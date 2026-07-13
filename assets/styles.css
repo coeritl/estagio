@@ -172,6 +172,16 @@ textarea { min-height:120px; resize:vertical; }
 .counter { text-align:right; font-size:.78rem; color:var(--muted); }
 .form-actions { display:flex; align-items:center; gap:1rem; margin-top:1.5rem; }
 .privacy { font-size:.82rem; color:var(--muted); }
+.form-open-action { justify-content:center; margin:1.5rem 0; }
+.form-embed-wrap { overflow:hidden; border:1px solid var(--line); border-radius:20px; background:#fff; box-shadow:var(--shadow); }
+.form-embed { display:block; width:100%; height:1900px; border:0; background:#fff; }
+.form-choice-title { text-align:center; margin:2.5rem 0 .25rem; font-size:clamp(1.6rem,3vw,2.2rem); }
+.form-choice-intro { text-align:center; color:var(--muted); margin:0 0 1.4rem; }
+.form-choice-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
+.form-choice-card { display:flex; flex-direction:column; align-items:flex-start; border:1px solid var(--line); border-radius:20px; padding:1.5rem; background:#fff; box-shadow:0 8px 26px rgba(7,61,39,.06); }
+.form-choice-card h3 { margin:1rem 0 .35rem; font-size:1.3rem; }
+.form-choice-card p { color:var(--muted); margin:0 0 1.3rem; flex:1; }
+.form-choice-help { text-align:center; margin-top:1.2rem; }
 
 .site-footer { background:#102319; color:#d7e3da; padding:3.4rem 0 1.5rem; margin-top:0; }
 .footer-grid { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:2rem; }
@@ -194,11 +204,12 @@ textarea { min-height:120px; resize:vertical; }
   .topbar .container span { display:none; }
   .brand span { max-width:195px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .hero { padding-top:3.8rem; }
-  .card-grid,.course-grid,.form-grid,.footer-grid,.advisor-grid { grid-template-columns:1fr; }
+  .card-grid,.course-grid,.form-grid,.footer-grid,.advisor-grid,.form-choice-grid { grid-template-columns:1fr; }
   .site-header .brand-mark { width:220px; height:58px; }
   .field.full { grid-column:auto; }
   .cta-band,.download-card { align-items:flex-start; flex-direction:column; }
   .choice { min-width:100%; }
+  .form-embed { height:2100px; }
 }
 
 @media print {
