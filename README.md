@@ -6,9 +6,9 @@ Portal público com orientações sobre estágio obrigatório, estágio não obr
 
 O projeto é um site estático compatível com GitHub Pages. O arquivo `index.html` é a página inicial e não há etapa de compilação.
 
-## Formulário de TCE
+## Formulários de TCE
 
-As solicitações são encaminhadas para `coeri.tl@ifms.edu.br` pelo FormSubmit. No primeiro envio após a publicação, o serviço encaminhará uma mensagem de confirmação para esse endereço. O recebimento só será ativado depois que a COERI confirmar essa mensagem.
+As solicitações são coletadas pelos formulários institucionais do Google Workspace da COERI. A página apresenta opções separadas para estágio externo e estágio interno. Nenhum dado preenchido é armazenado no GitHub Pages ou encaminhado pelo FormSubmit.
 
 ## Manutenção
 
