@@ -8,7 +8,7 @@ O projeto é um site estático compatível com GitHub Pages. O arquivo `index.ht
 
 ## Formulários de TCE
 
-As solicitações são coletadas pelos formulários institucionais do Google Workspace da COERI. A página apresenta opções separadas para estágio externo e estágio interno. Nenhum dado preenchido é armazenado no GitHub Pages ou encaminhado pelo FormSubmit.
+As solicitações são coletadas pelos formulários institucionais do Google Workspace da COERI. A página apresenta opções separadas para estágio externo e estágio interno.
 
 ## Manutenção
 
