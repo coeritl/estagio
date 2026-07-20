@@ -58,7 +58,11 @@ export default { async fetch(request: Request) {
     const isMinor = bool(input.is_minor);
     const isPaid = bool(input.is_paid);
     const requiresEpi = bool(input.requires_epi);
+    const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
+    const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, "0")).join("").toUpperCase();
+    const publicProtocol = `TCE-${protocolCode.match(/.{4}/g)!.join("-")}`;
     const payload = {
+      public_protocol: publicProtocol,
       request_type: text(input.request_type, 10),
       student_name: text(input.student_name, 180).toLocaleUpperCase("pt-BR"),
       student_cpf: text(input.student_cpf, 14),
@@ -122,7 +126,12 @@ export default { async fetch(request: Request) {
     );
     const { data, error } = await supabase.from("tce_requests").insert(payload).select("id").single();
     if (error) throw error;
-    return response(origin, 201, { id: data.id });
+    const { error: statusError } = await supabase.from("tce_protocol_statuses").insert({ protocol: publicProtocol, status: "recebido" });
+    if (statusError) {
+      await supabase.from("tce_requests").delete().eq("id", data.id);
+      throw statusError;
+    }
+    return response(origin, 201, { protocol: publicProtocol });
   } catch (error) {
     console.error(error);
     return response(origin, 500, { error: "Não foi possível registrar a solicitação. Tente novamente mais tarde." });

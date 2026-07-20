@@ -35,6 +35,7 @@ create table if not exists public.internships (
 
 create table if not exists public.tce_requests (
   id uuid primary key default gen_random_uuid(),
+  public_protocol text unique,
   request_type text not null check (request_type in ('externo', 'interno')),
   student_name text not null,
   student_cpf text not null,
@@ -80,16 +81,28 @@ create table if not exists public.tce_requests (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.tce_protocol_statuses (
+  protocol text primary key,
+  status text not null default 'recebido' check (status in ('recebido', 'em_processamento', 'tce_gerado', 'pendente_correcao')),
+  public_note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
 alter table public.tce_requests add column if not exists supervisor_phone text;
+alter table public.tce_requests add column if not exists public_protocol text unique;
 
 alter table public.admin_users enable row level security;
 alter table public.internships enable row level security;
 alter table public.tce_requests enable row level security;
+alter table public.tce_protocol_statuses enable row level security;
 
 revoke all on table public.tce_requests from anon;
 grant select, update, delete on table public.tce_requests to authenticated;
+revoke all on table public.tce_protocol_statuses from anon;
+grant select, insert, update, delete on table public.tce_protocol_statuses to authenticated;
 
 create or replace function public.is_coeri_admin()
 returns boolean
@@ -124,6 +137,15 @@ create policy "Administradores atualizam solicitações de TCE" on public.tce_re
 drop policy if exists "Administradores excluem solicitações de TCE" on public.tce_requests;
 create policy "Administradores excluem solicitações de TCE" on public.tce_requests for delete to authenticated using (public.is_coeri_admin());
 
+drop policy if exists "Administradores consultam status de TCE" on public.tce_protocol_statuses;
+create policy "Administradores consultam status de TCE" on public.tce_protocol_statuses for select to authenticated using (public.is_coeri_admin());
+drop policy if exists "Administradores cadastram status de TCE" on public.tce_protocol_statuses;
+create policy "Administradores cadastram status de TCE" on public.tce_protocol_statuses for insert to authenticated with check (public.is_coeri_admin());
+drop policy if exists "Administradores atualizam status de TCE" on public.tce_protocol_statuses;
+create policy "Administradores atualizam status de TCE" on public.tce_protocol_statuses for update to authenticated using (public.is_coeri_admin()) with check (public.is_coeri_admin());
+drop policy if exists "Administradores excluem status de TCE" on public.tce_protocol_statuses;
+create policy "Administradores excluem status de TCE" on public.tce_protocol_statuses for delete to authenticated using (public.is_coeri_admin());
+
 create or replace function public.process_tce_request(
   p_request_id uuid,
   p_internship_number text,
@@ -152,6 +174,13 @@ begin
     p_partial_report_date, p_final_report_date, p_insurance_provider,
     'Solicitação de TCE processada em ' || to_char(now(), 'DD/MM/YYYY') || '. Modalidade: ' || r.internship_modality || '.'
   ) returning id into new_id;
+  if r.public_protocol is not null then
+    update public.tce_protocol_statuses
+    set status = 'tce_gerado',
+        public_note = 'TCE gerado e enviado para assinaturas. Confira o e-mail e o WhatsApp informados. O remetente será o Autentique.',
+        updated_at = now()
+    where protocol = r.public_protocol;
+  end if;
   delete from public.tce_requests where id = p_request_id;
   return new_id;
 end;
@@ -167,6 +196,9 @@ $$;
 
 drop trigger if exists internships_updated_at on public.internships;
 create trigger internships_updated_at before update on public.internships for each row execute function public.set_updated_at();
+
+drop trigger if exists tce_protocol_statuses_updated_at on public.tce_protocol_statuses;
+create trigger tce_protocol_statuses_updated_at before update on public.tce_protocol_statuses for each row execute function public.set_updated_at();
 
 -- Após criar o login da COERI em Authentication > Users, execute:
 -- insert into public.admin_users (user_id)

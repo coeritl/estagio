@@ -21,6 +21,7 @@ const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(windo
 let supabase;
 let records = [];
 let tceRequests = [];
+let protocolStatuses = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -95,13 +96,15 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult] = await Promise.all([
+  const [internshipsResult, requestsResult, statusesResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
-    supabase.from('tce_requests').select('*').order('created_at', { ascending: true })
+    supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
+    supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false })
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
   tceRequests = requestsResult.error ? [] : (requestsResult.data || []);
+  protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   render();
   renderTceRequests();
 }
@@ -117,7 +120,18 @@ function detailItem(label, value) {
 }
 
 function requestProtocol(request) {
-  return request.id.slice(0, 8).toUpperCase();
+  return request.public_protocol || request.id.slice(0, 8).toUpperCase();
+}
+
+const publicStatusLabels = {
+  recebido: 'Recebido pela COERI',
+  em_processamento: 'Em processamento pela COERI',
+  tce_gerado: 'TCE gerado e enviado para assinaturas',
+  pendente_correcao: 'Pendente de correção'
+};
+
+function protocolStatus(request) {
+  return protocolStatuses.find(item => item.protocol === request.public_protocol) || null;
 }
 
 function renderTceRequests() {
@@ -138,7 +152,10 @@ function renderTceRequests() {
     summary.textContent = `${request.student_course} · ${request.company_name}`;
     const received = document.createElement('small');
     received.textContent = `Protocolo ${requestProtocol(request)} · Recebido em ${new Date(request.created_at).toLocaleString('pt-BR')}`;
-    main.append(tag, title, summary, received);
+    const statusLine = document.createElement('span');
+    statusLine.className = 'public-status-line';
+    statusLine.textContent = publicStatusLabels[protocolStatus(request)?.status] || 'Status público indisponível';
+    main.append(tag, title, summary, received, statusLine);
     const button = document.createElement('button');
     button.className = 'admin-button primary';
     button.type = 'button';
@@ -156,6 +173,10 @@ function openTceDialog(request) {
   $('#tce-final-date').value = request.expected_end_date || '';
   $('#tce-insurance-provider').value = '';
   $('#tce-process-message').textContent = '';
+  $('#tce-status-message').textContent = '';
+  const currentStatus = protocolStatus(request);
+  $('#tce-public-status').value = currentStatus?.status || 'recebido';
+  $('#tce-public-note').value = currentStatus?.public_note || '';
   const details = $('#tce-request-details');
   details.replaceChildren();
   const fields = [
@@ -362,7 +383,29 @@ $('#delete-tce-request').addEventListener('click', async () => {
   if (!request || !confirm(`Excluir permanentemente a solicitação de ${request.student_name}?`)) return;
   const { error } = await supabase.from('tce_requests').delete().eq('id', request.id);
   if (error) { $('#tce-process-message').textContent = 'Não foi possível excluir a solicitação.'; return; }
+  if (request.public_protocol) await supabase.from('tce_protocol_statuses').delete().eq('protocol', request.public_protocol);
   tceDialog.close();
+  await loadRecords();
+});
+
+$('#save-tce-status').addEventListener('click', async () => {
+  const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
+  const message = $('#tce-status-message');
+  if (!request?.public_protocol) { message.textContent = 'Esta solicitação antiga não possui protocolo público.'; return; }
+  const status = $('#tce-public-status').value;
+  const publicNote = $('#tce-public-note').value.trim();
+  if (status === 'pendente_correcao' && !publicNote) {
+    message.textContent = 'Informe o que o estudante precisa corrigir.';
+    $('#tce-public-note').focus();
+    return;
+  }
+  const button = $('#save-tce-status');
+  button.disabled = true;
+  message.textContent = 'Salvando…';
+  const { error } = await supabase.from('tce_protocol_statuses').update({ status, public_note: publicNote || null }).eq('protocol', request.public_protocol);
+  button.disabled = false;
+  if (error) { message.textContent = 'Não foi possível atualizar o status.'; return; }
+  message.textContent = 'Status público atualizado.';
   await loadRecords();
 });
 

@@ -234,7 +234,7 @@ form.addEventListener('submit', async event => {
     window.turnstile.reset(widgetId);
     captchaToken = '';
     message.classList.add('success');
-    message.textContent = `Solicitação enviada à COERI. Protocolo: ${data.id.slice(0, 8).toUpperCase()}. Guarde este número.`;
+    message.textContent = `Solicitação enviada à COERI. Protocolo: ${data.protocol}. Guarde este número para acompanhar o andamento.`;
     message.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
