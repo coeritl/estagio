@@ -11,6 +11,7 @@ create table if not exists public.admin_users (
 
 create table if not exists public.internships (
   id uuid primary key default gen_random_uuid(),
+  internship_number text not null unique,
   student_name text not null,
   student_email text not null,
   student_whatsapp text not null,

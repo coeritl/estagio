@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260720-2">
+  <link rel="stylesheet" href="assets/admin.css?v=20260720-3">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -63,6 +63,7 @@
       <div class="dialog-header"><div><span class="admin-kicker">Cadastro</span><h2 id="internship-dialog-title">Novo estágio</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fechar">×</button></div>
       <input type="hidden" id="internship-id">
       <div class="admin-form-grid">
+        <label class="full">Número do estágio<input id="internship-number" required placeholder="Ex.: 001/2026"></label>
         <label class="full">Nome completo do estudante<input id="student-name" required></label>
         <label>E-mail institucional<input id="student-email" type="email" required placeholder="nome@estudante.ifms.edu.br"></label>
         <label>WhatsApp<input id="student-whatsapp" type="tel" required placeholder="(67) 99999-9999"></label>
@@ -96,9 +97,9 @@
     </form>
   </dialog>
 
-  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-2"></script>
+  <script type="module" src="assets/admin.js?v=20260720-3"></script>
 </body>
 </html>

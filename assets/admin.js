@@ -92,7 +92,7 @@ function render() {
   const status = $('#status-filter').value;
   const deadline = $('#deadline-filter').value;
   const filtered = records.filter(record => {
-    const haystack = `${record.student_name} ${record.course} ${record.company_name}`.toLocaleLowerCase('pt-BR');
+    const haystack = `${record.internship_number} ${record.student_name} ${record.course} ${record.company_name}`.toLocaleLowerCase('pt-BR');
     const state = recordState(record);
     return (!query || haystack.includes(query)) && (status === 'all' || record.status === status) && (deadline === 'all' || (deadline === 'due' && state === 'due') || (deadline === 'soon' && state === 'soon') || (deadline === 'ok' && state === 'active'));
   });
@@ -110,6 +110,7 @@ function render() {
     card.dataset.id = record.id;
     card.classList.add(`status-${state}`);
     $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+    $('.internship-number', card).textContent = `Estágio nº ${record.internship_number}`;
     $('.student-name', card).textContent = record.student_name;
     $('.course-company', card).textContent = `${record.course} · ${record.company_name}`;
     const email = $('.student-email', card);
@@ -134,6 +135,7 @@ function openInternshipDialog(record = null) {
   internshipMessage.textContent = '';
   $('#internship-id').value = record?.id || '';
   $('#internship-dialog-title').textContent = record ? 'Editar estágio' : 'Novo estágio';
+  $('#internship-number').value = record?.internship_number || '';
   $('#student-name').value = record?.student_name || '';
   $('#student-email').value = record?.student_email || '';
   $('#student-whatsapp').value = record?.student_whatsapp || '';
@@ -171,7 +173,7 @@ internshipForm.addEventListener('submit', async event => {
   internshipMessage.textContent = 'Salvando…';
   const id = $('#internship-id').value;
   const payload = {
-    student_name: $('#student-name').value.trim(), student_email: $('#student-email').value.trim(), student_whatsapp: $('#student-whatsapp').value.trim(), course: $('#student-course').value,
+    internship_number: $('#internship-number').value.trim(), student_name: $('#student-name').value.trim(), student_email: $('#student-email').value.trim(), student_whatsapp: $('#student-whatsapp').value.trim(), course: $('#student-course').value,
     company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value, partial_report_date: $('#partial-date').value, final_report_date: $('#final-date').value,
     insurance_provider: $('#insurance-provider').value, notes: $('#internship-notes').value.trim()
   };
