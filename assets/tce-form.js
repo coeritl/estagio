@@ -224,13 +224,18 @@ form.addEventListener('submit', async event => {
   try {
     const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
     const supabase = createClient(config.url, config.anonKey, { auth: { persistSession: false } });
-    const { data, error } = await supabase.functions.invoke('submit-tce', { body: { token: captchaToken, payload } });
+    const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
+    const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const requestedProtocol = `TCE-${protocolCode.match(/.{4}/g).join('-')}`;
+    const { data, error } = await supabase.functions.invoke('submit-tce', {
+      body: { token: captchaToken, protocol: requestedProtocol, payload }
+    });
     if (error) throw new Error(data?.error || error.message);
     let responseData = data;
     if (typeof responseData === 'string') {
       try { responseData = JSON.parse(responseData); } catch { responseData = {}; }
     }
-    const protocol = responseData?.protocol || responseData?.data?.protocol || responseData?.public_protocol;
+    const protocol = responseData?.protocol || responseData?.data?.protocol || responseData?.public_protocol || requestedProtocol;
     if (!protocol) {
       throw new Error('A solicitação foi recebida, mas o protocolo não foi retornado. Entre em contato com a COERI antes de reenviar o formulário.');
     }

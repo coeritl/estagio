@@ -33,7 +33,7 @@ export default { async fetch(request: Request) {
   if (request.method !== "POST") return response(origin, 405, { error: "Método não permitido." });
 
   try {
-    const { token, payload: input } = await request.json();
+    const { token, protocol: requestedProtocol, payload: input } = await request.json();
     if (!token || !input || typeof input !== "object") {
       return response(origin, 400, { error: "Preencha o formulário e confirme o CAPTCHA." });
     }
@@ -58,9 +58,13 @@ export default { async fetch(request: Request) {
     const isMinor = bool(input.is_minor);
     const isPaid = bool(input.is_paid);
     const requiresEpi = bool(input.requires_epi);
+    const normalizedRequestedProtocol = text(requestedProtocol, 24).toUpperCase();
     const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
     const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, "0")).join("").toUpperCase();
-    const publicProtocol = `TCE-${protocolCode.match(/.{4}/g)!.join("-")}`;
+    const generatedProtocol = `TCE-${protocolCode.match(/.{4}/g)!.join("-")}`;
+    const publicProtocol = /^TCE-[0-9A-F]{4}(?:-[0-9A-F]{4}){3}$/.test(normalizedRequestedProtocol)
+      ? normalizedRequestedProtocol
+      : generatedProtocol;
     const payload = {
       public_protocol: publicProtocol,
       request_type: text(input.request_type, 10),
