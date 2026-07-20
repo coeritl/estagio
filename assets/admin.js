@@ -287,7 +287,7 @@ internshipForm.addEventListener('submit', async event => {
   internshipMessage.textContent = 'Salvando…';
   const id = $('#internship-id').value;
   const payload = {
-    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim(), student_cpf: $('#student-cpf').value.trim() || null, student_sex: $('#student-sex').value || null, student_birth_date: $('#student-birth-date').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
+    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim().toLocaleUpperCase('pt-BR'), student_cpf: $('#student-cpf').value.trim() || null, student_sex: $('#student-sex').value || null, student_birth_date: $('#student-birth-date').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
     company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value || null, partial_report_date: $('#partial-date').value || null, final_report_date: $('#final-date').value || null,
     insurance_provider: $('#insurance-provider').value || null, notes: $('#internship-notes').value.trim()
   };

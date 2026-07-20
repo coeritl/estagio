@@ -60,7 +60,7 @@ export default { async fetch(request: Request) {
     const requiresEpi = bool(input.requires_epi);
     const payload = {
       request_type: text(input.request_type, 10),
-      student_name: text(input.student_name, 180),
+      student_name: text(input.student_name, 180).toLocaleUpperCase("pt-BR"),
       student_cpf: text(input.student_cpf, 14),
       student_sex: text(input.student_sex, 20),
       student_birth_date: text(input.student_birth_date, 10),

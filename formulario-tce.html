@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Solicitação do Termo de Compromisso de Estágio do IFMS Campus Três Lagoas.">
   <title>Solicitação de TCE | COERI</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260720-3">
+  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260720-4">
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -25,7 +25,7 @@
     <form id="tce-form" hidden>
       <section class="form-section"><h2>1. Dados do estudante</h2><div class="form-grid">
         <label class="field">Tipo de estágio<select name="request_type" required><option value="externo">Externo</option><option value="interno">Interno — no IFMS</option></select></label>
-        <label class="field">Nome completo<input name="student_name" required maxlength="180" autocomplete="name"></label>
+        <label class="field">Nome completo<input name="student_name" class="uppercase-name" required maxlength="180" autocomplete="name" autocapitalize="characters"></label>
         <label class="field">CPF<input name="student_cpf" required inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></label>
         <label class="field">Sexo<select name="student_sex" required><option value="">Selecione</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></label>
         <label class="field">Data de nascimento<input name="student_birth_date" type="date" required></label>
@@ -81,5 +81,5 @@
   </div></div></section>
 </main>
 <footer class="site-footer"><div class="container"><div class="footer-grid"><div><h3>COERI · Estágios</h3><p>IFMS Campus Três Lagoas</p></div><div><h3>Precisa de ajuda?</h3><a href="como-comecar">Veja como começar</a></div><div><h3>Contato</h3><a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a></div></div></div></footer>
-<script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-3"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/tce-form.js?v=20260720-4"></script>
+<script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-3"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/tce-form.js?v=20260720-5"></script>
 </body></html>

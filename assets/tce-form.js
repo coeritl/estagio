@@ -143,6 +143,7 @@ form.addEventListener('submit', async event => {
   const values = Object.fromEntries(new FormData(form).entries());
   const payload = {
     ...values,
+    student_name: values.student_name.trim().toLocaleUpperCase('pt-BR'),
     weekly_schedule: weeklySchedule,
     student_email: email,
     is_minor: values.is_minor === 'true',
