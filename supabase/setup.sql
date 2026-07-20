@@ -12,6 +12,7 @@ create table if not exists public.admin_users (
 create table if not exists public.internships (
   id uuid primary key default gen_random_uuid(),
   internship_number text unique,
+  public_protocol text unique,
   student_name text not null,
   student_cpf text,
   student_sex text check (student_sex in ('Feminino', 'Masculino', 'Outro')),
@@ -92,6 +93,7 @@ create table if not exists public.tce_protocol_statuses (
 
 alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
+alter table public.internships add column if not exists public_protocol text unique;
 alter table public.tce_requests add column if not exists supervisor_phone text;
 alter table public.tce_requests add column if not exists public_protocol text unique;
 alter table public.tce_protocol_statuses add column if not exists document_url text;
@@ -169,11 +171,11 @@ begin
   select * into r from public.tce_requests where id = p_request_id for update;
   if not found then raise exception 'Solicitação não encontrada'; end if;
   insert into public.internships (
-    internship_number, student_name, student_cpf, student_sex, student_birth_date,
+    internship_number, public_protocol, student_name, student_cpf, student_sex, student_birth_date,
     student_email, student_whatsapp, course, company_name, expected_end_date,
     partial_report_date, final_report_date, insurance_provider, notes
   ) values (
-    nullif(trim(p_internship_number), ''), r.student_name, r.student_cpf, r.student_sex, r.student_birth_date,
+    nullif(trim(p_internship_number), ''), r.public_protocol, r.student_name, r.student_cpf, r.student_sex, r.student_birth_date,
     r.student_email, r.student_phone, r.student_course, r.company_name, r.expected_end_date,
     p_partial_report_date, p_final_report_date, p_insurance_provider,
     'Solicitação de TCE processada em ' || to_char(now(), 'DD/MM/YYYY') || '. Modalidade: ' || r.internship_modality || '.'
@@ -192,6 +194,28 @@ $$;
 
 revoke all on function public.process_tce_request(uuid,text,date,date,text) from public;
 grant execute on function public.process_tce_request(uuid,text,date,date,text) to authenticated;
+
+create or replace function public.complete_internship(p_internship_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r public.internships%rowtype;
+begin
+  if not public.is_coeri_admin() then raise exception 'Acesso não autorizado'; end if;
+  select * into r from public.internships where id = p_internship_id for update;
+  if not found then raise exception 'Estágio não encontrado'; end if;
+  if r.public_protocol is not null then
+    delete from public.tce_protocol_statuses where protocol = r.public_protocol;
+  end if;
+  delete from public.internships where id = p_internship_id;
+end;
+$$;
+
+revoke all on function public.complete_internship(uuid) from public;
+grant execute on function public.complete_internship(uuid) to authenticated;
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = public as $$
