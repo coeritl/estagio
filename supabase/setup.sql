@@ -13,6 +13,8 @@ create table if not exists public.internships (
   id uuid primary key default gen_random_uuid(),
   internship_number text unique,
   student_name text not null,
+  student_cpf text,
+  student_sex text check (student_sex in ('Feminino', 'Masculino', 'Outro')),
   student_email text,
   student_whatsapp text,
   course text not null,
