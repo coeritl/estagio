@@ -264,8 +264,27 @@ function exportIfmsInsuranceList() {
   URL.revokeObjectURL(url);
 }
 
+async function copyPendingEmails(type) {
+  const pending = records.filter(record => record.status === 'em_andamento' && reminderDue(record, type));
+  const emails = [...new Set(pending.map(record => record.student_email?.trim()).filter(Boolean))];
+  const missingEmail = pending.filter(record => !record.student_email?.trim()).length;
+  const reportName = type === 'partial' ? 'relatório parcial' : 'relatório final';
+  if (!emails.length) {
+    alert(`Não há e-mails cadastrados para avisos pendentes do ${reportName}.`);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(emails.join(', '));
+    alert(`${emails.length} e-mail${emails.length === 1 ? '' : 's'} copiado${emails.length === 1 ? '' : 's'}. Cole a lista no campo Cco/Bcc.${missingEmail ? ` Há ${missingEmail} estudante${missingEmail === 1 ? '' : 's'} pendente${missingEmail === 1 ? '' : 's'} sem e-mail cadastrado.` : ''}`);
+  } catch {
+    alert('O navegador não permitiu copiar os e-mails. Recarregue a página e tente novamente.');
+  }
+}
+
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
+$('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
+$('#copy-final-emails').addEventListener('click', () => copyPendingEmails('final'));
 $('#logout-button').addEventListener('click', () => supabase.auth.signOut());
 $('#search-input').addEventListener('input', render);
 $('#deadline-filter').addEventListener('change', render);
