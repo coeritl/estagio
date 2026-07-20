@@ -83,9 +83,22 @@
     <div class="dialog-content"><div class="dialog-header"><div><span class="admin-kicker">Lembrete</span><h2 id="message-title">Mensagem ao estudante</h2></div><button class="icon-button" type="button" data-close-message aria-label="Fechar">×</button></div><label class="message-label">Texto da mensagem<textarea id="message-text" rows="9"></textarea></label><div class="dialog-actions"><button class="admin-button ghost" id="copy-message" type="button">Copiar texto</button><a class="admin-button primary" id="open-email" href="#">Abrir no e-mail</a></div></div>
   </dialog>
 
+  <dialog id="password-dialog" class="admin-dialog small">
+    <form id="password-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Primeiro acesso</span><h2>Crie sua senha</h2></div></div>
+      <p>Defina uma senha permanente para os próximos acessos ao painel.</p>
+      <div class="admin-form-grid">
+        <label class="full">Nova senha<input id="new-password" type="password" autocomplete="new-password" required minlength="8"></label>
+        <label class="full">Confirme a nova senha<input id="confirm-password" type="password" autocomplete="new-password" required minlength="8"></label>
+      </div>
+      <p class="form-message" id="password-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button primary" type="submit">Salvar senha e entrar</button></div>
+    </form>
+  </dialog>
+
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-1"></script>
+  <script type="module" src="assets/admin.js?v=20260720-2"></script>
 </body>
 </html>

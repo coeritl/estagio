@@ -10,6 +10,9 @@ const internshipDialog = $('#internship-dialog');
 const internshipForm = $('#internship-form');
 const internshipMessage = $('#internship-message');
 const messageDialog = $('#message-dialog');
+const passwordDialog = $('#password-dialog');
+const passwordForm = $('#password-form');
+const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
 
 let supabase;
 let records = [];
@@ -203,6 +206,19 @@ document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEve
 document.querySelectorAll('[data-close-message]').forEach(button => button.addEventListener('click', () => messageDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
+passwordForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const message = $('#password-message');
+  const password = $('#new-password').value;
+  if (password !== $('#confirm-password').value) { message.textContent = 'As senhas não coincidem.'; return; }
+  message.textContent = 'Salvando…';
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) { message.textContent = 'Não foi possível salvar a senha. Use pelo menos 8 caracteres e tente novamente.'; return; }
+  history.replaceState(null, '', `${location.pathname}${location.search}`);
+  passwordDialog.close();
+  message.textContent = '';
+});
+
 async function initialize() {
   $('#today-label').textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
   if (!isConfigured) { setupNotice.hidden = false; loginForm.querySelector('button').disabled = true; return; }
@@ -214,7 +230,10 @@ async function initialize() {
   });
   const { data } = await supabase.auth.getSession();
   setView(Boolean(data.session), data.session?.user?.email || '');
-  if (data.session) await loadRecords();
+  if (data.session) {
+    await loadRecords();
+    if (arrivedFromInvite) passwordDialog.showModal();
+  }
 }
 
 initialize();
