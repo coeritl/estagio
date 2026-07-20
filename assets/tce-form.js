@@ -1,6 +1,7 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const form = $('#tce-form');
 const config = window.SUPABASE_CONFIG || {};
+const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 let captchaToken = '';
 let widgetId;
 
@@ -24,9 +25,22 @@ function setConditional(name, expected, container, fields) {
 }
 
 function initializeForm() {
-  if (!config.turnstileSiteKey || !config.url || !config.anonKey) return;
+  if ((!config.turnstileSiteKey && !previewMode) || !config.url || !config.anonKey) return;
   $('#legacy-forms').hidden = true;
   form.hidden = false;
+  if (previewMode) {
+    const notice = document.createElement('div');
+    notice.className = 'callout orange preview-notice';
+    const title = document.createElement('strong');
+    const copy = document.createElement('p');
+    title.textContent = 'Modo de visualização';
+    copy.textContent = 'Confira todos os campos abaixo. O envio ficará disponível depois da ativação do CAPTCHA no Supabase.';
+    notice.append(title, copy);
+    form.prepend(notice);
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = 'Envio disponível após a ativação';
+  }
   const params = new URLSearchParams(location.search);
   if (params.get('tipo') === 'interno') form.elements.request_type.value = 'interno';
   form.elements.start_date.min = addBusinessDays(new Date(), 5);
@@ -48,7 +62,7 @@ function initializeForm() {
     if (!window.turnstile) return;
     clearInterval(waitForTurnstile);
     widgetId = window.turnstile.render('#turnstile-widget', {
-      sitekey: config.turnstileSiteKey,
+      sitekey: config.turnstileSiteKey || '1x00000000000000000000AA',
       theme: 'light',
       callback: token => { captchaToken = token; },
       'expired-callback': () => { captchaToken = ''; },
