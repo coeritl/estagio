@@ -139,6 +139,7 @@ function openInternshipDialog(record = null) {
   $('#student-name').value = record?.student_name || '';
   $('#student-cpf').value = record?.student_cpf || '';
   $('#student-sex').value = record?.student_sex || '';
+  $('#student-birth-date').value = record?.student_birth_date || '';
   $('#student-email').value = record?.student_email || '';
   $('#student-whatsapp').value = record?.student_whatsapp || '';
   $('#student-course').value = record?.course || '';
@@ -175,7 +176,7 @@ internshipForm.addEventListener('submit', async event => {
   internshipMessage.textContent = 'Salvando…';
   const id = $('#internship-id').value;
   const payload = {
-    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim(), student_cpf: $('#student-cpf').value.trim() || null, student_sex: $('#student-sex').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
+    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim(), student_cpf: $('#student-cpf').value.trim() || null, student_sex: $('#student-sex').value || null, student_birth_date: $('#student-birth-date').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
     company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value || null, partial_report_date: $('#partial-date').value || null, final_report_date: $('#final-date').value || null,
     insurance_provider: $('#insurance-provider').value || null, notes: $('#internship-notes').value.trim()
   };
@@ -209,7 +210,7 @@ function exportIfmsInsuranceList() {
     .sort((a, b) => a.student_name.localeCompare(b.student_name, 'pt-BR'));
   if (!eligible.length) { alert('Nenhum estagiário atende aos critérios da lista do seguro IFMS.'); return; }
   const csvCell = value => `"${String(value || '').replaceAll('"', '""')}"`;
-  const rows = [['CPF', 'Nome', 'Sexo'], ...eligible.map(record => [record.student_cpf, record.student_name, record.student_sex])];
+  const rows = [['CPF', 'Nome', 'Sexo', 'Data de nascimento'], ...eligible.map(record => [record.student_cpf, record.student_name, record.student_sex, formatDate(record.student_birth_date)])];
   const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');

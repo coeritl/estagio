@@ -15,6 +15,7 @@ create table if not exists public.internships (
   student_name text not null,
   student_cpf text,
   student_sex text check (student_sex in ('Feminino', 'Masculino', 'Outro')),
+  student_birth_date date,
   student_email text,
   student_whatsapp text,
   course text not null,
