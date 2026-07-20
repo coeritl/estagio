@@ -105,6 +105,7 @@ function initializeForm() {
     clearInterval(waitForTurnstile);
     widgetId = window.turnstile.render('#turnstile-widget', {
       sitekey: config.turnstileSiteKey || '1x00000000000000000000AA',
+      size: 'flexible',
       theme: 'light',
       callback: token => { captchaToken = token; },
       'expired-callback': () => { captchaToken = ''; },
