@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Painel de Estágios | COERI</title>
+  <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260720-1">
+</head>
+<body class="admin-body">
+  <main id="admin-root">
+    <section class="login-screen" id="login-screen">
+      <div class="login-card">
+        <a class="admin-brand" href="./" aria-label="Voltar ao portal de estágios"><img src="assets/logo-ifms-tres-lagoas.png" alt="IFMS Campus Três Lagoas"></a>
+        <span class="admin-kicker">Área restrita · COERI</span>
+        <h1>Controle de estágios</h1>
+        <p>Acesse com a conta administrativa autorizada.</p>
+        <div class="setup-notice" id="setup-notice" hidden><strong>Conexão pendente</strong><span>Informe os dados do novo projeto Supabase no arquivo de configuração para ativar o painel.</span></div>
+        <form id="login-form" class="admin-form">
+          <label>E-mail institucional<input id="login-email" type="email" autocomplete="username" required placeholder="coeri.tl@ifms.edu.br"></label>
+          <label>Senha<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label>
+          <button class="admin-button primary" type="submit">Entrar no painel</button>
+          <p class="form-message" id="login-message" role="alert"></p>
+        </form>
+        <a class="back-link" href="./">← Voltar ao portal público</a>
+      </div>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <header class="admin-header">
+        <div class="admin-header-inner">
+          <a class="admin-brand compact" href="./"><img src="assets/logo-ifms-tres-lagoas.png" alt="IFMS Campus Três Lagoas"></a>
+          <div class="admin-header-title"><span>COERI</span><strong>Controle de estágios</strong></div>
+          <div class="admin-account"><span id="admin-email"></span><button class="admin-button ghost" id="logout-button" type="button">Sair</button></div>
+        </div>
+      </header>
+
+      <div class="admin-container">
+        <div class="dashboard-heading"><div><span class="admin-kicker">Visão geral</span><h1>Acompanhamento dos estagiários</h1><p id="today-label"></p></div><button class="admin-button primary" id="new-internship-button" type="button">+ Novo estágio</button></div>
+
+        <section class="stat-grid" aria-label="Resumo dos estágios">
+          <article class="stat-card"><span>Em andamento</span><strong id="stat-active">0</strong><small>estágios ativos</small></article>
+          <article class="stat-card warning"><span>Com prazo próximo</span><strong id="stat-soon">0</strong><small>próximos 7 dias</small></article>
+          <article class="stat-card danger"><span>Prazos atingidos</span><strong id="stat-due">0</strong><small>aguardando providência</small></article>
+          <article class="stat-card success"><span>Concluídos</span><strong id="stat-completed">0</strong><small>estágios finalizados</small></article>
+        </section>
+
+        <section class="admin-panel filters-panel">
+          <div class="search-field"><label for="search-input">Pesquisar</label><input id="search-input" type="search" placeholder="Nome, curso ou empresa"></div>
+          <label>Status<select id="status-filter"><option value="all">Todos</option><option value="em_andamento">Em andamento</option><option value="concluido">Concluído</option></select></label>
+          <label>Prazos<select id="deadline-filter"><option value="all">Todos</option><option value="due">Atingidos</option><option value="soon">Próximos 7 dias</option><option value="ok">No prazo</option></select></label>
+        </section>
+
+        <section class="internship-list" id="internship-list" aria-live="polite"></section>
+        <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="internship-dialog" class="admin-dialog">
+    <form id="internship-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Cadastro</span><h2 id="internship-dialog-title">Novo estágio</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fechar">×</button></div>
+      <input type="hidden" id="internship-id">
+      <div class="admin-form-grid">
+        <label class="full">Nome completo do estudante<input id="student-name" required></label>
+        <label>E-mail institucional<input id="student-email" type="email" required placeholder="nome@estudante.ifms.edu.br"></label>
+        <label>WhatsApp<input id="student-whatsapp" type="tel" required placeholder="(67) 99999-9999"></label>
+        <label>Curso<select id="student-course" required><option value="">Selecione</option><option>Análise e Desenvolvimento de Sistemas</option><option>Automação Industrial</option><option>Engenharia de Controle e Automação</option><option>Engenharia de Computação</option><option>Técnico Integrado em Eletrotécnica</option><option>Técnico Integrado em Informática</option><option>Técnico Integrado em Administração (EJA-EPT)</option><option>Especialização em Docência para EPCT</option></select></label>
+        <label>Empresa ou unidade concedente<input id="company-name" required></label>
+        <label>Previsão de término<input id="end-date" type="date" required></label>
+        <label>Entrega do relatório parcial<input id="partial-date" type="date" required></label>
+        <label>Entrega do relatório final<input id="final-date" type="date" required></label>
+        <label>Seguro do estagiário<select id="insurance-provider" required><option value="">Selecione</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
+        <label class="full">Observações<textarea id="internship-notes" rows="3" placeholder="Informações adicionais para acompanhamento"></textarea></label>
+      </div>
+      <p class="form-message" id="internship-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-dialog>Cancelar</button><button class="admin-button primary" type="submit">Salvar estágio</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="message-dialog" class="admin-dialog small">
+    <div class="dialog-content"><div class="dialog-header"><div><span class="admin-kicker">Lembrete</span><h2 id="message-title">Mensagem ao estudante</h2></div><button class="icon-button" type="button" data-close-message aria-label="Fechar">×</button></div><label class="message-label">Texto da mensagem<textarea id="message-text" rows="9"></textarea></label><div class="dialog-actions"><button class="admin-button ghost" id="copy-message" type="button">Copiar texto</button><a class="admin-button primary" id="open-email" href="#">Abrir no e-mail</a></div></div>
+  </dialog>
+
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+
+  <script src="assets/supabase-config.js"></script>
+  <script type="module" src="assets/admin.js?v=20260720-1"></script>
+</body>
+</html>
