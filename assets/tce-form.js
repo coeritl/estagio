@@ -226,6 +226,14 @@ form.addEventListener('submit', async event => {
     const supabase = createClient(config.url, config.anonKey, { auth: { persistSession: false } });
     const { data, error } = await supabase.functions.invoke('submit-tce', { body: { token: captchaToken, payload } });
     if (error) throw new Error(data?.error || error.message);
+    let responseData = data;
+    if (typeof responseData === 'string') {
+      try { responseData = JSON.parse(responseData); } catch { responseData = {}; }
+    }
+    const protocol = responseData?.protocol || responseData?.data?.protocol || responseData?.public_protocol;
+    if (!protocol) {
+      throw new Error('A solicitação foi recebida, mas o protocolo não foi retornado. Entre em contato com a COERI antes de reenviar o formulário.');
+    }
     form.reset();
     document.querySelectorAll('.weekday-row input[type="time"]').forEach(field => { field.disabled = true; field.required = false; });
     $('#guardian-fields').hidden = true;
@@ -234,7 +242,7 @@ form.addEventListener('submit', async event => {
     window.turnstile.reset(widgetId);
     captchaToken = '';
     message.classList.add('success');
-    message.textContent = `Solicitação enviada à COERI. Protocolo: ${data.protocol}. Guarde este número para acompanhar o andamento.`;
+    message.textContent = `Solicitação enviada à COERI. Protocolo: ${protocol}. Guarde este número para acompanhar o andamento.`;
     message.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
