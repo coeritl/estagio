@@ -13,10 +13,14 @@ const internshipMessage = $('#internship-message');
 const messageDialog = $('#message-dialog');
 const passwordDialog = $('#password-dialog');
 const passwordForm = $('#password-form');
+const tceList = $('#tce-request-list');
+const tceDialog = $('#tce-dialog');
+const tceProcessForm = $('#tce-process-form');
 const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
 
 let supabase;
 let records = [];
+let tceRequests = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -91,10 +95,80 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const { data, error } = await supabase.from('internships').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  records = data || [];
+  const [internshipsResult, requestsResult] = await Promise.all([
+    supabase.from('internships').select('*').order('created_at', { ascending: false }),
+    supabase.from('tce_requests').select('*').order('created_at', { ascending: true })
+  ]);
+  if (internshipsResult.error) throw internshipsResult.error;
+  records = internshipsResult.data || [];
+  tceRequests = requestsResult.error ? [] : (requestsResult.data || []);
   render();
+  renderTceRequests();
+}
+
+function detailItem(label, value) {
+  const item = document.createElement('div');
+  const term = document.createElement('span');
+  const content = document.createElement('strong');
+  term.textContent = label;
+  content.textContent = value || 'Não informado';
+  item.append(term, content);
+  return item;
+}
+
+function renderTceRequests() {
+  tceList.replaceChildren();
+  $('#tce-request-count').textContent = tceRequests.length;
+  $('#tce-empty-state').hidden = tceRequests.length > 0;
+  tceRequests.forEach(request => {
+    const card = document.createElement('article');
+    card.className = 'tce-request-card';
+    card.dataset.id = request.id;
+    const main = document.createElement('div');
+    const tag = document.createElement('span');
+    tag.className = 'status-pill';
+    tag.textContent = request.request_type === 'interno' ? 'Estágio interno' : 'Estágio externo';
+    const title = document.createElement('h3');
+    title.textContent = request.student_name;
+    const summary = document.createElement('p');
+    summary.textContent = `${request.student_course} · ${request.company_name}`;
+    const received = document.createElement('small');
+    received.textContent = `Recebido em ${new Date(request.created_at).toLocaleString('pt-BR')}`;
+    main.append(tag, title, summary, received);
+    const button = document.createElement('button');
+    button.className = 'admin-button primary';
+    button.type = 'button';
+    button.textContent = 'Analisar solicitação';
+    card.append(main, button);
+    tceList.append(card);
+  });
+}
+
+function openTceDialog(request) {
+  $('#tce-request-id').value = request.id;
+  $('#tce-dialog-title').textContent = request.student_name;
+  $('#tce-internship-number').value = '';
+  $('#tce-partial-date').value = '';
+  $('#tce-final-date').value = request.expected_end_date || '';
+  $('#tce-insurance-provider').value = '';
+  $('#tce-process-message').textContent = '';
+  const details = $('#tce-request-details');
+  details.replaceChildren();
+  const fields = [
+    ['Tipo', request.request_type === 'interno' ? 'Estágio interno' : 'Estágio externo'],
+    ['CPF', request.student_cpf], ['Sexo', request.student_sex], ['Nascimento', formatDate(request.student_birth_date)],
+    ['E-mail', request.student_email], ['WhatsApp', request.student_phone], ['Curso', request.student_course], ['Período', request.student_period],
+    ['Menor de idade', request.is_minor ? 'Sim' : 'Não'], ['Responsável legal', request.guardian_name], ['E-mail do responsável', request.guardian_email],
+    ['CPF do responsável', request.guardian_cpf], ['Contato do responsável', request.guardian_phone], ['Unidade concedente', request.company_name],
+    ['CNPJ', request.company_cnpj], ['E-mail da concedente', request.company_email], ['Contato da concedente', request.company_phone],
+    ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não'],
+    ['Horário semanal', request.weekly_schedule], ['Início', formatDate(request.start_date)], ['Previsão de término', formatDate(request.expected_end_date)],
+    ['Setor', request.internship_sector], ['Plano de atividades', request.activity_plan], ['Supervisor', request.supervisor_name],
+    ['E-mail do supervisor', request.supervisor_email], ['Formação do supervisor', request.supervisor_education], ['Formação/experiência', request.supervisor_experience],
+    ['Necessita de EPI', request.requires_epi ? 'Sim' : 'Não'], ['EPIs', request.epi_types]
+  ];
+  fields.filter(([, value]) => value !== null && value !== '').forEach(([label, value]) => details.append(detailItem(label, value)));
+  tceDialog.showModal();
 }
 
 function renderDeadline(container, value) {
@@ -246,6 +320,47 @@ async function handleCardAction(event) {
 list.addEventListener('click', handleCardAction);
 sentList.addEventListener('click', handleCardAction);
 
+tceList.addEventListener('click', event => {
+  const card = event.target.closest('.tce-request-card');
+  if (!card) return;
+  const request = tceRequests.find(item => item.id === card.dataset.id);
+  if (request) openTceDialog(request);
+});
+
+document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => {
+  document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab === button));
+  $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
+  $('#requests-view').hidden = button.dataset.adminView !== 'requests';
+}));
+
+tceProcessForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = tceProcessForm.querySelector('[type="submit"]');
+  const message = $('#tce-process-message');
+  button.disabled = true;
+  message.textContent = 'Registrando no acompanhamento…';
+  const { error } = await supabase.rpc('process_tce_request', {
+    p_request_id: $('#tce-request-id').value,
+    p_internship_number: $('#tce-internship-number').value.trim() || null,
+    p_partial_report_date: $('#tce-partial-date').value || null,
+    p_final_report_date: $('#tce-final-date').value || null,
+    p_insurance_provider: $('#tce-insurance-provider').value
+  });
+  button.disabled = false;
+  if (error) { message.textContent = 'Não foi possível processar a solicitação. Verifique os campos e tente novamente.'; return; }
+  tceDialog.close();
+  await loadRecords();
+});
+
+$('#delete-tce-request').addEventListener('click', async () => {
+  const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
+  if (!request || !confirm(`Excluir permanentemente a solicitação de ${request.student_name}?`)) return;
+  const { error } = await supabase.from('tce_requests').delete().eq('id', request.id);
+  if (error) { $('#tce-process-message').textContent = 'Não foi possível excluir a solicitação.'; return; }
+  tceDialog.close();
+  await loadRecords();
+});
+
 function exportIfmsInsuranceList() {
   const now = new Date();
   const firstDayOfCoverageWindow = new Date(now.getFullYear(), now.getMonth() - 2, 1);
@@ -290,6 +405,7 @@ $('#search-input').addEventListener('input', render);
 $('#deadline-filter').addEventListener('change', render);
 document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => internshipDialog.close()));
 document.querySelectorAll('[data-close-message]').forEach(button => button.addEventListener('click', () => messageDialog.close()));
+document.querySelectorAll('[data-close-tce]').forEach(button => button.addEventListener('click', () => tceDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
 passwordForm.addEventListener('submit', async event => {

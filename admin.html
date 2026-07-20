@@ -39,6 +39,13 @@
       <div class="admin-container">
         <div class="dashboard-heading"><div><span class="admin-kicker">Visão geral</span><h1>Acompanhamento dos estagiários</h1><p id="today-label"></p></div><div class="heading-actions"><button class="admin-button ghost" id="copy-partial-emails" type="button">Copiar e-mails · parcial</button><button class="admin-button ghost" id="copy-final-emails" type="button">Copiar e-mails · final</button><button class="admin-button ghost" id="export-ifms-button" type="button">Exportar lista do seguro IFMS</button><button class="admin-button primary" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
 
+        <nav class="admin-tabs" aria-label="Áreas do painel">
+          <button class="admin-tab active" type="button" data-admin-view="tracking">Acompanhamento</button>
+          <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button>
+        </nav>
+
+        <div id="tracking-view">
+
         <section class="stat-grid" aria-label="Resumo dos estágios">
           <article class="stat-card"><span>Em andamento</span><strong id="stat-active">0</strong><small>estágios ativos</small></article>
           <article class="stat-card warning"><span>Com prazo próximo</span><strong id="stat-soon">0</strong><small>próximos 7 dias</small></article>
@@ -59,6 +66,13 @@
           <section class="internship-list" id="sent-internship-list" aria-live="polite"></section>
         </section>
         <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
+        </div>
+
+        <section id="requests-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Fila de entrada</span><h2>Solicitações de TCE</h2><p>Os dados completos permanecem nesta área restrita até o TCE ser gerado.</p></div></div>
+          <section class="tce-request-list" id="tce-request-list" aria-live="polite"></section>
+          <div class="empty-state" id="tce-empty-state"><div>✅</div><h2>Nenhuma solicitação nova</h2><p>As próximas solicitações aparecerão aqui.</p></div>
+        </section>
       </div>
     </section>
   </main>
@@ -92,6 +106,26 @@
     <div class="dialog-content"><div class="dialog-header"><div><span class="admin-kicker">Lembrete</span><h2 id="message-title">Mensagem ao estudante</h2></div><button class="icon-button" type="button" data-close-message aria-label="Fechar">×</button></div><label class="message-label">Texto da mensagem<textarea id="message-text" rows="9"></textarea></label><div class="dialog-actions"><button class="admin-button ghost" id="copy-message" type="button">Copiar texto</button><a class="admin-button primary" id="open-email" href="#">Abrir no e-mail</a></div></div>
   </dialog>
 
+  <dialog id="tce-dialog" class="admin-dialog tce-dialog">
+    <form id="tce-process-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Solicitação recebida</span><h2 id="tce-dialog-title">Novo TCE</h2></div><button class="icon-button" type="button" data-close-tce aria-label="Fechar">×</button></div>
+      <div id="tce-request-details" class="tce-request-details"></div>
+      <section class="process-box">
+        <h3>Registrar no acompanhamento</h3>
+        <p>Ao confirmar, os dados completos desta solicitação serão apagados. Permanecerão somente os dados necessários ao acompanhamento.</p>
+        <div class="admin-form-grid">
+          <label class="full">Número do estágio<input id="tce-internship-number" placeholder="Ex.: 001/2026"></label>
+          <label>Entrega do relatório parcial<input id="tce-partial-date" type="date"></label>
+          <label>Entrega do relatório final<input id="tce-final-date" type="date"></label>
+          <label class="full">Seguro do estagiário<select id="tce-insurance-provider" required><option value="">Selecione</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
+        </div>
+      </section>
+      <input id="tce-request-id" type="hidden">
+      <p class="form-message" id="tce-process-message" role="alert"></p>
+      <div class="dialog-actions split-actions"><button class="admin-button danger-outline" id="delete-tce-request" type="button">Excluir solicitação</button><span></span><button class="admin-button ghost" type="button" data-close-tce>Cancelar</button><button class="admin-button primary" type="submit">TCE gerado</button></div>
+    </form>
+  </dialog>
+
   <dialog id="password-dialog" class="admin-dialog small">
     <form id="password-form" class="dialog-content">
       <div class="dialog-header"><div><span class="admin-kicker">Primeiro acesso</span><h2>Crie sua senha</h2></div></div>
@@ -108,6 +142,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-9"></script>
+  <script type="module" src="assets/admin.js?v=20260720-10"></script>
 </body>
 </html>

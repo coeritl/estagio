@@ -33,11 +33,61 @@ create table if not exists public.internships (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.tce_requests (
+  id uuid primary key default gen_random_uuid(),
+  request_type text not null check (request_type in ('externo', 'interno')),
+  student_name text not null,
+  student_cpf text not null,
+  student_sex text not null check (student_sex in ('Feminino', 'Masculino', 'Outro')),
+  student_birth_date date not null,
+  student_email text not null check (
+    position('@' in student_email) > 1
+    and split_part(lower(trim(student_email)), '@', 2) = 'estudante.ifms.edu.br'
+  ),
+  student_course text not null,
+  student_period text not null,
+  student_phone text not null,
+  is_minor boolean not null default false,
+  guardian_name text,
+  guardian_email text,
+  guardian_cpf text,
+  guardian_phone text,
+  company_name text not null,
+  company_cnpj text not null,
+  company_email text not null,
+  company_phone text not null,
+  internship_modality text not null check (internship_modality in ('Obrigatório', 'Não obrigatório')),
+  advisor_name text not null,
+  is_paid boolean not null default false,
+  scholarship_amount numeric(10,2),
+  weekly_schedule text not null,
+  start_date date not null,
+  expected_end_date date not null,
+  internship_sector text not null,
+  activity_plan text not null check (char_length(activity_plan) >= 50),
+  supervisor_name text not null,
+  supervisor_email text not null,
+  supervisor_education text not null,
+  supervisor_experience text not null,
+  requires_epi boolean not null,
+  epi_types text not null,
+  privacy_consent boolean not null check (privacy_consent is true),
+  acknowledgment_start boolean not null check (acknowledgment_start is true),
+  acknowledgment_reports boolean not null check (acknowledgment_reports is true),
+  acknowledgment_changes boolean not null check (acknowledgment_changes is true),
+  status text not null default 'novo' check (status in ('novo', 'em_analise')),
+  created_at timestamptz not null default now()
+);
+
 alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
 
 alter table public.admin_users enable row level security;
 alter table public.internships enable row level security;
+alter table public.tce_requests enable row level security;
+
+revoke all on table public.tce_requests from anon;
+grant select, update, delete on table public.tce_requests to authenticated;
 
 create or replace function public.is_coeri_admin()
 returns boolean
@@ -60,6 +110,53 @@ drop policy if exists "Administradores atualizam estágios" on public.internship
 create policy "Administradores atualizam estágios" on public.internships for update to authenticated using (public.is_coeri_admin()) with check (public.is_coeri_admin());
 drop policy if exists "Administradores excluem estágios" on public.internships;
 create policy "Administradores excluem estágios" on public.internships for delete to authenticated using (public.is_coeri_admin());
+
+-- Não há política pública de INSERT. O formulário envia os dados exclusivamente
+-- pela Edge Function submit-tce, que valida o CAPTCHA e usa a service role.
+-- Assim, visitantes não conseguem consultar nem gravar diretamente nesta tabela.
+drop policy if exists "Estudantes enviam solicitações de TCE" on public.tce_requests;
+drop policy if exists "Administradores consultam solicitações de TCE" on public.tce_requests;
+create policy "Administradores consultam solicitações de TCE" on public.tce_requests for select to authenticated using (public.is_coeri_admin());
+drop policy if exists "Administradores atualizam solicitações de TCE" on public.tce_requests;
+create policy "Administradores atualizam solicitações de TCE" on public.tce_requests for update to authenticated using (public.is_coeri_admin()) with check (public.is_coeri_admin());
+drop policy if exists "Administradores excluem solicitações de TCE" on public.tce_requests;
+create policy "Administradores excluem solicitações de TCE" on public.tce_requests for delete to authenticated using (public.is_coeri_admin());
+
+create or replace function public.process_tce_request(
+  p_request_id uuid,
+  p_internship_number text,
+  p_partial_report_date date,
+  p_final_report_date date,
+  p_insurance_provider text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r public.tce_requests%rowtype;
+  new_id uuid;
+begin
+  if not public.is_coeri_admin() then raise exception 'Acesso não autorizado'; end if;
+  select * into r from public.tce_requests where id = p_request_id for update;
+  if not found then raise exception 'Solicitação não encontrada'; end if;
+  insert into public.internships (
+    internship_number, student_name, student_cpf, student_sex, student_birth_date,
+    student_email, student_whatsapp, course, company_name, expected_end_date,
+    partial_report_date, final_report_date, insurance_provider, notes
+  ) values (
+    nullif(trim(p_internship_number), ''), r.student_name, r.student_cpf, r.student_sex, r.student_birth_date,
+    r.student_email, r.student_phone, r.student_course, r.company_name, r.expected_end_date,
+    p_partial_report_date, p_final_report_date, p_insurance_provider,
+    'Solicitação de TCE processada em ' || to_char(now(), 'DD/MM/YYYY') || '. Modalidade: ' || r.internship_modality || '.'
+  ) returning id into new_id;
+  delete from public.tce_requests where id = p_request_id;
+  return new_id;
+end;
+$$;
+
+revoke all on function public.process_tce_request(uuid,text,date,date,text) from public;
+grant execute on function public.process_tce_request(uuid,text,date,date,text) to authenticated;
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql set search_path = public as $$
