@@ -56,6 +56,67 @@ function buildWeeklySchedule() {
   return schedule.join('\n');
 }
 
+const digits = value => value.replace(/\D/g, '');
+
+function formatCpf(value) {
+  const number = digits(value).slice(0, 11);
+  return number.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function formatCnpj(value) {
+  const number = digits(value).slice(0, 14);
+  return number.replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+function formatPhone(value) {
+  const number = digits(value).slice(0, 11);
+  if (number.length <= 2) return number ? `(${number}` : '';
+  if (number.length <= 7) return `(${number.slice(0, 2)}) ${number.slice(2)}`;
+  return `(${number.slice(0, 2)}) ${number.slice(2, 7)}-${number.slice(7)}`;
+}
+
+function validCpf(value) {
+  const number = digits(value);
+  if (number.length !== 11 || /^(\d)\1+$/.test(number)) return false;
+  const check = size => {
+    let sum = 0;
+    for (let index = 0; index < size; index++) sum += Number(number[index]) * (size + 1 - index);
+    const remainder = (sum * 10) % 11;
+    return Number(number[size]) === (remainder === 10 ? 0 : remainder);
+  };
+  return check(9) && check(10);
+}
+
+function validCnpj(value) {
+  const number = digits(value);
+  if (number.length !== 14 || /^(\d)\1+$/.test(number)) return false;
+  const calculate = base => {
+    let weight = base.length - 7;
+    const sum = [...base].reduce((total, digit) => {
+      const result = total + Number(digit) * weight--;
+      if (weight < 2) weight = 9;
+      return result;
+    }, 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const first = calculate(number.slice(0, 12));
+  const second = calculate(number.slice(0, 12) + first);
+  return number.endsWith(`${first}${second}`);
+}
+
+function validateDocuments() {
+  const cpfFields = [...form.querySelectorAll('.mask-cpf')].filter(field => !field.disabled && field.required);
+  for (const field of cpfFields) {
+    field.setCustomValidity(validCpf(field.value) ? '' : 'Informe um CPF válido.');
+    if (!field.checkValidity()) { field.reportValidity(); field.focus(); return false; }
+  }
+  const cnpj = form.querySelector('.mask-cnpj');
+  cnpj.setCustomValidity(validCnpj(cnpj.value) ? '' : 'Informe um CNPJ válido.');
+  if (!cnpj.checkValidity()) { cnpj.reportValidity(); cnpj.focus(); return false; }
+  return true;
+}
+
 function initializeForm() {
   if ((!config.turnstileSiteKey && !previewMode) || !config.url || !config.anonKey) return;
   $('#legacy-forms').hidden = true;
@@ -89,6 +150,9 @@ function initializeForm() {
   form.elements.activity_plan.addEventListener('input', () => {
     $('#activity-count').textContent = `${form.elements.activity_plan.value.length}/50 caracteres mínimos`;
   });
+  form.querySelectorAll('.mask-cpf').forEach(field => field.addEventListener('input', () => { field.value = formatCpf(field.value); field.setCustomValidity(''); }));
+  form.querySelectorAll('.mask-cnpj').forEach(field => field.addEventListener('input', () => { field.value = formatCnpj(field.value); field.setCustomValidity(''); }));
+  form.querySelectorAll('.mask-phone').forEach(field => field.addEventListener('input', () => { field.value = formatPhone(field.value); }));
   document.querySelectorAll('.weekday-check').forEach(check => check.addEventListener('change', () => {
     const row = check.closest('.weekday-row');
     const timeFields = [...row.querySelectorAll('input[type="time"]')];
@@ -118,6 +182,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   const message = $('#tce-form-message');
   const email = form.elements.student_email.value.trim().toLowerCase();
+  if (!validateDocuments()) return;
   if (!/^[^@\s]+@estudante\.ifms\.edu\.br$/.test(email)) {
     message.textContent = 'Use seu e-mail institucional @estudante.ifms.edu.br.';
     form.elements.student_email.focus();
