@@ -116,6 +116,10 @@ function detailItem(label, value) {
   return item;
 }
 
+function requestProtocol(request) {
+  return request.id.slice(0, 8).toUpperCase();
+}
+
 function renderTceRequests() {
   tceList.replaceChildren();
   $('#tce-request-count').textContent = tceRequests.length;
@@ -133,7 +137,7 @@ function renderTceRequests() {
     const summary = document.createElement('p');
     summary.textContent = `${request.student_course} · ${request.company_name}`;
     const received = document.createElement('small');
-    received.textContent = `Recebido em ${new Date(request.created_at).toLocaleString('pt-BR')}`;
+    received.textContent = `Protocolo ${requestProtocol(request)} · Recebido em ${new Date(request.created_at).toLocaleString('pt-BR')}`;
     main.append(tag, title, summary, received);
     const button = document.createElement('button');
     button.className = 'admin-button primary';
@@ -155,6 +159,7 @@ function openTceDialog(request) {
   const details = $('#tce-request-details');
   details.replaceChildren();
   const fields = [
+    ['Protocolo', requestProtocol(request)],
     ['Tipo', request.request_type === 'interno' ? 'Estágio interno' : 'Estágio externo'],
     ['CPF', request.student_cpf], ['Sexo', request.student_sex], ['Nascimento', formatDate(request.student_birth_date)],
     ['E-mail', request.student_email], ['WhatsApp', request.student_phone], ['Curso', request.student_course], ['Período', request.student_period],
