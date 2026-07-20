@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Solicitação do Termo de Compromisso de Estágio do IFMS Campus Três Lagoas.">
   <title>Solicitação de TCE | COERI</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260720-1">
+  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260720-2">
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -42,7 +42,19 @@
         <label class="field">Professor orientador<select name="advisor_name" required><option value="">Converse com o docente antes de selecionar</option><option>Alex Fernando Araújo</option><option>Leonardo Castelli Rister</option><option>Ápio Carniello e Silva</option><option>Diogo Ramalho de Oliveira</option><option>Fernando Honório da Silva</option><option>Jose Roberto Campos</option><option>Maraísa da Silva Guerra Asseiss</option><option>Marco Aurelio Ferreira</option><option>Marcus Felipe Calori Jorgetto</option><option>Kader Carvalho Assad</option></select></label>
         <fieldset class="field"><legend>O estágio será remunerado?</legend><div class="choice-row"><label><input type="radio" name="is_paid" value="true" required> Sim</label><label><input type="radio" name="is_paid" value="false"> Não</label></div></fieldset>
         <label class="field" id="scholarship-field" hidden>Valor da bolsa (R$)<input name="scholarship_amount" type="number" min="0" step="0.01"></label>
-        <label class="field full">Carga horária semanal <small>Máximo de 6h/dia e 30h/semana. Ex.: segunda, 7h às 11h.</small><textarea name="weekly_schedule" required rows="3" maxlength="1500"></textarea></label>
+        <fieldset class="field full weekly-schedule"><legend>Carga horária semanal</legend>
+          <div class="callout orange schedule-warning"><strong>Atenção ao limite diário</strong><p>A jornada de estágio deve respeitar o máximo de 6 horas por dia. Marque os dias e informe os horários de entrada e saída.</p></div>
+          <div class="weekday-grid">
+            <div class="weekday-row" data-weekday="Segunda-feira"><label><input type="checkbox" class="weekday-check"> Segunda-feira</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada na segunda-feira" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída na segunda-feira" disabled></div></div>
+            <div class="weekday-row" data-weekday="Terça-feira"><label><input type="checkbox" class="weekday-check"> Terça-feira</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada na terça-feira" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída na terça-feira" disabled></div></div>
+            <div class="weekday-row" data-weekday="Quarta-feira"><label><input type="checkbox" class="weekday-check"> Quarta-feira</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada na quarta-feira" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída na quarta-feira" disabled></div></div>
+            <div class="weekday-row" data-weekday="Quinta-feira"><label><input type="checkbox" class="weekday-check"> Quinta-feira</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada na quinta-feira" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída na quinta-feira" disabled></div></div>
+            <div class="weekday-row" data-weekday="Sexta-feira"><label><input type="checkbox" class="weekday-check"> Sexta-feira</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada na sexta-feira" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída na sexta-feira" disabled></div></div>
+            <div class="weekday-row" data-weekday="Sábado"><label><input type="checkbox" class="weekday-check"> Sábado</label><div class="time-range"><input type="time" class="time-start" aria-label="Entrada no sábado" disabled><span>até</span><input type="time" class="time-end" aria-label="Saída no sábado" disabled></div></div>
+          </div>
+          <input name="weekly_schedule" type="hidden">
+          <p id="schedule-message" class="field-error" role="alert"></p>
+        </fieldset>
         <label class="field">Data de início<input name="start_date" type="date" required></label><label class="field">Previsão de encerramento<input name="expected_end_date" type="date" required></label>
         <label class="field full">Setor do estágio<input name="internship_sector" required maxlength="180"></label>
         <label class="field full">Plano de atividades <small>Converse com o supervisor e descreva as atividades. Mínimo de 50 caracteres.</small><textarea name="activity_plan" required minlength="50" maxlength="6000" rows="6"></textarea><span id="activity-count">0/50 caracteres mínimos</span></label>
@@ -67,5 +79,5 @@
   </div></div></section>
 </main>
 <footer class="site-footer"><div class="container"><div class="footer-grid"><div><h3>COERI · Estágios</h3><p>IFMS Campus Três Lagoas</p></div><div><h3>Precisa de ajuda?</h3><a href="como-comecar">Veja como começar</a></div><div><h3>Contato</h3><a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a></div></div></div></footer>
-<script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-2"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/tce-form.js?v=20260720-2"></script>
+<script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-2"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/tce-form.js?v=20260720-3"></script>
 </body></html>

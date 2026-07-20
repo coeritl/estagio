@@ -24,6 +24,38 @@ function setConditional(name, expected, container, fields) {
   });
 }
 
+function buildWeeklySchedule() {
+  const selected = [...document.querySelectorAll('.weekday-row')].filter(row => $('.weekday-check', row).checked);
+  const scheduleMessage = $('#schedule-message');
+  if (!selected.length) {
+    scheduleMessage.textContent = 'Marque pelo menos um dia da semana.';
+    return '';
+  }
+  const schedule = [];
+  for (const row of selected) {
+    const start = $('.time-start', row).value;
+    const end = $('.time-end', row).value;
+    if (!start || !end) {
+      scheduleMessage.textContent = `Informe os horários de entrada e saída de ${row.dataset.weekday.toLowerCase()}.`;
+      return '';
+    }
+    const [startHour, startMinute] = start.split(':').map(Number);
+    const [endHour, endMinute] = end.split(':').map(Number);
+    const duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+    if (duration <= 0) {
+      scheduleMessage.textContent = `O horário de saída de ${row.dataset.weekday.toLowerCase()} deve ser posterior ao de entrada.`;
+      return '';
+    }
+    if (duration > 360) {
+      scheduleMessage.textContent = `${row.dataset.weekday} ultrapassa o limite de 6 horas diárias.`;
+      return '';
+    }
+    schedule.push(`${row.dataset.weekday}: ${start} / ${end}`);
+  }
+  scheduleMessage.textContent = '';
+  return schedule.join('\n');
+}
+
 function initializeForm() {
   if ((!config.turnstileSiteKey && !previewMode) || !config.url || !config.anonKey) return;
   $('#legacy-forms').hidden = true;
@@ -57,6 +89,16 @@ function initializeForm() {
   form.elements.activity_plan.addEventListener('input', () => {
     $('#activity-count').textContent = `${form.elements.activity_plan.value.length}/50 caracteres mínimos`;
   });
+  document.querySelectorAll('.weekday-check').forEach(check => check.addEventListener('change', () => {
+    const row = check.closest('.weekday-row');
+    const timeFields = [...row.querySelectorAll('input[type="time"]')];
+    timeFields.forEach(field => {
+      field.disabled = !check.checked;
+      field.required = check.checked;
+      if (!check.checked) field.value = '';
+    });
+    $('#schedule-message').textContent = '';
+  }));
 
   const waitForTurnstile = setInterval(() => {
     if (!window.turnstile) return;
@@ -85,6 +127,12 @@ form.addEventListener('submit', async event => {
     form.elements.start_date.focus();
     return;
   }
+  const weeklySchedule = buildWeeklySchedule();
+  if (!weeklySchedule) {
+    $('.weekly-schedule').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  form.elements.weekly_schedule.value = weeklySchedule;
   if (!captchaToken) { message.textContent = 'Confirme o CAPTCHA antes de enviar.'; return; }
 
   const submit = form.querySelector('[type="submit"]');
@@ -94,6 +142,7 @@ form.addEventListener('submit', async event => {
   const values = Object.fromEntries(new FormData(form).entries());
   const payload = {
     ...values,
+    weekly_schedule: weeklySchedule,
     student_email: email,
     is_minor: values.is_minor === 'true',
     is_paid: values.is_paid === 'true',
@@ -111,6 +160,7 @@ form.addEventListener('submit', async event => {
     const { data, error } = await supabase.functions.invoke('submit-tce', { body: { token: captchaToken, payload } });
     if (error) throw new Error(data?.error || error.message);
     form.reset();
+    document.querySelectorAll('.weekday-row input[type="time"]').forEach(field => { field.disabled = true; field.required = false; });
     $('#guardian-fields').hidden = true;
     $('#scholarship-field').hidden = true;
     form.elements.start_date.min = addBusinessDays(new Date(), 5);
