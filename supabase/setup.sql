@@ -67,6 +67,7 @@ create table if not exists public.tce_requests (
   activity_plan text not null check (char_length(activity_plan) >= 50),
   supervisor_name text not null,
   supervisor_email text not null,
+  supervisor_phone text not null,
   supervisor_education text not null,
   supervisor_experience text not null,
   requires_epi boolean not null,
@@ -81,6 +82,7 @@ create table if not exists public.tce_requests (
 
 alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
+alter table public.tce_requests add column if not exists supervisor_phone text;
 
 alter table public.admin_users enable row level security;
 alter table public.internships enable row level security;

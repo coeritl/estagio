@@ -88,6 +88,7 @@ export default { async fetch(request: Request) {
       activity_plan: text(input.activity_plan, 6000),
       supervisor_name: text(input.supervisor_name, 180),
       supervisor_email: text(input.supervisor_email, 254),
+      supervisor_phone: text(input.supervisor_phone, 30),
       supervisor_education: text(input.supervisor_education, 80),
       supervisor_experience: text(input.supervisor_experience, 1000),
       requires_epi: requiresEpi,
@@ -103,7 +104,7 @@ export default { async fetch(request: Request) {
       "student_course", "student_period", "student_phone", "company_name", "company_cnpj",
       "company_email", "company_phone", "internship_modality", "advisor_name", "weekly_schedule",
       "start_date", "expected_end_date", "internship_sector", "activity_plan", "supervisor_name",
-      "supervisor_email", "supervisor_education", "supervisor_experience", "epi_types",
+      "supervisor_email", "supervisor_phone", "supervisor_education", "supervisor_experience", "epi_types",
     ] as const;
     if (required.some((field) => !payload[field])) return response(origin, 400, { error: "Preencha todos os campos obrigatórios." });
     if (payload.activity_plan.length < 50) return response(origin, 400, { error: "O plano de atividades deve ter pelo menos 50 caracteres." });

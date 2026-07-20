@@ -62,6 +62,7 @@
 
       <section class="form-section"><h2>3. Supervisor e segurança</h2><div class="form-grid">
         <label class="field">Nome completo do supervisor<input name="supervisor_name" required maxlength="180"></label><label class="field">E-mail do supervisor<input name="supervisor_email" type="email" required maxlength="254"></label>
+        <label class="field">WhatsApp do supervisor<input name="supervisor_phone" type="tel" required maxlength="30" placeholder="(67) 99999-9999"></label>
         <label class="field">Grau de formação<select name="supervisor_education" required><option value="">Selecione</option><option>Ensino Médio Completo</option><option>Superior Completo</option><option>Especialização</option><option>Mestrado</option><option>Doutorado</option></select></label><label class="field">Formação ou experiência profissional<textarea name="supervisor_experience" required rows="3" maxlength="1000"></textarea></label>
         <fieldset class="field full"><legend>Alguma atividade poderá necessitar de EPI?</legend><div class="choice-row"><label><input type="radio" name="requires_epi" value="true" required> Sim</label><label><input type="radio" name="requires_epi" value="false"> Não</label></div></fieldset>
         <label class="field full" id="epi-field">Tipos de EPI <small>Se não houver necessidade, o sistema registrará “Não se aplica”.</small><textarea name="epi_types" rows="3" maxlength="1000"></textarea></label>
