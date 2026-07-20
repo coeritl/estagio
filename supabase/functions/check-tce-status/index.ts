@@ -7,6 +7,7 @@ const labels = {
   em_processamento: "Em processamento pela COERI",
   tce_gerado: "TCE gerado e enviado para assinaturas",
   pendente_correcao: "Pendente de correção",
+  tce_negado: "TCE negado — consulte a COERI",
 };
 
 function headers(origin: string | null) {
@@ -40,10 +41,10 @@ export default { async fetch(request: Request) {
     if (!captcha.success) return answer(origin, 403, { error: "Não foi possível validar o CAPTCHA. Tente novamente." });
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-    const { data, error } = await supabase.from("tce_protocol_statuses").select("status,public_note,updated_at").eq("protocol", normalized).maybeSingle();
+    const { data, error } = await supabase.from("tce_protocol_statuses").select("status,public_note,document_url,updated_at").eq("protocol", normalized).maybeSingle();
     if (error) throw error;
     if (!data) return answer(origin, 404, { error: "Protocolo não encontrado. Confira os caracteres informados." });
-    return answer(origin, 200, { status: data.status, label: labels[data.status], note: data.public_note, updated_at: data.updated_at });
+    return answer(origin, 200, { status: data.status, label: labels[data.status], note: data.public_note, document_url: data.status === "tce_gerado" ? data.document_url : null, updated_at: data.updated_at });
   } catch (error) {
     console.error(error);
     return answer(origin, 500, { error: "Não foi possível consultar o protocolo agora." });

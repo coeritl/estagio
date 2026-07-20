@@ -32,7 +32,31 @@ form.addEventListener('submit', async event => {
     if (error) throw new Error(data?.error || 'Não foi possível localizar o protocolo.');
     document.querySelector('#protocol-result-code').textContent = input.value;
     document.querySelector('#protocol-result-status').textContent = data.label;
-    document.querySelector('#protocol-result-note').textContent = data.note || (data.status === 'recebido' ? 'Sua solicitação foi registrada e aguarda processamento pela COERI.' : 'Acompanhe esta página para novas atualizações.');
+    const defaultNotes = {
+      recebido: 'Sua solicitação foi registrada e aguarda processamento pela COERI.',
+      em_processamento: 'A COERI está conferindo as informações e preparando o seu TCE.',
+      pendente_correcao: 'Existem informações que precisam ser corrigidas. Consulte a orientação abaixo.',
+      tce_gerado: 'O documento foi gerado e enviado para assinaturas.',
+      tce_negado: 'Não foi possível dar continuidade à solicitação. Consulte a COERI.'
+    };
+    document.querySelector('#protocol-result-note').textContent = data.note || defaultNotes[data.status] || 'Acompanhe esta página para novas atualizações.';
+    result.className = `protocol-result status-${data.status}`;
+    const completedByStatus = {
+      recebido: [],
+      em_processamento: ['recebido'],
+      pendente_correcao: ['recebido', 'em_processamento'],
+      tce_gerado: ['recebido', 'em_processamento'],
+      tce_negado: ['recebido', 'em_processamento']
+    };
+    document.querySelectorAll('.timeline-step').forEach(step => {
+      const stepStatus = step.dataset.status;
+      step.classList.toggle('is-complete', completedByStatus[data.status]?.includes(stepStatus));
+      step.classList.toggle('is-current', stepStatus === data.status);
+    });
+    const documentLink = document.querySelector('#protocol-document-link');
+    const validDocumentUrl = data.status === 'tce_gerado' && /^https:\/\//i.test(data.document_url || '');
+    documentLink.hidden = !validDocumentUrl;
+    documentLink.href = validDocumentUrl ? data.document_url : '#';
     document.querySelector('#protocol-result-date').textContent = `Atualizado em ${new Date(data.updated_at).toLocaleString('pt-BR')}`;
     result.hidden = false;
     message.textContent = '';

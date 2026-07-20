@@ -114,8 +114,9 @@
         <h3>Status público da solicitação</h3>
         <p>O estudante verá somente o status, a observação e a data da atualização ao consultar o protocolo.</p>
         <div class="admin-form-grid">
-          <label class="full">Status<select id="tce-public-status"><option value="recebido">Recebido pela COERI</option><option value="em_processamento">Em processamento pela COERI</option><option value="pendente_correcao">Pendente de correção</option><option value="tce_gerado">TCE gerado e enviado para assinaturas</option></select></label>
+          <label class="full">Status<select id="tce-public-status"><option value="recebido">Recebido pela COERI</option><option value="em_processamento">Em processamento pela COERI</option><option value="pendente_correcao">Pendente de correção</option><option value="tce_gerado">TCE gerado e enviado para assinaturas</option><option value="tce_negado">TCE negado — consulte a COERI</option></select></label>
           <label class="full" id="tce-public-note-field">Observações para o estudante<textarea id="tce-public-note" rows="3" maxlength="1000" placeholder="Informe o que deve ser corrigido ou complementado."></textarea></label>
+          <label class="full" id="tce-document-url-field" hidden>Link do documento no Autentique<input id="tce-document-url" type="url" maxlength="1000" placeholder="https://app.autentique.com.br/..."></label>
         </div>
         <p class="form-message" id="tce-status-message" role="alert"></p>
         <div class="status-actions"><button class="admin-button ghost" id="save-tce-status" type="button">Salvar status e observação</button></div>
@@ -152,6 +153,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-15"></script>
+  <script type="module" src="assets/admin.js?v=20260720-16"></script>
 </body>
 </html>

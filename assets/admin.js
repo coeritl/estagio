@@ -127,11 +127,16 @@ const publicStatusLabels = {
   recebido: 'Recebido pela COERI',
   em_processamento: 'Em processamento pela COERI',
   tce_gerado: 'TCE gerado e enviado para assinaturas',
-  pendente_correcao: 'Pendente de correção'
+  pendente_correcao: 'Pendente de correção',
+  tce_negado: 'TCE negado — consulte a COERI'
 };
 
 function protocolStatus(request) {
   return protocolStatuses.find(item => item.protocol === request.public_protocol) || null;
+}
+
+function syncTceStatusFields() {
+  $('#tce-document-url-field').hidden = $('#tce-public-status').value !== 'tce_gerado';
 }
 
 function renderTceRequests() {
@@ -177,6 +182,8 @@ function openTceDialog(request) {
   const currentStatus = protocolStatus(request);
   $('#tce-public-status').value = currentStatus?.status || 'recebido';
   $('#tce-public-note').value = currentStatus?.public_note || '';
+  $('#tce-document-url').value = currentStatus?.document_url || '';
+  syncTceStatusFields();
   const details = $('#tce-request-details');
   details.replaceChildren();
   const fields = [
@@ -363,6 +370,12 @@ tceProcessForm.addEventListener('submit', async event => {
   event.preventDefault();
   const button = tceProcessForm.querySelector('[type="submit"]');
   const message = $('#tce-process-message');
+  const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
+  const savedPublicStatus = request ? protocolStatus(request) : null;
+  if (!savedPublicStatus || savedPublicStatus.status !== 'tce_gerado' || !/^https:\/\//i.test(savedPublicStatus.document_url || '')) {
+    message.textContent = 'Antes de registrar no acompanhamento, selecione “TCE gerado”, informe o link do Autentique e salve o status.';
+    return;
+  }
   button.disabled = true;
   message.textContent = 'Registrando no acompanhamento…';
   const { error } = await supabase.rpc('process_tce_request', {
@@ -394,20 +407,28 @@ $('#save-tce-status').addEventListener('click', async () => {
   if (!request?.public_protocol) { message.textContent = 'Esta solicitação antiga não possui protocolo público.'; return; }
   const status = $('#tce-public-status').value;
   const publicNote = $('#tce-public-note').value.trim();
+  const documentUrl = $('#tce-document-url').value.trim();
   if (status === 'pendente_correcao' && !publicNote) {
     message.textContent = 'Informe o que o estudante precisa corrigir.';
     $('#tce-public-note').focus();
     return;
   }
+  if (status === 'tce_gerado' && !/^https:\/\//i.test(documentUrl)) {
+    message.textContent = 'Informe o link completo do documento no Autentique.';
+    $('#tce-document-url').focus();
+    return;
+  }
   const button = $('#save-tce-status');
   button.disabled = true;
   message.textContent = 'Salvando…';
-  const { error } = await supabase.from('tce_protocol_statuses').update({ status, public_note: publicNote || null }).eq('protocol', request.public_protocol);
+  const { error } = await supabase.from('tce_protocol_statuses').update({ status, public_note: publicNote || null, document_url: status === 'tce_gerado' ? documentUrl : null }).eq('protocol', request.public_protocol);
   button.disabled = false;
   if (error) { message.textContent = 'Não foi possível atualizar o status.'; return; }
   message.textContent = 'Status público atualizado.';
   await loadRecords();
 });
+
+$('#tce-public-status').addEventListener('change', syncTceStatusFields);
 
 function exportIfmsInsuranceList() {
   const now = new Date();
