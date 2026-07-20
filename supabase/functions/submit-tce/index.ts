@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
@@ -26,7 +27,7 @@ function response(origin: string | null, status: number, body: Record<string, un
 const text = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 const bool = (value: unknown) => value === true;
 
-Deno.serve(async (request) => {
+export default { async fetch(request: Request) {
   const origin = request.headers.get("origin");
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
   if (request.method !== "POST") return response(origin, 405, { error: "Método não permitido." });
@@ -125,4 +126,4 @@ Deno.serve(async (request) => {
     console.error(error);
     return response(origin, 500, { error: "Não foi possível registrar a solicitação. Tente novamente mais tarde." });
   }
-});
+} };

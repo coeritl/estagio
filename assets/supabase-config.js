@@ -5,5 +5,5 @@ window.SUPABASE_CONFIG = {
   url: "https://ztppjygemmejgnovijgy.supabase.co",
   anonKey: "sb_publishable_ZBd5OlaSszk3gMZz8qxa6Q_oRDXPZ8j",
   // Chave pública do widget Cloudflare Turnstile. A chave secreta fica somente no Supabase.
-  turnstileSiteKey: ""
+  turnstileSiteKey: "0x4AAAAAAD6CNkG1oVqmwE-7"
 };
