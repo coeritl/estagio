@@ -204,13 +204,13 @@ list.addEventListener('click', async event => {
 
 function exportIfmsInsuranceList() {
   const now = new Date();
-  const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const firstDayOfCoverageWindow = new Date(now.getFullYear(), now.getMonth() - 2, 1);
   const eligible = records
-    .filter(record => record.status === 'em_andamento' && record.insurance_provider === 'IFMS' && record.expected_end_date && localDate(record.expected_end_date) >= firstDayOfNextMonth)
+    .filter(record => record.status === 'em_andamento' && record.insurance_provider === 'IFMS' && record.expected_end_date && localDate(record.expected_end_date) >= firstDayOfCoverageWindow)
     .sort((a, b) => a.student_name.localeCompare(b.student_name, 'pt-BR'));
   if (!eligible.length) { alert('Nenhum estagiário atende aos critérios da lista do seguro IFMS.'); return; }
   const csvCell = value => `"${String(value || '').replaceAll('"', '""')}"`;
-  const rows = [['CPF', 'Nome', 'Sexo', 'Data de nascimento'], ...eligible.map(record => [record.student_cpf, record.student_name, record.student_sex, formatDate(record.student_birth_date)])];
+  const rows = [['CPF', 'Nome', 'Sexo', 'Data de nascimento'], ...eligible.map(record => [record.student_cpf, record.student_name, record.student_sex || 'Não informado', formatDate(record.student_birth_date)])];
   const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
