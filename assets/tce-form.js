@@ -247,7 +247,19 @@ form.addEventListener('submit', async event => {
     window.turnstile.reset(widgetId);
     captchaToken = '';
     message.classList.add('success');
-    message.textContent = `Solicitação enviada à COERI. Protocolo: ${protocol}. Guarde este número para acompanhar o andamento.`;
+    const confirmationTitle = document.createElement('strong');
+    confirmationTitle.textContent = 'Solicitação enviada à COERI.';
+    const protocolLine = document.createElement('strong');
+    protocolLine.className = 'protocol-number';
+    protocolLine.textContent = `PROTOCOLO: ${protocol}`;
+    const saveInstruction = document.createElement('strong');
+    saveInstruction.textContent = 'Salve este número ou tire uma captura de tela. Ele será necessário para acompanhar sua solicitação.';
+    const consultationInstruction = document.createElement('span');
+    consultationInstruction.textContent = 'Para consultar posteriormente, acesse “Consultar protocolo” e informe o número acima.';
+    const consultationLink = document.createElement('a');
+    consultationLink.href = 'consultar-protocolo';
+    consultationLink.textContent = 'Consultar protocolo';
+    message.replaceChildren(confirmationTitle, protocolLine, saveInstruction, consultationInstruction, consultationLink);
     message.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
