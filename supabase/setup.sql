@@ -24,12 +24,17 @@ create table if not exists public.internships (
   expected_end_date date,
   partial_report_date date,
   final_report_date date,
+  partial_reminder_sent_at timestamptz,
+  final_reminder_sent_at timestamptz,
   insurance_provider text check (insurance_provider in ('IFMS', 'Empresa concedente')),
   notes text,
   completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
+alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
 
 alter table public.admin_users enable row level security;
 alter table public.internships enable row level security;

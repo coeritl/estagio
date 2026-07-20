@@ -5,6 +5,7 @@ const loginForm = $('#login-form');
 const loginMessage = $('#login-message');
 const setupNotice = $('#setup-notice');
 const list = $('#internship-list');
+const sentList = $('#sent-internship-list');
 const emptyState = $('#empty-state');
 const internshipDialog = $('#internship-dialog');
 const internshipForm = $('#internship-form');
@@ -52,10 +53,27 @@ function deadlineState(value) {
 
 function recordState(record) {
   if (record.status === 'concluido') return 'completed';
-  const states = [record.partial_report_date, record.final_report_date, record.expected_end_date].map(deadlineState);
+  const dates = [
+    record.partial_reminder_sent_at ? null : record.partial_report_date,
+    record.final_reminder_sent_at ? null : record.final_report_date,
+    record.expected_end_date
+  ];
+  const states = dates.map(deadlineState);
   if (states.some(state => state.className === 'due')) return 'due';
   if (states.some(state => state.className === 'soon')) return 'soon';
   return 'active';
+}
+
+function reminderDue(record, type) {
+  const date = type === 'partial' ? record.partial_report_date : record.final_report_date;
+  const sentAt = type === 'partial' ? record.partial_reminder_sent_at : record.final_reminder_sent_at;
+  const days = daysFromToday(date);
+  return days !== null && days <= 0 && !sentAt;
+}
+
+function belongsToSentList(record) {
+  const hasSentReminder = Boolean(record.partial_reminder_sent_at || record.final_reminder_sent_at);
+  return hasSentReminder && !reminderDue(record, 'partial') && !reminderDue(record, 'final');
 }
 
 function emailMessage(record, type) {
@@ -87,6 +105,39 @@ function renderDeadline(container, value) {
   $('small', container).textContent = state.label;
 }
 
+function renderCard(record, target) {
+  const card = $('#internship-card-template').content.firstElementChild.cloneNode(true);
+  const state = recordState(record);
+  card.dataset.id = record.id;
+  card.classList.add(`status-${state}`);
+  $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+  $('.internship-number', card).textContent = record.internship_number ? `Estágio nº ${record.internship_number}` : 'Número pendente';
+  $('.student-name', card).textContent = record.student_name;
+  $('.course-company', card).textContent = `${record.course} · ${record.company_name}`;
+  const email = $('.student-email', card);
+  email.textContent = record.student_email || 'E-mail pendente';
+  if (record.student_email) email.href = `mailto:${record.student_email}`;
+  const whatsapp = $('.student-whatsapp', card);
+  whatsapp.textContent = record.student_whatsapp ? `WhatsApp: ${record.student_whatsapp}` : 'WhatsApp pendente';
+  if (record.student_whatsapp) {
+    whatsapp.href = `https://wa.me/55${record.student_whatsapp.replace(/\D/g, '')}`;
+    whatsapp.target = '_blank';
+    whatsapp.rel = 'noopener';
+  }
+  $('.insurance', card).textContent = record.insurance_provider ? `Seguro: ${record.insurance_provider}` : 'Seguro pendente';
+  renderDeadline($('.partial', card), record.partial_report_date);
+  renderDeadline($('.final', card), record.final_report_date);
+  renderDeadline($('.end', card), record.expected_end_date);
+  const partialCheck = $('[data-reminder-type="partial"]', card);
+  partialCheck.checked = Boolean(record.partial_reminder_sent_at);
+  partialCheck.disabled = !record.partial_report_date;
+  const finalCheck = $('[data-reminder-type="final"]', card);
+  finalCheck.checked = Boolean(record.final_reminder_sent_at);
+  finalCheck.disabled = !record.final_report_date;
+  $('.notes', card).textContent = record.notes || '';
+  target.append(card);
+}
+
 function render() {
   const query = $('#search-input').value.trim().toLocaleLowerCase('pt-BR');
   const deadline = $('#deadline-filter').value;
@@ -99,35 +150,16 @@ function render() {
   $('#stat-active').textContent = records.filter(record => record.status === 'em_andamento').length;
   $('#stat-due').textContent = records.filter(record => recordState(record) === 'due').length;
   $('#stat-soon').textContent = records.filter(record => recordState(record) === 'soon').length;
+  const pending = filtered.filter(record => !belongsToSentList(record));
+  const sent = filtered.filter(belongsToSentList);
   list.replaceChildren();
+  sentList.replaceChildren();
   emptyState.hidden = filtered.length > 0;
-
-  filtered.forEach(record => {
-    const card = $('#internship-card-template').content.firstElementChild.cloneNode(true);
-    const state = recordState(record);
-    card.dataset.id = record.id;
-    card.classList.add(`status-${state}`);
-    $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
-    $('.internship-number', card).textContent = record.internship_number ? `Estágio nº ${record.internship_number}` : 'Número pendente';
-    $('.student-name', card).textContent = record.student_name;
-    $('.course-company', card).textContent = `${record.course} · ${record.company_name}`;
-    const email = $('.student-email', card);
-    email.textContent = record.student_email || 'E-mail pendente';
-    if (record.student_email) email.href = `mailto:${record.student_email}`;
-    const whatsapp = $('.student-whatsapp', card);
-    whatsapp.textContent = record.student_whatsapp ? `WhatsApp: ${record.student_whatsapp}` : 'WhatsApp pendente';
-    if (record.student_whatsapp) {
-      whatsapp.href = `https://wa.me/55${record.student_whatsapp.replace(/\D/g, '')}`;
-      whatsapp.target = '_blank';
-      whatsapp.rel = 'noopener';
-    }
-    $('.insurance', card).textContent = record.insurance_provider ? `Seguro: ${record.insurance_provider}` : 'Seguro pendente';
-    renderDeadline($('.partial', card), record.partial_report_date);
-    renderDeadline($('.final', card), record.final_report_date);
-    renderDeadline($('.end', card), record.expected_end_date);
-    $('.notes', card).textContent = record.notes || '';
-    list.append(card);
-  });
+  $('#pending-list-count').textContent = pending.length;
+  $('#sent-list-count').textContent = sent.length;
+  $('#sent-group').hidden = sent.length === 0;
+  pending.forEach(record => renderCard(record, list));
+  sent.forEach(record => renderCard(record, sentList));
 }
 
 function openInternshipDialog(record = null) {
@@ -188,10 +220,19 @@ internshipForm.addEventListener('submit', async event => {
   await loadRecords();
 });
 
-list.addEventListener('click', async event => {
+async function handleCardAction(event) {
   const card = event.target.closest('.internship-card');
   if (!card) return;
   const record = records.find(item => item.id === card.dataset.id);
+  const sentCheck = event.target.closest('.reminder-sent');
+  if (sentCheck) {
+    const column = sentCheck.dataset.reminderType === 'partial' ? 'partial_reminder_sent_at' : 'final_reminder_sent_at';
+    sentCheck.disabled = true;
+    const { error } = await supabase.from('internships').update({ [column]: sentCheck.checked ? new Date().toISOString() : null }).eq('id', record.id);
+    if (error) { alert('Não foi possível atualizar o aviso. Tente novamente.'); sentCheck.checked = !sentCheck.checked; sentCheck.disabled = false; return; }
+    await loadRecords();
+    return;
+  }
   if (event.target.closest('.menu-action')) openInternshipDialog(record);
   if (event.target.closest('.partial-reminder')) openMessage(record, 'partial');
   if (event.target.closest('.final-reminder')) openMessage(record, 'final');
@@ -200,7 +241,10 @@ list.addEventListener('click', async event => {
     const { error } = await supabase.from('internships').delete().eq('id', record.id);
     if (!error) await loadRecords();
   }
-});
+}
+
+list.addEventListener('click', handleCardAction);
+sentList.addEventListener('click', handleCardAction);
 
 function exportIfmsInsuranceList() {
   const now = new Date();

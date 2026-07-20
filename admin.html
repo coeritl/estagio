@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260720-4">
+  <link rel="stylesheet" href="assets/admin.css?v=20260720-5">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -50,7 +50,14 @@
           <label>Prazos<select id="deadline-filter"><option value="all">Todos</option><option value="due">Atingidos</option><option value="soon">Próximos 7 dias</option><option value="ok">No prazo</option></select></label>
         </section>
 
-        <section class="internship-list" id="internship-list" aria-live="polite"></section>
+        <section class="list-group" aria-labelledby="pending-list-title">
+          <div class="list-heading"><div><span class="admin-kicker">Acompanhamento</span><h2 id="pending-list-title">Pendências de aviso</h2></div><span class="list-count" id="pending-list-count">0</span></div>
+          <section class="internship-list" id="internship-list" aria-live="polite"></section>
+        </section>
+        <section class="list-group sent-group" id="sent-group" aria-labelledby="sent-list-title">
+          <div class="list-heading"><div><span class="admin-kicker">Organizados</span><h2 id="sent-list-title">Avisos enviados</h2></div><span class="list-count" id="sent-list-count">0</span></div>
+          <section class="internship-list" id="sent-internship-list" aria-live="polite"></section>
+        </section>
         <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
       </div>
     </section>
@@ -98,9 +105,9 @@
     </form>
   </dialog>
 
-  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-7"></script>
+  <script type="module" src="assets/admin.js?v=20260720-8"></script>
 </body>
 </html>
