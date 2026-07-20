@@ -63,16 +63,16 @@
       <div class="dialog-header"><div><span class="admin-kicker">Cadastro</span><h2 id="internship-dialog-title">Novo estágio</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fechar">×</button></div>
       <input type="hidden" id="internship-id">
       <div class="admin-form-grid">
-        <label class="full">Número do estágio<input id="internship-number" required placeholder="Ex.: 001/2026"></label>
+        <label class="full">Número do estágio<input id="internship-number" placeholder="Pode ser preenchido depois. Ex.: 001/2026"></label>
         <label class="full">Nome completo do estudante<input id="student-name" required></label>
-        <label>E-mail institucional<input id="student-email" type="email" required placeholder="nome@estudante.ifms.edu.br"></label>
-        <label>WhatsApp<input id="student-whatsapp" type="tel" required placeholder="(67) 99999-9999"></label>
+        <label>E-mail institucional<input id="student-email" type="email" placeholder="Pode ser preenchido depois"></label>
+        <label>WhatsApp<input id="student-whatsapp" type="tel" placeholder="Pode ser preenchido depois"></label>
         <label>Curso<select id="student-course" required><option value="">Selecione</option><option>Análise e Desenvolvimento de Sistemas</option><option>Automação Industrial</option><option>Engenharia de Controle e Automação</option><option>Engenharia de Computação</option><option>Técnico Integrado em Eletrotécnica</option><option>Técnico Integrado em Informática</option><option>Técnico Integrado em Administração (EJA-EPT)</option><option>Especialização em Docência para EPCT</option></select></label>
         <label>Empresa ou unidade concedente<input id="company-name" required></label>
-        <label>Previsão de término<input id="end-date" type="date" required></label>
-        <label>Entrega do relatório parcial<input id="partial-date" type="date" required></label>
-        <label>Entrega do relatório final<input id="final-date" type="date" required></label>
-        <label>Seguro do estagiário<select id="insurance-provider" required><option value="">Selecione</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
+        <label>Previsão de término<input id="end-date" type="date"></label>
+        <label>Entrega do relatório parcial<input id="partial-date" type="date"></label>
+        <label>Entrega do relatório final<input id="final-date" type="date"></label>
+        <label>Seguro do estagiário<select id="insurance-provider"><option value="">Preencher depois</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
         <label class="full">Observações<textarea id="internship-notes" rows="3" placeholder="Informações adicionais para acompanhamento"></textarea></label>
       </div>
       <p class="form-message" id="internship-message" role="alert"></p>
@@ -100,6 +100,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="notes"></div><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260720-3"></script>
+  <script type="module" src="assets/admin.js?v=20260720-4"></script>
 </body>
 </html>

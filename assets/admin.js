@@ -110,18 +110,20 @@ function render() {
     card.dataset.id = record.id;
     card.classList.add(`status-${state}`);
     $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
-    $('.internship-number', card).textContent = `Estágio nº ${record.internship_number}`;
+    $('.internship-number', card).textContent = record.internship_number ? `Estágio nº ${record.internship_number}` : 'Número pendente';
     $('.student-name', card).textContent = record.student_name;
     $('.course-company', card).textContent = `${record.course} · ${record.company_name}`;
     const email = $('.student-email', card);
-    email.textContent = record.student_email;
-    email.href = `mailto:${record.student_email}`;
+    email.textContent = record.student_email || 'E-mail pendente';
+    if (record.student_email) email.href = `mailto:${record.student_email}`;
     const whatsapp = $('.student-whatsapp', card);
-    whatsapp.textContent = `WhatsApp: ${record.student_whatsapp}`;
-    whatsapp.href = `https://wa.me/55${record.student_whatsapp.replace(/\D/g, '')}`;
-    whatsapp.target = '_blank';
-    whatsapp.rel = 'noopener';
-    $('.insurance', card).textContent = `Seguro: ${record.insurance_provider}`;
+    whatsapp.textContent = record.student_whatsapp ? `WhatsApp: ${record.student_whatsapp}` : 'WhatsApp pendente';
+    if (record.student_whatsapp) {
+      whatsapp.href = `https://wa.me/55${record.student_whatsapp.replace(/\D/g, '')}`;
+      whatsapp.target = '_blank';
+      whatsapp.rel = 'noopener';
+    }
+    $('.insurance', card).textContent = record.insurance_provider ? `Seguro: ${record.insurance_provider}` : 'Seguro pendente';
     renderDeadline($('.partial', card), record.partial_report_date);
     renderDeadline($('.final', card), record.final_report_date);
     renderDeadline($('.end', card), record.expected_end_date);
@@ -173,9 +175,9 @@ internshipForm.addEventListener('submit', async event => {
   internshipMessage.textContent = 'Salvando…';
   const id = $('#internship-id').value;
   const payload = {
-    internship_number: $('#internship-number').value.trim(), student_name: $('#student-name').value.trim(), student_email: $('#student-email').value.trim(), student_whatsapp: $('#student-whatsapp').value.trim(), course: $('#student-course').value,
-    company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value, partial_report_date: $('#partial-date').value, final_report_date: $('#final-date').value,
-    insurance_provider: $('#insurance-provider').value, notes: $('#internship-notes').value.trim()
+    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim(), student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
+    company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value || null, partial_report_date: $('#partial-date').value || null, final_report_date: $('#final-date').value || null,
+    insurance_provider: $('#insurance-provider').value || null, notes: $('#internship-notes').value.trim()
   };
   const request = id ? supabase.from('internships').update(payload).eq('id', id) : supabase.from('internships').insert(payload);
   const { error } = await request;
