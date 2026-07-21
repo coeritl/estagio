@@ -22,6 +22,7 @@ let supabase;
 let records = [];
 let tceRequests = [];
 let protocolStatuses = [];
+let lastCopiedReminderBatch = null;
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -451,7 +452,8 @@ function exportIfmsInsuranceList() {
 
 async function copyPendingEmails(type) {
   const pending = records.filter(record => record.status === 'em_andamento' && reminderDue(record, type));
-  const emails = [...new Set(pending.map(record => record.student_email?.trim()).filter(Boolean))];
+  const recordsWithEmail = pending.filter(record => record.student_email?.trim());
+  const emails = [...new Set(recordsWithEmail.map(record => record.student_email.trim()))];
   const missingEmail = pending.filter(record => !record.student_email?.trim()).length;
   const reportName = type === 'partial' ? 'relatório parcial' : 'relatório final';
   if (!emails.length) {
@@ -460,16 +462,42 @@ async function copyPendingEmails(type) {
   }
   try {
     await navigator.clipboard.writeText(emails.join(', '));
-    alert(`${emails.length} e-mail${emails.length === 1 ? '' : 's'} copiado${emails.length === 1 ? '' : 's'}. Cole a lista no campo Cco/Bcc.${missingEmail ? ` Há ${missingEmail} estudante${missingEmail === 1 ? '' : 's'} pendente${missingEmail === 1 ? '' : 's'} sem e-mail cadastrado.` : ''}`);
+    lastCopiedReminderBatch = { type, ids: recordsWithEmail.map(record => record.id), count: recordsWithEmail.length };
+    const markButton = $('#mark-copied-emails-sent');
+    markButton.disabled = false;
+    markButton.textContent = `Marcar ${type === 'partial' ? 'parcial' : 'final'} como enviado (${recordsWithEmail.length})`;
+    alert(`${emails.length} e-mail${emails.length === 1 ? '' : 's'} copiado${emails.length === 1 ? '' : 's'}. Cole a lista no campo Cco/Bcc. Depois de efetivamente enviar o aviso, volte ao painel e use “Marcar como enviado”.${missingEmail ? ` Há ${missingEmail} estudante${missingEmail === 1 ? '' : 's'} pendente${missingEmail === 1 ? '' : 's'} sem e-mail cadastrado.` : ''}`);
   } catch {
     alert('O navegador não permitiu copiar os e-mails. Recarregue a página e tente novamente.');
   }
+}
+
+async function markCopiedEmailsAsSent() {
+  if (!lastCopiedReminderBatch?.ids.length) return;
+  const reportName = lastCopiedReminderBatch.type === 'partial' ? 'relatório parcial' : 'relatório final';
+  if (!confirm(`Confirme somente se o aviso do ${reportName} já foi efetivamente enviado. Marcar ${lastCopiedReminderBatch.count} estudante${lastCopiedReminderBatch.count === 1 ? '' : 's'} como avisado${lastCopiedReminderBatch.count === 1 ? '' : 's'}?`)) return;
+  const button = $('#mark-copied-emails-sent');
+  button.disabled = true;
+  button.textContent = 'Marcando avisos…';
+  const column = lastCopiedReminderBatch.type === 'partial' ? 'partial_reminder_sent_at' : 'final_reminder_sent_at';
+  const { error } = await supabase.from('internships').update({ [column]: new Date().toISOString() }).in('id', lastCopiedReminderBatch.ids);
+  if (error) {
+    button.disabled = false;
+    button.textContent = 'Tentar marcar novamente';
+    alert('Não foi possível marcar os avisos como enviados. Tente novamente.');
+    return;
+  }
+  lastCopiedReminderBatch = null;
+  button.textContent = 'Marcar última lista como enviada';
+  await loadRecords();
+  alert('Os avisos da lista copiada foram marcados como enviados.');
 }
 
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
 $('#copy-final-emails').addEventListener('click', () => copyPendingEmails('final'));
+$('#mark-copied-emails-sent').addEventListener('click', markCopiedEmailsAsSent);
 $('#logout-button').addEventListener('click', () => supabase.auth.signOut());
 $('#search-input').addEventListener('input', render);
 $('#deadline-filter').addEventListener('change', render);
