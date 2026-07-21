@@ -7,7 +7,10 @@ let captchaToken = '';
 let widgetId;
 
 input.addEventListener('input', () => {
-  const raw = input.value.toUpperCase().replace(/^TCE-?/, '').replace(/[^A-F0-9]/g, '').slice(0, 16);
+  let source = input.value.toUpperCase();
+  const protocolMarker = source.lastIndexOf('TCE');
+  if (protocolMarker >= 0) source = source.slice(protocolMarker + 3);
+  const raw = source.replace(/[^A-F0-9]/g, '').slice(0, 16);
   input.value = raw ? `TCE-${raw.match(/.{1,4}/g).join('-')}` : '';
 });
 
