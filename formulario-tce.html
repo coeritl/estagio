@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Solicitação do Termo de Compromisso de Estágio do IFMS Campus Três Lagoas.">
   <title>Solicitação de TCE | COERI</title>
-  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260720-5">
+  <link rel="stylesheet" href="assets/styles.css?v=20260713-3"><link rel="stylesheet" href="assets/tce-form.css?v=20260722-1">
 </head>
 <body>
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -34,7 +34,7 @@
         <label class="field">Período/semestre<input name="student_period" required maxlength="80"></label>
         <label class="field">Telefone/WhatsApp<input name="student_phone" class="mask-phone" required type="tel" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" pattern="\(\d{2}\) \d{5}-\d{4}" title="Informe o telefone no formato (00) 00000-0000"></label>
         <fieldset class="field"><legend>Estudante menor de idade?</legend><div class="choice-row"><label><input type="radio" name="is_minor" value="false" required> Não</label><label><input type="radio" name="is_minor" value="true"> Sim</label></div></fieldset>
-      </div><div id="guardian-fields" class="form-grid conditional" hidden><label class="field">Nome do responsável legal<input name="guardian_name" maxlength="180"></label><label class="field">E-mail do responsável<input name="guardian_email" type="email" maxlength="254"></label><label class="field">CPF do responsável<input name="guardian_cpf" class="mask-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}"></label><label class="field">WhatsApp do responsável<input name="guardian_phone" class="mask-phone" type="tel" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" pattern="\(\d{2}\) \d{5}-\d{4}"></label></div></section>
+      </div><div id="guardian-fields" class="form-grid conditional" hidden><div class="callout orange guardian-signature-notice"><strong>Atenção à assinatura do responsável legal</strong><p>O responsável legal deverá assinar o TCE. Portanto, aguarde o envio do link para assinatura no e-mail ou WhatsApp informado abaixo.</p></div><label class="field">Nome do responsável legal<input name="guardian_name" maxlength="180"></label><label class="field">E-mail do responsável<input name="guardian_email" type="email" maxlength="254"></label><label class="field">CPF do responsável<input name="guardian_cpf" class="mask-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" pattern="\d{3}\.\d{3}\.\d{3}-\d{2}"></label><label class="field">WhatsApp do responsável<input name="guardian_phone" class="mask-phone" type="tel" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" pattern="\(\d{2}\) \d{5}-\d{4}"></label></div></section>
 
       <section class="form-section"><h2>2. Unidade concedente e estágio</h2><div class="form-grid">
         <label class="field">Nome da unidade concedente<input name="company_name" required maxlength="180"></label><label class="field">CNPJ<input name="company_cnpj" class="mask-cnpj" required inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" pattern="\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}" title="Informe o CNPJ no formato 00.000.000/0000-00"></label>
