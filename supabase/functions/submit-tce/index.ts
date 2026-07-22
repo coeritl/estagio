@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
   "https://coeritl.github.io",
+  "https://coeri.tl.ifms.edu.br",
   "http://localhost:5500",
   "http://127.0.0.1:5500",
 ]);

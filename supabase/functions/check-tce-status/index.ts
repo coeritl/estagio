@@ -1,7 +1,12 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const allowedOrigins = new Set(["https://coeritl.github.io", "http://localhost:5500", "http://127.0.0.1:5500"]);
+const allowedOrigins = new Set([
+  "https://coeritl.github.io",
+  "https://coeri.tl.ifms.edu.br",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+]);
 const labels = {
   recebido: "Recebido pela COERI",
   em_processamento: "Em processamento pela COERI",
