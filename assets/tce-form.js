@@ -15,13 +15,19 @@ function addBusinessDays(date, count) {
   return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, '0')}-${String(result.getDate()).padStart(2, '0')}`;
 }
 
-function setConditional(name, expected, container, fields) {
-  form.addEventListener('change', event => {
-    if (event.target.name !== name) return;
-    const visible = event.target.value === expected;
+function setConditional(name, expected, container, fields, requiredWhenVisible = true) {
+  const sync = () => {
+    const visible = form.elements[name]?.value === expected;
     container.hidden = !visible;
-    fields.forEach(field => { field.required = visible; });
-  });
+    fields.forEach(field => {
+      field.disabled = !visible;
+      field.required = visible && requiredWhenVisible;
+      if (!visible) field.value = '';
+    });
+  };
+  form.addEventListener('change', event => { if (event.target.name === name) sync(); });
+  sync();
+  return sync;
 }
 
 function buildWeeklySchedule() {
@@ -112,8 +118,10 @@ function validateDocuments() {
     if (!field.checkValidity()) { field.reportValidity(); field.focus(); return false; }
   }
   const cnpj = form.querySelector('.mask-cnpj');
-  cnpj.setCustomValidity(validCnpj(cnpj.value) ? '' : 'Informe um CNPJ válido.');
-  if (!cnpj.checkValidity()) { cnpj.reportValidity(); cnpj.focus(); return false; }
+  if (!cnpj.disabled) {
+    cnpj.setCustomValidity(validCnpj(cnpj.value) ? '' : 'Informe um CNPJ válido.');
+    if (!cnpj.checkValidity()) { cnpj.reportValidity(); cnpj.focus(); return false; }
+  }
   return true;
 }
 
@@ -139,9 +147,10 @@ function initializeForm() {
   form.elements.start_date.min = addBusinessDays(new Date(), 5);
 
   const guardianFields = $('#guardian-fields');
-  setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
-  setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
-  setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits]);
+  const syncCompanyFields = setConditional('request_type', 'externo', $('#company-fields'), [...$('#company-fields').querySelectorAll('input')]);
+  const syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
+  const syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
+  const syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
   form.addEventListener('change', event => {
     if (event.target.name !== 'requires_epi') return;
     const needsEpi = event.target.value === 'true';
@@ -242,10 +251,11 @@ form.addEventListener('submit', async event => {
       throw new Error('A solicitação foi recebida, mas o protocolo não foi retornado. Entre em contato com a COERI antes de reenviar o formulário.');
     }
     form.reset();
+    syncCompanyFields();
+    syncGuardianFields();
+    syncScholarshipField();
+    syncOtherBenefitsField();
     document.querySelectorAll('.weekday-row input[type="time"]').forEach(field => { field.disabled = true; field.required = false; });
-    $('#guardian-fields').hidden = true;
-    $('#scholarship-field').hidden = true;
-    $('#other-benefits-field').hidden = true;
     form.elements.start_date.min = addBusinessDays(new Date(), 5);
     window.turnstile.reset(widgetId);
     captchaToken = '';

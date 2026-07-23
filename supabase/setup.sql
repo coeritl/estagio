@@ -124,6 +124,10 @@ $$;
 revoke all on function public.is_coeri_admin() from public;
 grant execute on function public.is_coeri_admin() to authenticated;
 
+drop policy if exists coeri_admin_select on public.internships;
+drop policy if exists coeri_admin_insert on public.internships;
+drop policy if exists coeri_admin_update on public.internships;
+drop policy if exists coeri_admin_delete on public.internships;
 drop policy if exists "Administradores consultam estágios" on public.internships;
 create policy "Administradores consultam estágios" on public.internships for select to authenticated using (public.is_coeri_admin());
 drop policy if exists "Administradores cadastram estágios" on public.internships;

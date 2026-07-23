@@ -59,6 +59,9 @@ export default { async fetch(request: Request) {
     const isMinor = bool(input.is_minor);
     const isPaid = bool(input.is_paid);
     const requiresEpi = bool(input.requires_epi);
+    const requestType = text(input.request_type, 10);
+    if (!["externo", "interno"].includes(requestType)) return response(origin, 400, { error: "Selecione o tipo de estágio." });
+    const isInternal = requestType === "interno";
     const normalizedRequestedProtocol = text(requestedProtocol, 24).toUpperCase();
     const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
     const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, "0")).join("").toUpperCase();
@@ -68,7 +71,7 @@ export default { async fetch(request: Request) {
       : generatedProtocol;
     const payload = {
       public_protocol: publicProtocol,
-      request_type: text(input.request_type, 10),
+      request_type: requestType,
       student_name: text(input.student_name, 180).toLocaleUpperCase("pt-BR"),
       student_cpf: text(input.student_cpf, 14),
       student_sex: text(input.student_sex, 20),
@@ -82,10 +85,10 @@ export default { async fetch(request: Request) {
       guardian_email: isMinor ? text(input.guardian_email, 254) : null,
       guardian_cpf: isMinor ? text(input.guardian_cpf, 14) : null,
       guardian_phone: isMinor ? text(input.guardian_phone, 30) : null,
-      company_name: text(input.company_name, 180),
-      company_cnpj: text(input.company_cnpj, 18),
-      company_email: text(input.company_email, 254),
-      company_phone: text(input.company_phone, 30),
+      company_name: isInternal ? "IFMS Campus Três Lagoas" : text(input.company_name, 180),
+      company_cnpj: isInternal ? "" : text(input.company_cnpj, 18),
+      company_email: isInternal ? "" : text(input.company_email, 254),
+      company_phone: isInternal ? "" : text(input.company_phone, 30),
       internship_modality: text(input.internship_modality, 30),
       advisor_name: text(input.advisor_name, 180),
       is_paid: isPaid,
@@ -111,12 +114,18 @@ export default { async fetch(request: Request) {
 
     const required = [
       "request_type", "student_name", "student_cpf", "student_sex", "student_birth_date",
-      "student_course", "student_period", "student_phone", "company_name", "company_cnpj",
-      "company_email", "company_phone", "internship_modality", "advisor_name", "weekly_schedule",
+      "student_course", "student_period", "student_phone",
+      "internship_modality", "advisor_name", "weekly_schedule",
       "start_date", "expected_end_date", "internship_sector", "activity_plan", "supervisor_name",
       "supervisor_email", "supervisor_phone", "supervisor_education", "supervisor_experience", "epi_types",
     ] as const;
     if (required.some((field) => !payload[field])) return response(origin, 400, { error: "Preencha todos os campos obrigatórios." });
+    if (!isInternal && (!payload.company_name || !payload.company_cnpj || !payload.company_email || !payload.company_phone)) {
+      return response(origin, 400, { error: "Preencha os dados da unidade concedente." });
+    }
+    if (isPaid && (!Number.isFinite(payload.scholarship_amount) || payload.scholarship_amount < 0)) {
+      return response(origin, 400, { error: "Informe um valor de bolsa válido." });
+    }
     if (payload.activity_plan.length < 50) return response(origin, 400, { error: "O plano de atividades deve ter pelo menos 50 caracteres." });
     if (isMinor && (!payload.guardian_name || !payload.guardian_email || !payload.guardian_cpf || !payload.guardian_phone)) {
       return response(origin, 400, { error: "Preencha os dados do responsável legal." });
