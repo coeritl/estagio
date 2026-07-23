@@ -94,6 +94,16 @@ create table if not exists public.tce_protocol_statuses (
 alter table public.internships add column if not exists partial_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists final_reminder_sent_at timestamptz;
 alter table public.internships add column if not exists public_protocol text unique;
+alter table public.internships add column if not exists academic_system_id text unique;
+alter table public.internships add column if not exists start_date date;
+alter table public.internships add column if not exists advisor_name text;
+alter table public.internships add column if not exists internship_type text;
+alter table public.internships add column if not exists academic_workload text;
+alter table public.internships add column if not exists academic_status text;
+alter table public.internships add column if not exists course_status text;
+alter table public.internships add column if not exists academic_activity_status text;
+alter table public.internships add column if not exists closure_date date;
+alter table public.internships add column if not exists academic_imported_at timestamptz;
 alter table public.tce_requests add column if not exists supervisor_phone text;
 alter table public.tce_requests add column if not exists public_protocol text unique;
 alter table public.tce_requests add column if not exists other_benefits text;
