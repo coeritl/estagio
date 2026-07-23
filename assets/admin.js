@@ -15,6 +15,8 @@ const passwordDialog = $('#password-dialog');
 const importDialog = $('#import-dialog');
 const studentImportDialog = $('#student-import-dialog');
 const agreementImportDialog = $('#agreement-import-dialog');
+const advisorDialog = $('#advisor-dialog');
+const advisorForm = $('#advisor-form');
 const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
 const tceDialog = $('#tce-dialog');
@@ -32,6 +34,7 @@ let pendingStudentImport = [];
 let pendingStudentRows = [];
 let agreements = [];
 let pendingAgreementImport = [];
+let advisors = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -106,19 +109,22 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, statusesResult, agreementsResult] = await Promise.all([
+  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
     supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false }),
-    supabase.from('internship_agreements').select('*').order('external_institution')
+    supabase.from('internship_agreements').select('*').order('external_institution'),
+    supabase.from('internship_advisors').select('*').order('display_order').order('name')
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
   tceRequests = requestsResult.error ? [] : (requestsResult.data || []);
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
+  advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   render();
   renderTceRequests();
+  renderAdvisors();
 }
 
 function detailItem(label, value) {
@@ -298,6 +304,58 @@ function render() {
   sent.forEach(record => renderCard(record, sentList));
 }
 
+
+function renderAdvisors() {
+  const container = $('#advisor-admin-list');
+  container.replaceChildren();
+  $('#advisor-count').textContent = advisors.filter(advisor => advisor.is_active).length;
+  $('#advisor-empty-state').hidden = advisors.length > 0;
+  advisors.forEach(advisor => {
+    const card = document.createElement('article');
+    card.className = `advisor-admin-card${advisor.is_active ? '' : ' inactive'}`;
+    card.dataset.id = advisor.id;
+    const content = document.createElement('div');
+    const heading = document.createElement('div');
+    heading.className = 'advisor-admin-heading';
+    const name = document.createElement('h3');
+    name.textContent = advisor.name;
+    const status = document.createElement('span');
+    status.className = `advisor-status${advisor.is_active ? '' : ' inactive'}`;
+    status.textContent = advisor.is_active ? 'Público' : 'Oculto';
+    heading.append(name, status);
+    const areas = document.createElement('p');
+    areas.textContent = advisor.areas;
+    const order = document.createElement('small');
+    order.textContent = `Ordem de exibição: ${advisor.display_order}`;
+    content.append(heading, areas, order);
+    const actions = document.createElement('div');
+    actions.className = 'advisor-admin-actions';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'admin-button ghost advisor-toggle';
+    toggle.textContent = advisor.is_active ? 'Ocultar' : 'Publicar';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'admin-button ghost advisor-edit';
+    edit.textContent = 'Editar';
+    actions.append(toggle, edit);
+    card.append(content, actions);
+    container.append(card);
+  });
+}
+
+function openAdvisorDialog(advisor = null) {
+  advisorForm.reset();
+  $('#advisor-message').textContent = '';
+  $('#advisor-id').value = advisor?.id || '';
+  $('#advisor-dialog-title').textContent = advisor ? 'Editar orientador' : 'Novo orientador';
+  $('#advisor-name').value = advisor?.name || '';
+  $('#advisor-areas').value = advisor?.areas || '';
+  $('#advisor-order').value = advisor?.display_order ?? (advisors.length + 1) * 10;
+  $('#advisor-active').checked = advisor?.is_active ?? true;
+  $('#delete-advisor-button').hidden = !advisor;
+  advisorDialog.showModal();
+}
 function openInternshipDialog(record = null) {
   internshipForm.reset();
   internshipMessage.textContent = '';
@@ -394,6 +452,7 @@ document.querySelectorAll('[data-admin-view]').forEach(button => button.addEvent
   document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab === button));
   $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
   $('#requests-view').hidden = button.dataset.adminView !== 'requests';
+  $('#advisors-view').hidden = button.dataset.adminView !== 'advisors';
 }));
 
 tceProcessForm.addEventListener('submit', async event => {
@@ -693,6 +752,43 @@ $('#import-agreements-button').addEventListener('click',()=>{$('#agreement-csv-f
 $('#agreement-csv-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;const message=$('#agreement-import-message');message.textContent='Analisando o arquivo…';try{const rows=parseCsv(await readAcademicCsv(file)),headers=Object.keys(rows[0]||{}),has=(...aliases)=>aliases.some(alias=>headers.includes(normalizeHeader(alias)));if(!has('ID')||!has('Descrição','Descricao')||!has('Instituição Externa','Instituicao Externa'))throw new Error('As colunas ID, Descrição e Instituição Externa não foram reconhecidas.');renderAgreementImport(classifyAgreementRows(rows));message.textContent=`${rows.length} convênio${rows.length===1?'':'s'} analisado${rows.length===1?'':'s'}. Confira antes de confirmar.`;}catch(error){pendingAgreementImport=[];$('#agreement-import-summary').hidden=true;$('#agreement-import-preview-wrap').hidden=true;updateAgreementImportButton();message.textContent=error.message||'Não foi possível ler o CSV.';}});
 $('#agreement-import-preview-body').addEventListener('change',event=>{const check=event.target.closest('.agreement-import-select');if(!check)return;pendingAgreementImport[Number(check.dataset.index)].selected=check.checked;updateAgreementImportButton();});
 $('#confirm-agreement-import').addEventListener('click',async()=>{const selected=pendingAgreementImport.filter(item=>item.selected&&(item.action==='new'||item.action==='update'));if(!selected.length||!confirm(`Atualizar ${selected.length} convênio${selected.length===1?'':'s'} na página pública?`))return;const button=$('#confirm-agreement-import'),message=$('#agreement-import-message');button.disabled=true;message.textContent='Atualizando convênios…';let completed=0;for(const item of selected){const query=item.action==='new'?supabase.from('internship_agreements').insert(item.payload):supabase.from('internship_agreements').update(item.payload).eq('academic_agreement_id',item.payload.academic_agreement_id);const {error}=await query;if(error){message.textContent=`${completed} convênio${completed===1?'':'s'} atualizado${completed===1?'':'s'}. A operação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}completed++;}await loadRecords();message.textContent=`${completed} convênio${completed===1?'':'s'} publicado${completed===1?'':'s'} com sucesso.`;button.textContent='Importação concluída';pendingAgreementImport=[];});
+$('#new-advisor-button').addEventListener('click', () => openAdvisorDialog());
+$('#advisor-admin-list').addEventListener('click', async event => {
+  const card = event.target.closest('.advisor-admin-card');
+  if (!card) return;
+  const advisor = advisors.find(item => item.id === card.dataset.id);
+  if (!advisor) return;
+  if (event.target.closest('.advisor-edit')) { openAdvisorDialog(advisor); return; }
+  if (event.target.closest('.advisor-toggle')) {
+    const { error } = await supabase.from('internship_advisors').update({ is_active: !advisor.is_active }).eq('id', advisor.id);
+    if (error) { alert('Não foi possível alterar a publicação deste orientador.'); return; }
+    await loadRecords();
+  }
+});
+advisorForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = advisorForm.querySelector('[type="submit"]');
+  const message = $('#advisor-message');
+  const id = $('#advisor-id').value;
+  const payload = { name: $('#advisor-name').value.trim(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), is_active: $('#advisor-active').checked };
+  button.disabled = true;
+  message.textContent = 'Salvando…';
+  const query = id ? supabase.from('internship_advisors').update(payload).eq('id', id) : supabase.from('internship_advisors').insert(payload);
+  const { error } = await query;
+  button.disabled = false;
+  if (error) { message.textContent = 'Não foi possível salvar o orientador. Verifique os dados e tente novamente.'; return; }
+  advisorDialog.close();
+  await loadRecords();
+});
+$('#delete-advisor-button').addEventListener('click', async () => {
+  const id = $('#advisor-id').value;
+  const advisor = advisors.find(item => item.id === id);
+  if (!advisor || !confirm(`Excluir permanentemente ${advisor.name} da lista de orientadores?`)) return;
+  const { error } = await supabase.from('internship_advisors').delete().eq('id', id);
+  if (error) { $('#advisor-message').textContent = 'Não foi possível excluir o orientador.'; return; }
+  advisorDialog.close();
+  await loadRecords();
+});
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
@@ -707,6 +803,7 @@ document.querySelectorAll('[data-close-tce]').forEach(button => button.addEventL
 document.querySelectorAll('[data-close-import]').forEach(button => button.addEventListener('click', () => importDialog.close()));
 document.querySelectorAll('[data-close-student-import]').forEach(button => button.addEventListener('click', () => studentImportDialog.close()));
 document.querySelectorAll('[data-close-agreement-import]').forEach(button=>button.addEventListener('click',()=>agreementImportDialog.close()));
+document.querySelectorAll('[data-close-advisor]').forEach(button=>button.addEventListener('click',()=>advisorDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
 passwordForm.addEventListener('submit', async event => {
