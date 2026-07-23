@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260723-4">
+  <link rel="stylesheet" href="assets/admin.css?v=20260723-5">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -117,7 +117,7 @@
     <div class="dialog-content">
       <div class="dialog-header"><div><span class="admin-kicker">Dados acadêmicos</span><h2>Complementar dados dos estudantes</h2></div><button class="icon-button" type="button" data-close-student-import aria-label="Fechar">×</button></div>
       <div class="import-instructions"><strong>Somente complementação</strong><p>Esta importação não cria estágios e não substitui informações existentes. Serão preenchidos apenas CPF, nascimento, e-mail, telefone, matrícula e RA que estiverem vazios.</p></div>
-      <label class="import-file">Arquivo CSV<input id="student-csv-file" type="file" accept=".csv,text/csv"></label>
+      <label class="import-file">Arquivo CSV<input id="student-csv-file" type="file" accept=".csv,text/csv"></label><label class="import-option"><input id="replace-student-emails" type="checkbox"> <span><strong>Substituir e-mails já cadastrados</strong><small>Quando marcado, o e-mail do CSV substituirá um e-mail diferente que já esteja salvo.</small></span></label>
       <p class="form-message" id="student-import-message" role="alert"></p>
       <div id="student-import-summary" class="import-summary" hidden></div>
       <div id="student-import-preview-wrap" class="import-preview-wrap" hidden><table class="import-preview"><thead><tr><th>Atualizar</th><th>Ação</th><th>Estudante</th><th>CPF</th><th>E-mail</th><th>Nascimento</th><th>Telefone</th></tr></thead><tbody id="student-import-preview-body"></tbody></table></div>
@@ -175,6 +175,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260723-7"></script>
+  <script type="module" src="assets/admin.js?v=20260723-8"></script>
 </body>
 </html>
