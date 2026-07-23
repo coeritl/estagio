@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260723-7">
+  <link rel="stylesheet" href="assets/admin.css?v=20260723-8">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -41,7 +41,7 @@
 
         <nav class="admin-tabs" aria-label="Áreas do painel">
           <button class="admin-tab active" type="button" data-admin-view="tracking">Acompanhamento</button>
-          <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button><button class="admin-tab" type="button" data-admin-view="advisors">Orientadores <span id="advisor-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button><button class="admin-tab" type="button" data-admin-view="advisors">Orientadores <span id="advisor-count">0</span></button><button class="admin-tab" type="button" data-admin-view="maintenance">Manutenção</button>
         </nav>
 
         <div id="tracking-view">
@@ -78,6 +78,18 @@
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
           <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
           <div class="empty-state" id="advisor-empty-state" hidden><div>👩‍🏫</div><h2>Nenhum orientador cadastrado</h2><p>Use “Novo orientador” para iniciar a lista.</p></div>
+        </section>
+        <section id="maintenance-view" hidden>
+          <div class="requests-intro maintenance-heading"><div><span class="admin-kicker">Saúde do sistema</span><h2>Manutenção e consumo</h2><p>Indicadores internos do projeto e atalhos para a medição oficial do Supabase.</p></div><button class="admin-button primary" id="refresh-maintenance" type="button">Atualizar indicadores</button></div>
+          <p class="maintenance-status" id="maintenance-status" role="status">Abra esta aba para consultar os indicadores.</p>
+          <section class="maintenance-grid">
+            <article class="maintenance-card database-usage"><span>Banco de dados</span><strong id="maintenance-db-size">—</strong><small id="maintenance-db-percent">Limite gratuito de referência: 500 MB</small><div class="usage-track" aria-hidden="true"><span id="maintenance-db-bar"></span></div><p>O modo somente leitura pode ser ativado quando o banco ultrapassa 500 MB no plano gratuito.</p></article>
+            <article class="maintenance-card"><span>Última movimentação</span><strong id="maintenance-last-change">—</strong><small>Última inclusão ou atualização registrada</small></article>
+            <article class="maintenance-card status-ok"><span>Conexão</span><strong id="maintenance-connection">Aguardando</strong><small>Consulta protegida pelo login da COERI</small></article>
+          </section>
+          <section class="maintenance-records" aria-label="Quantidade de registros"><article><strong id="maintenance-internships">—</strong><span>Estágios em andamento</span></article><article><strong id="maintenance-requests">—</strong><span>Novos TCEs</span></article><article><strong id="maintenance-protocols">—</strong><span>Status de protocolos</span></article><article><strong id="maintenance-agreements">—</strong><span>Convênios</span></article><article><strong id="maintenance-advisors">—</strong><span>Orientadores</span></article><article><strong id="maintenance-assignments">—</strong><span>Reservas de orientação</span></article></section>
+          <div class="maintenance-official"><div><h3>Consumo mensal oficial</h3><p>Tráfego, chamadas das funções e demais métricas são contabilizados pela organização. Consulte o painel oficial para os valores exatos do ciclo atual.</p><ul><li>Banco de dados gratuito: 500 MB por projeto.</li><li>Tráfego incluído: 5 GB por organização.</li><li>Funções: 500.000 chamadas por ciclo.</li></ul></div><div class="maintenance-links"><a class="admin-button primary" href="https://supabase.com/dashboard/org/nqniatcuapxgdyhiwtlz/usage" target="_blank" rel="noopener">Abrir consumo no Supabase ↗</a><a class="admin-button ghost" href="https://supabase.com/dashboard/project/ztppjygemmejgnovijgy" target="_blank" rel="noopener">Abrir projeto ↗</a><a href="https://supabase.com/docs/guides/platform/billing-on-supabase" target="_blank" rel="noopener">Consultar limites oficiais ↗</a></div></div>
+          <p class="maintenance-updated" id="maintenance-updated"></p>
         </section>
       </div>
     </section>
@@ -198,6 +210,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260723-15"></script>
+  <script type="module" src="assets/admin.js?v=20260723-16"></script>
 </body>
 </html>

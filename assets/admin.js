@@ -367,6 +367,47 @@ function openAdvisorDialog(advisor = null) {
   $('#delete-advisor-button').hidden = !advisor;
   advisorDialog.showModal();
 }
+
+function maintenanceDate(value) {
+  if (!value) return 'Nenhuma movimentação registrada';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+}
+
+async function loadMaintenanceMetrics() {
+  const button = $('#refresh-maintenance');
+  const status = $('#maintenance-status');
+  button.disabled = true;
+  status.textContent = 'Consultando o Supabase…';
+  $('#maintenance-connection').textContent = 'Verificando';
+  try {
+    const { data, error } = await supabase.rpc('get_maintenance_metrics');
+    if (error) throw error;
+    const metrics = typeof data === 'string' ? JSON.parse(data) : data;
+    const percent = Math.max(0, Number(metrics.database_percent || 0));
+    $('#maintenance-db-size').textContent = `${metrics.database_pretty} de 500 MB`;
+    $('#maintenance-db-percent').textContent = `${percent.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}% do limite gratuito do banco`;
+    $('#maintenance-db-bar').style.width = `${Math.min(percent, 100)}%`;
+    const dbCard = $('.database-usage');
+    dbCard.classList.toggle('warning', percent >= 70 && percent < 90);
+    dbCard.classList.toggle('danger', percent >= 90);
+    $('#maintenance-last-change').textContent = maintenanceDate(metrics.last_change_at);
+    $('#maintenance-connection').textContent = 'Operacional';
+    $('#maintenance-internships').textContent = metrics.active_internships;
+    $('#maintenance-requests').textContent = metrics.new_tce_requests;
+    $('#maintenance-protocols').textContent = metrics.protocol_statuses;
+    $('#maintenance-agreements').textContent = metrics.agreements;
+    $('#maintenance-advisors').textContent = metrics.advisors;
+    $('#maintenance-assignments').textContent = metrics.advisor_assignments;
+    status.textContent = percent >= 90 ? 'Atenção: o banco está próximo do limite gratuito.' : 'Sistema consultado com sucesso.';
+    $('#maintenance-updated').textContent = `Última verificação: ${maintenanceDate(metrics.checked_at)}`;
+  } catch (error) {
+    console.error('Falha na consulta de manutenção:', error);
+    $('#maintenance-connection').textContent = 'Falha na consulta';
+    status.textContent = 'Não foi possível atualizar os indicadores. Tente novamente.';
+  } finally {
+    button.disabled = false;
+  }
+}
 function openInternshipDialog(record = null) {
   internshipForm.reset();
   internshipMessage.textContent = '';
@@ -464,6 +505,8 @@ document.querySelectorAll('[data-admin-view]').forEach(button => button.addEvent
   $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
   $('#requests-view').hidden = button.dataset.adminView !== 'requests';
   $('#advisors-view').hidden = button.dataset.adminView !== 'advisors';
+  $('#maintenance-view').hidden = button.dataset.adminView !== 'maintenance';
+  if (button.dataset.adminView === 'maintenance') loadMaintenanceMetrics();
 }));
 
 tceProcessForm.addEventListener('submit', async event => {
@@ -812,6 +855,7 @@ $('#delete-advisor-button').addEventListener('click', async () => {
   advisorDialog.close();
   await loadRecords();
 });
+$('#refresh-maintenance').addEventListener('click', loadMaintenanceMetrics);
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
