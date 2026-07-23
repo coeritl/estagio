@@ -242,7 +242,9 @@ function renderCard(record, target) {
   const finalCheck = $('[data-reminder-type="final"]', card);
   finalCheck.checked = Boolean(record.final_reminder_sent_at);
   finalCheck.disabled = !record.final_report_date;
-  $('.notes', card).textContent = record.notes || '';
+  const notes = $('.notes', card);
+  notes.textContent = record.notes || '';
+  notes.closest('.notes-wrap').hidden = !record.notes;
   target.append(card);
 }
 
