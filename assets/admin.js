@@ -538,10 +538,23 @@ function csvDate(value) {
   match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/); return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
 }
 function normalizedIdentity(value) { return normalizeHeader(value).replace(/\s+/g, ' '); }
+function canonicalCourse(value) {
+  const withoutCode = String(value || '').replace(/^\s*\d+\s*-\s*/, '').trim();
+  const key = normalizedIdentity(withoutCode);
+  const aliases = {
+    'tecnologia em analise e desenvolvimento de sistemas': 'Análise e Desenvolvimento de Sistemas',
+    'tecnologia em automacao industrial': 'Automação Industrial'
+  };
+  return aliases[key] || withoutCode;
+}
+function isTresLagoasCampus(value) {
+  const campus = normalizedIdentity(value);
+  return !campus || campus === 'tl' || campus === 'campus tl' || campus.includes('tres lagoas');
+}
 function academicPayload(row) {
   const academicStatus = csvValue(row, 'Situ. Estágio', 'Situacao Estagio', 'Situação Estágio');
   return {
-    academic_system_id: csvValue(row, 'ID', 'Código', 'Codigo'), student_name: csvValue(row, 'Estudante', 'Aluno', 'Nome do estudante').toLocaleUpperCase('pt-BR'), course: csvValue(row, 'Curso'),
+    academic_system_id: csvValue(row, 'ID', 'Código', 'Codigo'), student_name: csvValue(row, 'Estudante', 'Aluno', 'Nome do estudante').toLocaleUpperCase('pt-BR'), course: canonicalCourse(csvValue(row, 'Curso')),
     company_name: csvValue(row, 'Convênio', 'Convenio', 'Unidade concedente', 'Empresa') || 'NÃO INFORMADA NO SISTEMA ACADÊMICO', start_date: csvDate(csvValue(row, 'Data de início', 'Data inicio')),
     expected_end_date: csvDate(csvValue(row, 'Data de Previsão de Encerramento', 'Previsão de encerramento')), advisor_name: csvValue(row, 'Orientador'), internship_type: csvValue(row, 'Tipo'),
     academic_workload: csvValue(row, 'Carga horária', 'Carga horaria'), academic_status: academicStatus, course_status: csvValue(row, 'Situ. Curso', 'Situacao Curso', 'Situação Curso'),
@@ -559,7 +572,7 @@ function classifyAcademicRows(rows) {
     const payload = academicPayload(row);
     if (!payload.academic_system_id || !payload.student_name || !payload.course) return { action:'review', reason:'Faltam ID, estudante ou curso', payload, row:index + 2 };
     if (seen.has(payload.academic_system_id)) return { action:'review', reason:'ID repetido no arquivo', payload, row:index + 2 }; seen.add(payload.academic_system_id);
-    const campus = normalizedIdentity(payload.campus); if (campus && !campus.includes('tres lagoas')) return { action:'review', reason:'Campus diferente de Três Lagoas', payload, row:index + 2 };
+    if (!isTresLagoasCampus(payload.campus)) return { action:'review', reason:'Campus diferente de Três Lagoas', payload, row:index + 2 };
     const closed = payload.closure_date || /conclu|fechad|cancelad|rescindid/.test(normalizedIdentity(payload.academic_status));
     if (closed) return { action:'review', reason:'Fechado — não será excluído automaticamente', payload, row:index + 2 };
     let existing = records.find(item => String(item.academic_system_id || '') === payload.academic_system_id);
