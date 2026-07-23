@@ -196,6 +196,7 @@ function openTceDialog(request) {
     ['CPF do responsável', request.guardian_cpf], ['Contato do responsável', request.guardian_phone], ['Unidade concedente', request.company_name],
     ['CNPJ', request.company_cnpj], ['E-mail da concedente', request.company_email], ['Contato da concedente', request.company_phone],
     ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não'],
+    ['Outros benefícios', request.other_benefits],
     ['Horário semanal', request.weekly_schedule], ['Início', formatDate(request.start_date)], ['Previsão de término', formatDate(request.expected_end_date)],
     ['Setor', request.internship_sector], ['Plano de atividades', request.activity_plan], ['Supervisor', request.supervisor_name],
     ['E-mail do supervisor', request.supervisor_email], ['WhatsApp do supervisor', request.supervisor_phone], ['Formação do supervisor', request.supervisor_education], ['Formação/experiência', request.supervisor_experience],

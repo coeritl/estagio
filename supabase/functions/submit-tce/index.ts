@@ -90,6 +90,7 @@ export default { async fetch(request: Request) {
       advisor_name: text(input.advisor_name, 180),
       is_paid: isPaid,
       scholarship_amount: isPaid ? Number(input.scholarship_amount) : null,
+      other_benefits: isPaid ? text(input.other_benefits, 500) || null : null,
       weekly_schedule: text(input.weekly_schedule, 1500),
       start_date: text(input.start_date, 10),
       expected_end_date: text(input.expected_end_date, 10),

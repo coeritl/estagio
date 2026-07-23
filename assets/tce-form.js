@@ -141,6 +141,7 @@ function initializeForm() {
   const guardianFields = $('#guardian-fields');
   setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
   setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
+  setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits]);
   form.addEventListener('change', event => {
     if (event.target.name !== 'requires_epi') return;
     const needsEpi = event.target.value === 'true';
@@ -215,6 +216,7 @@ form.addEventListener('submit', async event => {
     is_paid: values.is_paid === 'true',
     requires_epi: values.requires_epi === 'true',
     scholarship_amount: values.scholarship_amount || null,
+    other_benefits: values.other_benefits?.trim() || null,
     privacy_consent: Boolean(values.privacy_consent),
     acknowledgment_start: Boolean(values.acknowledgment_start),
     acknowledgment_reports: Boolean(values.acknowledgment_reports),
@@ -243,6 +245,7 @@ form.addEventListener('submit', async event => {
     document.querySelectorAll('.weekday-row input[type="time"]').forEach(field => { field.disabled = true; field.required = false; });
     $('#guardian-fields').hidden = true;
     $('#scholarship-field').hidden = true;
+    $('#other-benefits-field').hidden = true;
     form.elements.start_date.min = addBusinessDays(new Date(), 5);
     window.turnstile.reset(widgetId);
     captchaToken = '';

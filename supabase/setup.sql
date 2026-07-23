@@ -96,6 +96,7 @@ alter table public.internships add column if not exists final_reminder_sent_at t
 alter table public.internships add column if not exists public_protocol text unique;
 alter table public.tce_requests add column if not exists supervisor_phone text;
 alter table public.tce_requests add column if not exists public_protocol text unique;
+alter table public.tce_requests add column if not exists other_benefits text;
 alter table public.tce_protocol_statuses add column if not exists document_url text;
 alter table public.tce_protocol_statuses drop constraint if exists tce_protocol_statuses_status_check;
 alter table public.tce_protocol_statuses add constraint tce_protocol_statuses_status_check check (status in ('recebido', 'em_processamento', 'tce_gerado', 'pendente_correcao', 'tce_negado'));
