@@ -26,6 +26,7 @@ let tceRequests = [];
 let protocolStatuses = [];
 let lastCopiedReminderBatch = null;
 let pendingAcademicImport = [];
+let pendingMissingAcademic = [];
 let pendingStudentImport = [];
 let pendingStudentRows = [];
 
@@ -610,19 +611,32 @@ function renderImportPreview(items) {
   const body=$('#import-preview-body'); body.replaceChildren(); items.forEach((item,itemIndex) => { const tr=document.createElement('tr'); const selectCell=document.createElement('td'); const check=document.createElement('input'); check.type='checkbox'; check.className='import-select'; check.dataset.index=itemIndex; check.checked=item.action==='new'||item.action==='update'; check.disabled=!check.checked; item.selected=check.checked; selectCell.append(check); tr.append(selectCell); [item.reason,item.payload.academic_system_id,item.payload.student_name,item.payload.course,item.payload.company_name,formatDate(item.payload.expected_end_date)].forEach((value,index) => { const td=document.createElement('td'); if(index===0){const badge=document.createElement('span');badge.className=`import-action ${item.action}`;badge.textContent=value;td.append(badge);}else td.textContent=value||'—';tr.append(td);});body.append(tr); });
   $('#import-preview-wrap').hidden=false; updateImportButton();
 }
-function updateImportButton() {
+function updateMissingAcademicButton() {
+  const selected=pendingMissingAcademic.filter(item=>item.selected).length;
+  $('#remove-missing-academic').disabled=selected===0;
+  $('#remove-missing-academic').textContent=selected?`Concluir e remover ${selected} selecionado${selected===1?'':'s'}`:'Concluir e remover selecionados';
+}
+function renderMissingAcademic(rows) {
+  const csvIds=new Set(rows.map(row=>academicPayload(row)).filter(payload=>isTresLagoasCampus(payload.campus)&&payload.academic_system_id).map(payload=>payload.academic_system_id));
+  pendingMissingAcademic=records.filter(record=>record.status==='em_andamento'&&record.academic_system_id&&!csvIds.has(String(record.academic_system_id))).sort((a,b)=>a.student_name.localeCompare(b.student_name,'pt-BR')).map(record=>({record,selected:false}));
+  const section=$('#missing-academic-section'),body=$('#missing-academic-body');body.replaceChildren();section.hidden=pendingMissingAcademic.length===0;
+  pendingMissingAcademic.forEach((item,index)=>{const tr=document.createElement('tr'),selectCell=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.className='missing-select';check.dataset.index=index;selectCell.append(check);tr.append(selectCell);[item.record.academic_system_id,item.record.internship_number||'Pendente',item.record.student_name,item.record.course,formatDate(item.record.expected_end_date)].forEach(value=>{const td=document.createElement('td');td.textContent=value||'—';tr.append(td);});body.append(tr);});
+  updateMissingAcademicButton();
+}function updateImportButton() {
   const selected=pendingAcademicImport.filter(item=>item.selected&&(item.action==='new'||item.action==='update')).length;
   $('#confirm-import-button').disabled=selected===0;
   $('#confirm-import-button').textContent=selected?`Confirmar ${selected} alteração${selected===1?'':'ões'}`:'Nada selecionado';
 }
 async function readAcademicCsv(file) { const bytes=await file.arrayBuffer(); let text=new TextDecoder('utf-8').decode(bytes); if(text.includes('\uFFFD')) text=new TextDecoder('windows-1252').decode(bytes); return text.replace(/^\uFEFF/,''); }
-$('#import-academic-button').addEventListener('click', () => { $('#academic-csv-file').value=''; $('#import-message').textContent=''; $('#import-summary').hidden=true; $('#import-preview-wrap').hidden=true; $('#confirm-import-button').disabled=true; pendingAcademicImport=[]; importDialog.showModal(); });
+$('#import-academic-button').addEventListener('click', () => { $('#academic-csv-file').value=''; $('#import-message').textContent=''; $('#import-summary').hidden=true; $('#import-preview-wrap').hidden=true; $('#confirm-import-button').disabled=true; pendingAcademicImport=[]; pendingMissingAcademic=[]; $('#missing-academic-section').hidden=true; updateMissingAcademicButton(); importDialog.showModal(); });
 $('#academic-csv-file').addEventListener('change', async event => {
   const file=event.target.files[0]; if(!file)return; const message=$('#import-message'); message.textContent='Analisando o arquivo…';
-  try { const rows=parseCsv(await readAcademicCsv(file)); const headers=Object.keys(rows[0]||{}); if(!['id','estudante','curso'].every(header=>headers.includes(header))) throw new Error('As colunas ID, Estudante e Curso não foram reconhecidas.'); renderImportPreview(classifyAcademicRows(rows)); message.textContent=`${rows.length} linha${rows.length===1?'':'s'} analisada${rows.length===1?'':'s'}. Confira antes de confirmar.`; }
-  catch(error){ pendingAcademicImport=[]; $('#import-summary').hidden=true; $('#import-preview-wrap').hidden=true; $('#confirm-import-button').disabled=true; message.textContent=error.message||'Não foi possível ler o CSV.'; }
+  try { const rows=parseCsv(await readAcademicCsv(file)); const headers=Object.keys(rows[0]||{}); if(!['id','estudante','curso'].every(header=>headers.includes(header))) throw new Error('As colunas ID, Estudante e Curso não foram reconhecidas.'); renderImportPreview(classifyAcademicRows(rows)); renderMissingAcademic(rows); message.textContent=`${rows.length} linha${rows.length===1?'':'s'} analisada${rows.length===1?'':'s'}. Confira antes de confirmar.`; }
+  catch(error){ pendingAcademicImport=[]; pendingMissingAcademic=[]; $('#import-summary').hidden=true; $('#import-preview-wrap').hidden=true; $('#missing-academic-section').hidden=true; $('#confirm-import-button').disabled=true; updateMissingAcademicButton(); message.textContent=error.message||'Não foi possível ler o CSV.'; }
 });
-$('#confirm-import-button').addEventListener('click', async () => {
+$('#import-preview-body').addEventListener('change',event=>{const check=event.target.closest('.import-select');if(!check)return;pendingAcademicImport[Number(check.dataset.index)].selected=check.checked;updateImportButton();});
+$('#missing-academic-body').addEventListener('change',event=>{const check=event.target.closest('.missing-select');if(!check)return;pendingMissingAcademic[Number(check.dataset.index)].selected=check.checked;updateMissingAcademicButton();});
+$('#remove-missing-academic').addEventListener('click',async()=>{const selected=pendingMissingAcademic.filter(item=>item.selected);if(!selected.length)return;const names=selected.map(item=>item.record.student_name).join('\n• ');if(!confirm(`Confirme que estes ${selected.length} estágio${selected.length===1?' foi concluído':'s foram concluídos'} e deve${selected.length===1?'':'m'} ser removido${selected.length===1?'':'s'} permanentemente do acompanhamento:\n\n• ${names}\n\nEsta ação não poderá ser desfeita.`))return;const button=$('#remove-missing-academic'),message=$('#import-message');button.disabled=true;message.textContent='Concluindo e removendo os estágios selecionados…';let completed=0;for(const item of selected){const {error}=await supabase.rpc('complete_internship',{p_internship_id:item.record.id});if(error){message.textContent=`${completed} removido${completed===1?'':'s'}. Não foi possível remover ${item.record.student_name}.`;await loadRecords();return;}completed++;}await loadRecords();pendingMissingAcademic=pendingMissingAcademic.filter(item=>!item.selected);message.textContent=`${completed} estágio${completed===1?'':'s'} concluído${completed===1?'':'s'} e removido${completed===1?'':'s'} do acompanhamento.`;$('#missing-academic-section').hidden=true;});$('#confirm-import-button').addEventListener('click', async () => {
   const actionable=pendingAcademicImport.filter(item=>item.selected&&(item.action==='new'||item.action==='update')); if(!actionable.length||!confirm(`Importar ${actionable.length} registro${actionable.length===1?'':'s'} do Sistema Acadêmico?`))return;
   const button=$('#confirm-import-button'),message=$('#import-message'); button.disabled=true; message.textContent='Importando registros…'; let completed=0;
   for(const item of actionable){ const payload=importedFields(item.payload); const query=item.action==='new'?supabase.from('internships').insert({...payload,status:'em_andamento'}):supabase.from('internships').update(payload).eq('id',item.existing.id); const {error}=await query; if(error){message.textContent=`${completed} registro${completed===1?'':'s'} importado${completed===1?'':'s'}. A importação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}completed++;}

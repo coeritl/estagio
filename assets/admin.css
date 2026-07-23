@@ -16,3 +16,5 @@
 .import-select{width:1.05rem;height:1.05rem;accent-color:var(--admin-green);cursor:pointer}
 
 .import-option{display:grid;grid-template-columns:1.1rem minmax(0,1fr);align-items:start;gap:.6rem;margin:.8rem 0 1rem;padding:.8rem;border:1px solid #edc969;border-radius:10px;background:#fff9e9;cursor:pointer}.import-option input{width:1.05rem;height:1.05rem;margin-top:.15rem;accent-color:var(--admin-green)}.import-option span,.import-option small{display:block}.import-option small{margin-top:.15rem;color:#68583a;font-size:.76rem;font-weight:500}
+
+.missing-academic-section{display:grid;gap:.8rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--admin-line)}.missing-warning{padding:.9rem;border-left:5px solid var(--admin-amber);border-radius:0 10px 10px 0;background:#fff8e6}.missing-warning p{margin:.25rem 0 0;color:#68583a;font-size:.82rem}.missing-academic-section>.admin-button{justify-self:start}.missing-select{width:1.05rem;height:1.05rem;accent-color:var(--admin-red)}@media(max-width:600px){.missing-academic-section>.admin-button{width:100%}}
