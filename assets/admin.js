@@ -90,6 +90,12 @@ function reminderDue(record, type) {
   return days !== null && days <= 0 && !sentAt;
 }
 
+function reportDeadlineReached(record, type) {
+  const date = type === 'partial' ? record.partial_report_date : record.final_report_date;
+  const days = daysFromToday(date);
+  return days !== null && days <= 0;
+}
+
 function belongsToSentList(record) {
   const hasSentReminder = Boolean(record.partial_reminder_sent_at || record.final_reminder_sent_at);
   return hasSentReminder && !reminderDue(record, 'partial') && !reminderDue(record, 'final');
@@ -555,13 +561,13 @@ function exportIfmsInsuranceList() {
 }
 
 async function copyPendingEmails(type) {
-  const pending = records.filter(record => record.status === 'em_andamento' && reminderDue(record, type));
+  const pending = records.filter(record => record.status === 'em_andamento' && reportDeadlineReached(record, type));
   const recordsWithEmail = pending.filter(record => record.student_email?.trim());
   const emails = [...new Set(recordsWithEmail.map(record => record.student_email.trim()))];
   const missingEmail = pending.filter(record => !record.student_email?.trim()).length;
   const reportName = type === 'partial' ? 'relatório parcial' : 'relatório final';
   if (!emails.length) {
-    alert(`Não há e-mails cadastrados para avisos pendentes do ${reportName}.`);
+    alert(`Não há e-mails cadastrados para estudantes com prazo atingido do ${reportName}.`);
     return;
   }
   try {
