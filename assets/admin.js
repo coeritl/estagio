@@ -574,7 +574,14 @@ function importedFields(payload) {
   const allowed = ['academic_system_id','student_name','course','company_name','start_date','expected_end_date','advisor_name','internship_type','academic_workload','academic_status','course_status','academic_activity_status','closure_date','academic_imported_at'];
   return Object.fromEntries(allowed.filter(key => payload[key] !== '' && payload[key] !== undefined).map(key => [key, payload[key] || null]));
 }
-function classifyAcademicRows(rows) {
+function academicMatchScore(record, payload) {
+  let score = 0;
+  if (normalizedIdentity(canonicalCourse(record.course)) === normalizedIdentity(payload.course)) score++;
+  if (normalizedIdentity(record.company_name) === normalizedIdentity(payload.company_name)) score++;
+  if (record.expected_end_date && record.expected_end_date === payload.expected_end_date) score++;
+  if (record.start_date && record.start_date === payload.start_date) score++;
+  return score;
+}function classifyAcademicRows(rows) {
   const seen = new Set();
   return rows.map((row, index) => {
     const payload = academicPayload(row);
@@ -584,8 +591,14 @@ function classifyAcademicRows(rows) {
     const closed = payload.closure_date || /conclu|fechad|cancelad|rescindid/.test(normalizedIdentity(payload.academic_status));
     if (closed) return { action:'review', reason:'Fechado — não será excluído automaticamente', payload, row:index + 2 };
     let existing = records.find(item => String(item.academic_system_id || '') === payload.academic_system_id);
-    if (!existing) { const matches = records.filter(item => !item.academic_system_id && normalizedIdentity(item.student_name) === normalizedIdentity(payload.student_name) && normalizedIdentity(item.course) === normalizedIdentity(payload.course)); if (matches.length === 1) existing = matches[0]; if (matches.length > 1) return { action:'review', reason:'Mais de um cadastro correspondente', payload, row:index + 2 }; }
-    if (!existing) return { action:'new', reason:'Novo estágio', payload, row:index + 2 };
+    if (!existing) {
+      const candidates = records.filter(item => !item.academic_system_id && normalizedIdentity(item.student_name) === normalizedIdentity(payload.student_name));
+      const ranked = candidates.map(item => ({ item, score: academicMatchScore(item, payload) })).sort((a, b) => b.score - a.score);
+      const bestScore = ranked[0]?.score || 0;
+      const best = ranked.filter(match => match.score === bestScore && match.score >= 2);
+      if (best.length === 1) existing = best[0].item;
+      if (best.length > 1) return { action:'review', reason:'Mais de um cadastro correspondente', payload, row:index + 2 };
+    }    if (!existing) return { action:'new', reason:'Novo estágio', payload, row:index + 2 };
     const changes = importedFields(payload); delete changes.academic_imported_at;
     const changed = Object.entries(changes).some(([key,value]) => String(existing[key] ?? '') !== String(value ?? ''));
     return { action:changed ? 'update' : 'skip', reason:changed ? 'Atualizar dados acadêmicos' : 'Sem alterações', payload, existing, row:index + 2 };
@@ -637,24 +650,22 @@ function classifyStudentRows(rows, replaceEmails = false) {
     if(!payload.student_name)return {action:'review',reason:'Nome do estudante ausente',payload,row:index+2};
     if(!isTresLagoasCampus(payload.campus))return {action:'review',reason:'Campus diferente de Três Lagoas',payload,row:index+2};
     if(seen.has(identity))return {action:'review',reason:'Estudante repetido no arquivo',payload,row:index+2};seen.add(identity);
-    let matches=records.filter(item=>normalizedIdentity(item.student_name)===normalizedIdentity(payload.student_name));
-    if(matches.length>1&&payload.course)matches=matches.filter(item=>normalizedIdentity(canonicalCourse(item.course))===normalizedIdentity(payload.course));
+    let matches=records.filter(item=>(payload.academic_enrollment&&item.academic_enrollment===payload.academic_enrollment)||(payload.academic_ra&&item.academic_ra===payload.academic_ra));
+    if(!matches.length)matches=records.filter(item=>normalizedIdentity(item.student_name)===normalizedIdentity(payload.student_name));
+    if(matches.length>1&&payload.course){const sameCourse=matches.filter(item=>normalizedIdentity(canonicalCourse(item.course))===normalizedIdentity(payload.course));if(sameCourse.length)matches=sameCourse;}
     if(matches.length===0)return {action:'review',reason:'Sem estágio correspondente',payload,row:index+2};
-    if(matches.length>1)return {action:'review',reason:'Mais de um estágio correspondente',payload,row:index+2};
-    const existing=matches[0],changes={};
-    ['student_cpf','student_birth_date','student_whatsapp','academic_enrollment','academic_ra'].forEach(key=>{if(!existing[key]&&payload[key])changes[key]=payload[key];});
-    if(payload.student_email&&(!existing.student_email||(replaceEmails&&existing.student_email.trim().toLowerCase()!==payload.student_email)))changes.student_email=payload.student_email;
-    if(!Object.keys(changes).length)return {action:'skip',reason:'Dados já preenchidos',payload,existing,row:index+2};
-    changes.academic_student_imported_at=new Date().toISOString();
-    return {action:'update',reason:`Preencher ${Object.keys(changes).length-1} campo${Object.keys(changes).length-1===1?'':'s'}`,payload,changes,existing,row:index+2,selected:true};
+    const targets=matches.map(existing=>{const changes={};['student_cpf','student_birth_date','student_whatsapp','academic_enrollment','academic_ra'].forEach(key=>{if(!existing[key]&&payload[key])changes[key]=payload[key];});if(payload.student_email&&(!existing.student_email||(replaceEmails&&existing.student_email.trim().toLowerCase()!==payload.student_email)))changes.student_email=payload.student_email;if(Object.keys(changes).length)changes.academic_student_imported_at=new Date().toISOString();return {existing,changes};}).filter(target=>Object.keys(target.changes).length);
+    if(!targets.length)return {action:'skip',reason:'Dados já preenchidos',payload,row:index+2};
+    const fieldCount=targets.reduce((total,target)=>total+Object.keys(target.changes).length-1,0);
+    const reason=matches.length>1?`Atualizar ${matches.length} estágios vinculados`:`Preencher ${fieldCount} campo${fieldCount===1?'':'s'}`;
+    return {action:'update',reason,payload,targets,row:index+2,selected:true};
   });
-}
-function updateStudentImportButton(){const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected).length;$('#confirm-student-import').disabled=selected===0;$('#confirm-student-import').textContent=selected?`Confirmar ${selected} complementação${selected===1?'':'ões'}`:'Nada selecionado';}
+}function updateStudentImportButton(){const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected).length;$('#confirm-student-import').disabled=selected===0;$('#confirm-student-import').textContent=selected?`Confirmar ${selected} complementação${selected===1?'':'ões'}`:'Nada selecionado';}
 function renderStudentImportPreview(items){pendingStudentImport=items;const counts={update:items.filter(x=>x.action==='update').length,skip:items.filter(x=>x.action==='skip').length,review:items.filter(x=>x.action==='review').length};const summary=$('#student-import-summary');summary.replaceChildren(...[['update','Complementar'],['skip','Já preenchidos'],['review','Revisar']].map(([key,label])=>{const item=document.createElement('div'),strong=document.createElement('strong'),span=document.createElement('span');strong.textContent=counts[key];span.textContent=label;item.append(strong,span);return item;}));summary.hidden=false;const body=$('#student-import-preview-body');body.replaceChildren();items.forEach((item,itemIndex)=>{const tr=document.createElement('tr'),selectCell=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.className='student-import-select';check.dataset.index=itemIndex;check.checked=item.action==='update';check.disabled=item.action!=='update';item.selected=check.checked;selectCell.append(check);tr.append(selectCell);[item.reason,item.payload.student_name,item.payload.student_cpf,item.payload.student_email,formatDate(item.payload.student_birth_date),item.payload.student_whatsapp].forEach((value,index)=>{const td=document.createElement('td');if(index===0){const badge=document.createElement('span');badge.className=`import-action ${item.action}`;badge.textContent=value;td.append(badge);}else td.textContent=value||'—';tr.append(td);});body.append(tr);});$('#student-import-preview-wrap').hidden=false;updateStudentImportButton();}
 $('#import-students-button').addEventListener('click',()=>{$('#student-csv-file').value='';$('#student-import-message').textContent='';$('#student-import-summary').hidden=true;$('#student-import-preview-wrap').hidden=true;pendingStudentImport=[];pendingStudentRows=[];$('#replace-student-emails').checked=false;updateStudentImportButton();studentImportDialog.showModal();});
 $('#student-csv-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;const message=$('#student-import-message');message.textContent='Analisando o arquivo…';try{const rows=parseCsv(await readAcademicCsv(file)),headers=Object.keys(rows[0]||{});const hasHeader=(...aliases)=>aliases.some(alias=>headers.includes(normalizeHeader(alias)));const hasStudent=hasHeader('Estudante','Aluno','Nome do estudante');const hasComplement=hasHeader('Matrícula','Matricula','RA','Email','E-mail','CPF','Data de Nascimento','Nascimento','Telefone','WhatsApp');if(!hasStudent||!hasComplement)throw new Error('Cabeçalhos não reconhecidos. Encontrados: ' + (headers.join(', ') || 'nenhum') + '.');pendingStudentRows=rows;renderStudentImportPreview(classifyStudentRows(rows,$('#replace-student-emails').checked));message.textContent=`${rows.length} linha${rows.length===1?'':'s'} analisada${rows.length===1?'':'s'}. O campo sexo não está presente neste relatório.`;}catch(error){pendingStudentImport=[];$('#student-import-summary').hidden=true;$('#student-import-preview-wrap').hidden=true;updateStudentImportButton();message.textContent=error.message||'Não foi possível ler o CSV.';}});
 $('#replace-student-emails').addEventListener('change',()=>{if(pendingStudentRows.length)renderStudentImportPreview(classifyStudentRows(pendingStudentRows,$('#replace-student-emails').checked));});$('#student-import-preview-body').addEventListener('change',event=>{const check=event.target.closest('.student-import-select');if(!check)return;pendingStudentImport[Number(check.dataset.index)].selected=check.checked;updateStudentImportButton();});
-$('#confirm-student-import').addEventListener('click',async()=>{const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected);if(!selected.length||!confirm(`Complementar os dados de ${selected.length} estudante${selected.length===1?'':'s'}?`))return;const button=$('#confirm-student-import'),message=$('#student-import-message');button.disabled=true;message.textContent='Atualizando dados faltantes…';let completed=0;for(const item of selected){const {error}=await supabase.from('internships').update(item.changes).eq('id',item.existing.id);if(error){message.textContent=`${completed} atualizado${completed===1?'':'s'}. A operação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}completed++;}await loadRecords();message.textContent=`Dados de ${completed} estudante${completed===1?'':'s'} complementados com sucesso.`;button.textContent='Complementação concluída';pendingStudentImport=[];});
+$('#confirm-student-import').addEventListener('click',async()=>{const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected);if(!selected.length||!confirm(`Complementar os dados de ${selected.length} estudante${selected.length===1?'':'s'}?`))return;const button=$('#confirm-student-import'),message=$('#student-import-message');button.disabled=true;message.textContent='Atualizando dados faltantes…';let completed=0;for(const item of selected){for(const target of item.targets){const {error}=await supabase.from('internships').update(target.changes).eq('id',target.existing.id);if(error){message.textContent=`${completed} estudante${completed===1?'':'s'} atualizado${completed===1?'':'s'}. A operação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}}completed++;}await loadRecords();message.textContent=`Dados de ${completed} estudante${completed===1?'':'s'} complementados com sucesso.`;button.textContent='Complementação concluída';pendingStudentImport=[];});
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
