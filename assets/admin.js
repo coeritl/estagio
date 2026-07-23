@@ -35,7 +35,7 @@ let pendingStudentRows = [];
 let agreements = [];
 let pendingAgreementImport = [];
 let advisors = [];
-let advisorAssignments = [];
+let advisorAvailability = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -110,13 +110,13 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult, assignmentsResult] = await Promise.all([
+  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
     supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false }),
     supabase.from('internship_agreements').select('*').order('external_institution'),
     supabase.from('internship_advisors').select('*').order('display_order').order('name'),
-    supabase.from('advisor_assignments').select('advisor_id,semester_year,semester_half')
+    supabase.rpc('get_advisor_availability', { p_start_date: new Date().toISOString().slice(0,10) })
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
@@ -124,7 +124,7 @@ async function loadRecords() {
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
-  advisorAssignments = assignmentsResult.error ? [] : (assignmentsResult.data || []);
+  advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
   render();
   renderTceRequests();
   renderAdvisors();
@@ -329,10 +329,8 @@ function renderAdvisors() {
     const areas = document.createElement('p');
     areas.textContent = advisor.areas;
     const order = document.createElement('small');
-    const now = new Date();
-    const semesterYear = now.getFullYear();
-    const semesterHalf = now.getMonth() < 6 ? 1 : 2;
-    const occupied = advisorAssignments.filter(item => item.advisor_id === advisor.id && item.semester_year === semesterYear && item.semester_half === semesterHalf).length;
+    const availability = advisorAvailability.find(item => item.id === advisor.id);
+    const occupied = Number(availability?.current_selections || 0);
     order.textContent = `Ordem de exibição: ${advisor.display_order} · ${occupied} de ${advisor.max_selections || 5} orientações no semestre atual`;
     content.append(heading, areas, order);
     const actions = document.createElement('div');
