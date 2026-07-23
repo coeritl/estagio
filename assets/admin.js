@@ -87,7 +87,7 @@ function emailMessage(record, type) {
   const report = isPartial ? 'Relatório Parcial de Estágio' : 'Relatório Final de Estágio e a Ficha de Avaliação do Estagiário pelo Supervisor';
   const dueDate = isPartial ? record.partial_report_date : record.final_report_date;
   const firstName = record.student_name.trim().split(/\s+/)[0];
-  return `Olá, ${firstName}!\n\nConforme o cronograma do seu estágio, chegou o momento de entregar o ${report}. A data prevista para essa entrega é ${formatDate(dueDate)}.\n\nOs modelos dos relatórios e as orientações para preenchimento estão disponíveis em:\nhttps://coeritl.github.io/estagio/relatorios\n\nConfira se o documento está totalmente preenchido e com as assinaturas necessárias. Encaminhe-o para coeri.tl@ifms.edu.br.\n\nEm caso de dúvida, entre em contato com a COERI.\n\nAtenciosamente,\nCoordenação de Extensão e Relações Institucionais\nIFMS Campus Três Lagoas`;
+  return `Olá, ${firstName}!\n\nConforme o cronograma do seu estágio, chegou o momento de entregar o ${report}. A data prevista para essa entrega é ${formatDate(dueDate)}.\n\nOs modelos dos relatórios e as orientações para preenchimento estão disponíveis em:\nhttps://coeri.tl.ifms.edu.br/relatorios\n\nConfira se o documento está totalmente preenchido e com as assinaturas necessárias. Encaminhe-o para coeri.tl@ifms.edu.br.\n\nEm caso de dúvida, entre em contato com a COERI.\n\nAtenciosamente,\nCoordenação de Extensão e Relações Institucionais\nIFMS Campus Três Lagoas`;
 }
 
 function setView(authenticated, email = '') {
