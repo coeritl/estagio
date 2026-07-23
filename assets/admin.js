@@ -35,6 +35,7 @@ let pendingStudentRows = [];
 let agreements = [];
 let pendingAgreementImport = [];
 let advisors = [];
+let advisorAssignments = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -109,12 +110,13 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult] = await Promise.all([
+  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult, assignmentsResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
     supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false }),
     supabase.from('internship_agreements').select('*').order('external_institution'),
-    supabase.from('internship_advisors').select('*').order('display_order').order('name')
+    supabase.from('internship_advisors').select('*').order('display_order').order('name'),
+    supabase.from('advisor_assignments').select('advisor_id,semester_year,semester_half')
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
@@ -122,6 +124,7 @@ async function loadRecords() {
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
+  advisorAssignments = assignmentsResult.error ? [] : (assignmentsResult.data || []);
   render();
   renderTceRequests();
   renderAdvisors();
@@ -326,7 +329,11 @@ function renderAdvisors() {
     const areas = document.createElement('p');
     areas.textContent = advisor.areas;
     const order = document.createElement('small');
-    order.textContent = `Ordem de exibição: ${advisor.display_order}`;
+    const now = new Date();
+    const semesterYear = now.getFullYear();
+    const semesterHalf = now.getMonth() < 6 ? 1 : 2;
+    const occupied = advisorAssignments.filter(item => item.advisor_id === advisor.id && item.semester_year === semesterYear && item.semester_half === semesterHalf).length;
+    order.textContent = `Ordem de exibição: ${advisor.display_order} · ${occupied} de ${advisor.max_selections || 5} orientações no semestre atual`;
     content.append(heading, areas, order);
     const actions = document.createElement('div');
     actions.className = 'advisor-admin-actions';
@@ -485,7 +492,10 @@ $('#delete-tce-request').addEventListener('click', async () => {
   if (!request || !confirm(`Excluir permanentemente a solicitação de ${request.student_name}?`)) return;
   const { error } = await supabase.from('tce_requests').delete().eq('id', request.id);
   if (error) { $('#tce-process-message').textContent = 'Não foi possível excluir a solicitação.'; return; }
-  if (request.public_protocol) await supabase.from('tce_protocol_statuses').delete().eq('protocol', request.public_protocol);
+  if (request.public_protocol) {
+    await supabase.rpc('release_advisor_slot', { p_protocol: request.public_protocol });
+    await supabase.from('tce_protocol_statuses').delete().eq('protocol', request.public_protocol);
+  }
   tceDialog.close();
   await loadRecords();
 });
@@ -510,9 +520,18 @@ $('#save-tce-status').addEventListener('click', async () => {
   const button = $('#save-tce-status');
   button.disabled = true;
   message.textContent = 'Salvando…';
+  if (status !== 'tce_negado') {
+    const { error: reservationError } = await supabase.rpc('reserve_advisor_slot', { p_advisor_name: request.advisor_name, p_protocol: request.public_protocol, p_start_date: request.start_date });
+    if (reservationError) {
+      button.disabled = false;
+      message.textContent = reservationError.message?.includes('ADVISOR_CAPACITY_REACHED') ? 'Este professor já atingiu cinco orientações no semestre. Selecione outro orientador no cadastro antes de continuar.' : 'Não foi possível reservar a vaga deste orientador.';
+      return;
+    }
+  }
   const { error } = await supabase.from('tce_protocol_statuses').update({ status, public_note: publicNote || null, document_url: status === 'tce_gerado' ? documentUrl : null }).eq('protocol', request.public_protocol);
   button.disabled = false;
   if (error) { message.textContent = 'Não foi possível atualizar o status.'; return; }
+  if (status === 'tce_negado') await supabase.rpc('release_advisor_slot', { p_protocol: request.public_protocol });
   message.textContent = 'Status público atualizado.';
   await loadRecords();
 });

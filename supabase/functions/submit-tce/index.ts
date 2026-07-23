@@ -141,8 +141,24 @@ export default { async fetch(request: Request) {
     );
     const { data, error } = await supabase.from("tce_requests").insert(payload).select("id").single();
     if (error) throw error;
+    const { error: reservationError } = await supabase.rpc("reserve_advisor_slot", {
+      p_advisor_name: payload.advisor_name,
+      p_protocol: publicProtocol,
+      p_start_date: payload.start_date,
+    });
+    if (reservationError) {
+      await supabase.from("tce_requests").delete().eq("id", data.id);
+      if (reservationError.message?.includes("ADVISOR_CAPACITY_REACHED")) {
+        return response(origin, 409, { error: "Este professor atingiu o limite de cinco orientações neste semestre. Escolha outro orientador." });
+      }
+      if (reservationError.message?.includes("ADVISOR_NOT_AVAILABLE")) {
+        return response(origin, 409, { error: "O professor selecionado não está disponível para novas orientações neste semestre." });
+      }
+      throw reservationError;
+    }
     const { error: statusError } = await supabase.from("tce_protocol_statuses").insert({ protocol: publicProtocol, status: "recebido" });
     if (statusError) {
+      await supabase.rpc("release_advisor_slot", { p_protocol: publicProtocol });
       await supabase.from("tce_requests").delete().eq("id", data.id);
       throw statusError;
     }
