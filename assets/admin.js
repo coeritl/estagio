@@ -13,6 +13,7 @@ const internshipMessage = $('#internship-message');
 const messageDialog = $('#message-dialog');
 const passwordDialog = $('#password-dialog');
 const importDialog = $('#import-dialog');
+const studentImportDialog = $('#student-import-dialog');
 const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
 const tceDialog = $('#tce-dialog');
@@ -25,6 +26,7 @@ let tceRequests = [];
 let protocolStatuses = [];
 let lastCopiedReminderBatch = null;
 let pendingAcademicImport = [];
+let pendingStudentImport = [];
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -253,7 +255,7 @@ function renderCard(record, target) {
     const grid = document.createElement('div');
     grid.className = 'academic-grid';
     [
-      ['Início', formatDate(record.start_date)], ['Orientador', record.advisor_name], ['Tipo', record.internship_type],
+      ['Matrícula', record.academic_enrollment], ['RA', record.academic_ra], ['Início', formatDate(record.start_date)], ['Orientador', record.advisor_name], ['Tipo', record.internship_type],
       ['Carga horária', record.academic_workload], ['Situação do estágio', record.academic_status], ['Situação do curso', record.course_status],
       ['Plano/avaliação', record.academic_activity_status]
     ].filter(([, value]) => value).forEach(([label, value]) => grid.append(detailItem(label, value)));
@@ -543,7 +545,10 @@ function canonicalCourse(value) {
   const key = normalizedIdentity(withoutCode);
   const aliases = {
     'tecnologia em analise e desenvolvimento de sistemas': 'Análise e Desenvolvimento de Sistemas',
-    'tecnologia em automacao industrial': 'Automação Industrial'
+    'tecnologia em automacao industrial': 'Automação Industrial',
+    'tecnico em eletrotecnica': 'Técnico Integrado em Eletrotécnica',
+    'tecnico em informatica': 'Técnico Integrado em Informática',
+    'tecnico em administracao': 'Técnico Integrado em Administração (EJA-EPT)'
   };
   return aliases[key] || withoutCode;
 }
@@ -607,6 +612,45 @@ $('#confirm-import-button').addEventListener('click', async () => {
   for(const item of actionable){ const payload=importedFields(item.payload); const query=item.action==='new'?supabase.from('internships').insert({...payload,status:'em_andamento'}):supabase.from('internships').update(payload).eq('id',item.existing.id); const {error}=await query; if(error){message.textContent=`${completed} registro${completed===1?'':'s'} importado${completed===1?'':'s'}. A importação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}completed++;}
   await loadRecords();message.textContent=`${completed} registro${completed===1?'':'s'} importado${completed===1?'':'s'} com sucesso.`;button.textContent='Importação concluída';pendingAcademicImport=[];
 });
+function formattedCpf(value) {
+  const number=String(value||'').replace(/\D/g,'').slice(0,11);
+  return number.length===11?number.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):'';
+}
+function normalizedPhones(value) {
+  const matches=String(value||'').match(/\(\d{2}\)\s*\d{4,5}-\d{4}/g)||[];
+  if(matches.length)return [...new Set(matches.map(phone=>phone.replace(/\s+/g,' ').trim()))].join(' / ');
+  const number=String(value||'').replace(/\D/g,'').slice(0,11);
+  if(number.length===11)return `(${number.slice(0,2)}) ${number.slice(2,7)}-${number.slice(7)}`;
+  if(number.length===10)return `(${number.slice(0,2)}) ${number.slice(2,6)}-${number.slice(6)}`;
+  return '';
+}
+function studentComplementPayload(row) {
+  return {student_name:csvValue(row,'Estudante','Aluno','Nome do estudante').toLocaleUpperCase('pt-BR'),course:canonicalCourse(csvValue(row,'Curso')),campus:csvValue(row,'Campus'),academic_enrollment:csvValue(row,'Matrícula','Matricula'),academic_ra:csvValue(row,'RA'),student_email:csvValue(row,'Email','E-mail').toLowerCase(),student_cpf:formattedCpf(csvValue(row,'CPF')),student_birth_date:csvDate(csvValue(row,'Data de Nascimento','Nascimento')),student_whatsapp:normalizedPhones(csvValue(row,'Telefone','WhatsApp'))};
+}
+function classifyStudentRows(rows) {
+  const seen=new Set();
+  return rows.map((row,index)=>{
+    const payload=studentComplementPayload(row);const identity=payload.academic_enrollment||payload.academic_ra||normalizedIdentity(payload.student_name);
+    if(!payload.student_name)return {action:'review',reason:'Nome do estudante ausente',payload,row:index+2};
+    if(!isTresLagoasCampus(payload.campus))return {action:'review',reason:'Campus diferente de Três Lagoas',payload,row:index+2};
+    if(seen.has(identity))return {action:'review',reason:'Estudante repetido no arquivo',payload,row:index+2};seen.add(identity);
+    let matches=records.filter(item=>normalizedIdentity(item.student_name)===normalizedIdentity(payload.student_name));
+    if(matches.length>1&&payload.course)matches=matches.filter(item=>normalizedIdentity(canonicalCourse(item.course))===normalizedIdentity(payload.course));
+    if(matches.length===0)return {action:'review',reason:'Sem estágio correspondente',payload,row:index+2};
+    if(matches.length>1)return {action:'review',reason:'Mais de um estágio correspondente',payload,row:index+2};
+    const existing=matches[0],changes={};
+    ['student_cpf','student_birth_date','student_email','student_whatsapp','academic_enrollment','academic_ra'].forEach(key=>{if(!existing[key]&&payload[key])changes[key]=payload[key];});
+    if(!Object.keys(changes).length)return {action:'skip',reason:'Dados já preenchidos',payload,existing,row:index+2};
+    changes.academic_student_imported_at=new Date().toISOString();
+    return {action:'update',reason:`Preencher ${Object.keys(changes).length-1} campo${Object.keys(changes).length-1===1?'':'s'}`,payload,changes,existing,row:index+2,selected:true};
+  });
+}
+function updateStudentImportButton(){const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected).length;$('#confirm-student-import').disabled=selected===0;$('#confirm-student-import').textContent=selected?`Confirmar ${selected} complementação${selected===1?'':'ões'}`:'Nada selecionado';}
+function renderStudentImportPreview(items){pendingStudentImport=items;const counts={update:items.filter(x=>x.action==='update').length,skip:items.filter(x=>x.action==='skip').length,review:items.filter(x=>x.action==='review').length};const summary=$('#student-import-summary');summary.replaceChildren(...[['update','Complementar'],['skip','Já preenchidos'],['review','Revisar']].map(([key,label])=>{const item=document.createElement('div'),strong=document.createElement('strong'),span=document.createElement('span');strong.textContent=counts[key];span.textContent=label;item.append(strong,span);return item;}));summary.hidden=false;const body=$('#student-import-preview-body');body.replaceChildren();items.forEach((item,itemIndex)=>{const tr=document.createElement('tr'),selectCell=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.className='student-import-select';check.dataset.index=itemIndex;check.checked=item.action==='update';check.disabled=item.action!=='update';item.selected=check.checked;selectCell.append(check);tr.append(selectCell);[item.reason,item.payload.student_name,item.payload.student_cpf,item.payload.student_email,formatDate(item.payload.student_birth_date),item.payload.student_whatsapp].forEach((value,index)=>{const td=document.createElement('td');if(index===0){const badge=document.createElement('span');badge.className=`import-action ${item.action}`;badge.textContent=value;td.append(badge);}else td.textContent=value||'—';tr.append(td);});body.append(tr);});$('#student-import-preview-wrap').hidden=false;updateStudentImportButton();}
+$('#import-students-button').addEventListener('click',()=>{$('#student-csv-file').value='';$('#student-import-message').textContent='';$('#student-import-summary').hidden=true;$('#student-import-preview-wrap').hidden=true;pendingStudentImport=[];updateStudentImportButton();studentImportDialog.showModal();});
+$('#student-csv-file').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;const message=$('#student-import-message');message.textContent='Analisando o arquivo…';try{const rows=parseCsv(await readAcademicCsv(file)),headers=Object.keys(rows[0]||{});if(!['curso','campus','estudante','email','cpf','data de nascimento'].every(header=>headers.includes(header)))throw new Error('As colunas obrigatórias do relatório acadêmico não foram reconhecidas.');renderStudentImportPreview(classifyStudentRows(rows));message.textContent=`${rows.length} linha${rows.length===1?'':'s'} analisada${rows.length===1?'':'s'}. O campo sexo não está presente neste relatório.`;}catch(error){pendingStudentImport=[];$('#student-import-summary').hidden=true;$('#student-import-preview-wrap').hidden=true;updateStudentImportButton();message.textContent=error.message||'Não foi possível ler o CSV.';}});
+$('#student-import-preview-body').addEventListener('change',event=>{const check=event.target.closest('.student-import-select');if(!check)return;pendingStudentImport[Number(check.dataset.index)].selected=check.checked;updateStudentImportButton();});
+$('#confirm-student-import').addEventListener('click',async()=>{const selected=pendingStudentImport.filter(item=>item.action==='update'&&item.selected);if(!selected.length||!confirm(`Complementar os dados de ${selected.length} estudante${selected.length===1?'':'s'}?`))return;const button=$('#confirm-student-import'),message=$('#student-import-message');button.disabled=true;message.textContent='Atualizando dados faltantes…';let completed=0;for(const item of selected){const {error}=await supabase.from('internships').update(item.changes).eq('id',item.existing.id);if(error){message.textContent=`${completed} atualizado${completed===1?'':'s'}. A operação parou na linha ${item.row}: ${error.message}`;await loadRecords();return;}completed++;}await loadRecords();message.textContent=`Dados de ${completed} estudante${completed===1?'':'s'} complementados com sucesso.`;button.textContent='Complementação concluída';pendingStudentImport=[];});
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
@@ -619,6 +663,7 @@ document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEve
 document.querySelectorAll('[data-close-message]').forEach(button => button.addEventListener('click', () => messageDialog.close()));
 document.querySelectorAll('[data-close-tce]').forEach(button => button.addEventListener('click', () => tceDialog.close()));
 document.querySelectorAll('[data-close-import]').forEach(button => button.addEventListener('click', () => importDialog.close()));
+document.querySelectorAll('[data-close-student-import]').forEach(button => button.addEventListener('click', () => studentImportDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
 passwordForm.addEventListener('submit', async event => {
