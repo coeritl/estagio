@@ -132,32 +132,33 @@ p, li, a, strong, span { overflow-wrap: break-word; }
 .side-nav a:hover { background:var(--green-50); color:var(--green-800); }
 .side-nav a.btn-green { display:flex; margin-bottom:.45rem; padding:.72rem .75rem; background:var(--green-800); color:#fff; font-weight:850; }
 .side-nav a.btn-green:hover { background:var(--green-950); color:#fff; }
-.report-process-highlight { padding:1.5rem 0 0; background:var(--soft); }
+.reports-page .page-hero { padding:3.2rem 0 2.8rem; }
+.reports-page .page-hero h1 { font-size:clamp(2.3rem,4vw,3.5rem); }
+.reports-page main>.section { padding:3.5rem 0 4.5rem; }
+.report-process-highlight { padding:1.25rem 0; border-bottom:1px solid var(--line); background:var(--soft); }
 .report-process-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
-.report-process-card { display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; padding:1.4rem; border:2px solid var(--line); border-radius:20px; background:#fff; color:var(--ink); text-decoration:none; box-shadow:0 12px 30px rgba(16,59,36,.07); transition:.18s ease; }
-.report-process-card:hover { transform:translateY(-2px); box-shadow:0 18px 40px rgba(16,59,36,.12); }
-.report-process-card.download-step { border-color:#e9b433; background:#fff8df; }
-.report-process-card.upload-step { border-color:#6eaf88; background:#eef8f1; }
-.report-process-number { width:48px; height:48px; display:grid; place-items:center; border-radius:50%; background:var(--amber); color:#3e310c; font-size:1.3rem; font-weight:950; }
+.report-process-card { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:.9rem; padding:1rem 1.15rem; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--ink); text-decoration:none; transition:.18s ease; }
+.report-process-card:hover { border-color:#83b597; box-shadow:0 8px 20px rgba(16,59,36,.07); }
+.report-process-card.download-step { border-left:5px solid var(--amber); }
+.report-process-card.upload-step { border-left:5px solid var(--green-800); }
+.report-process-number { width:38px; height:38px; display:grid; place-items:center; border-radius:50%; background:var(--amber); color:#3e310c; font-size:1rem; font-weight:950; }
 .upload-step .report-process-number { background:var(--green-800); color:#fff; }
-.report-process-card h2 { margin:.2rem 0 .35rem; font-size:clamp(1.3rem,2.2vw,1.8rem); }
-.report-process-card p { margin:0 0 .75rem; color:#526158; }
-.report-process-card strong { color:#634600; }
-.report-process-card.upload-step strong { color:var(--green-900); }
-.document-section-heading { margin-bottom:2rem; padding:1.35rem; border-left:7px solid var(--amber); border-radius:0 15px 15px 0; background:#fff8df; }
-.document-section-heading h2 { margin:.3rem 0 .4rem!important; font-size:clamp(1.55rem,3vw,2.2rem); }
+.report-process-card h2 { margin:.1rem 0 .2rem; font-size:1.2rem; }
+.report-process-card p { margin:0; color:#526158; font-size:.9rem; }
+.document-section-heading { margin-bottom:1rem; }
+.document-section-heading h2 { margin:.25rem 0 .3rem!important; font-size:clamp(1.7rem,3vw,2.3rem); }
 .document-section-heading p { margin:0; }
-.download-help { margin:0 0 2rem; padding:1.25rem 1.4rem; border:1px solid #b9d2c2; border-radius:15px; background:#f1f8f3; }
-.download-help>strong { display:block; color:var(--green-950); font-size:1.08rem; }
+.download-help { margin:0 0 1.5rem; padding:.85rem 1rem; border:1px solid #cbd9cf; border-radius:12px; background:#f7faf8; }
+.download-help summary { color:var(--green-900); font-weight:800; cursor:pointer; }
 .download-help ol { margin:.7rem 0 0; padding-left:1.25rem; }
 .download-help li { color:#35483b; }
-.featured-download { display:grid; grid-template-columns:auto minmax(0,1fr) auto; min-height:104px; border:2px solid #d9b14c; background:#fffdf7; box-shadow:0 9px 24px rgba(99,70,0,.08); }
-.download-card-icon { width:48px; height:48px; display:grid; place-items:center; border-radius:13px; background:var(--amber); color:#3d310e; font-size:1.55rem; font-weight:950; }
+.featured-download { display:grid; grid-template-columns:auto minmax(0,1fr) auto; min-height:92px; border:1px solid #c9d8ce; border-left:5px solid var(--amber); background:#fff; box-shadow:0 5px 15px rgba(20,58,37,.045); }
+.download-card-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:11px; background:#fff1c5; color:#745100; font-size:1.3rem; font-weight:950; }
 .featured-download strong { font-size:1.05rem; }
 .download-action { background:var(--green-900); color:#fff; }
 .download-action:hover { background:#034725; color:#fff; }
 @media(max-width:760px){.report-process-grid{grid-template-columns:1fr}.featured-download{grid-template-columns:auto minmax(0,1fr)}.featured-download .download-action{grid-column:1/-1;width:100%}}
-@media(max-width:430px){.report-process-card{grid-template-columns:1fr}.report-process-number{width:42px;height:42px}.featured-download{grid-template-columns:1fr}.download-card-icon{width:42px;height:42px}.featured-download .download-action{grid-column:auto}}
+@media(max-width:430px){.report-process-card{grid-template-columns:auto minmax(0,1fr)}.featured-download{grid-template-columns:1fr}.featured-download .download-action{grid-column:auto}}
 .callout { border:1px solid #efd18b; border-left:7px solid var(--amber); background:#fff8e7; border-radius:0 16px 16px 0; padding:1.45rem 1.55rem; margin:1.6rem 0; box-shadow:0 10px 26px rgba(104,74,6,.08); font-size:1.02rem; }
 .callout > strong:first-child { display:block; color:#5e4308; font-size:1.15rem; line-height:1.25; margin-bottom:.35rem; }
 .callout.green { border-color:var(--green-700); background:var(--green-50); }
