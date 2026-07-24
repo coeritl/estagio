@@ -19,6 +19,7 @@ const advisorDialog = $('#advisor-dialog');
 const advisorForm = $('#advisor-form');
 const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
+const reportList = $('#report-admin-list');
 const tceDialog = $('#tce-dialog');
 const tceProcessForm = $('#tce-process-form');
 const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
@@ -26,6 +27,7 @@ const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(windo
 let supabase;
 let records = [];
 let tceRequests = [];
+let reportSubmissions = [];
 let protocolStatuses = [];
 let lastCopiedReminderBatch = null;
 let pendingAcademicImport = [];
@@ -116,9 +118,10 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult] = await Promise.all([
+  const [internshipsResult, requestsResult, reportsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
+    supabase.from('internship_report_submissions').select('*,internships(student_name,student_email,student_cpf,course,internship_number)').order('submitted_at', { ascending: false }),
     supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false }),
     supabase.from('internship_agreements').select('*').order('external_institution'),
     supabase.from('internship_advisors').select('*').order('display_order').order('name'),
@@ -127,12 +130,14 @@ async function loadRecords() {
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
   tceRequests = requestsResult.error ? [] : (requestsResult.data || []);
+  reportSubmissions = reportsResult.error ? [] : (reportsResult.data || []);
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
   render();
   renderTceRequests();
+  renderReportSubmissions();
   renderAdvisors();
 }
 
@@ -194,6 +199,71 @@ function renderTceRequests() {
     button.textContent = 'Analisar solicitação';
     card.append(main, button);
     tceList.append(card);
+  });
+}
+
+const reportTypeLabels = {
+  parcial: 'Relatório parcial',
+  final: 'Relatório final',
+  avaliacao_supervisor: 'Avaliação pelo supervisor'
+};
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(Number(bytes))) return '—';
+  return Number(bytes) < 1048576 ? `${Math.ceil(Number(bytes) / 1024)} KB` : `${(Number(bytes) / 1048576).toFixed(1)} MB`;
+}
+
+function renderReportSubmissions() {
+  reportList.replaceChildren();
+  $('#report-count').textContent = reportSubmissions.length;
+  $('#report-empty-state').hidden = reportSubmissions.length > 0;
+  reportSubmissions.forEach(report => {
+    const student = report.internships || {};
+    const card = document.createElement('article');
+    card.className = 'report-admin-card';
+    card.dataset.id = report.id;
+    const heading = document.createElement('div');
+    heading.className = 'report-admin-heading';
+    const info = document.createElement('div');
+    const tag = document.createElement('span');
+    tag.className = `status-pill report-status-${report.status}`;
+    tag.textContent = report.status === 'aceito' ? 'Conferido' : report.status === 'correcao_solicitada' ? 'Correção solicitada' : 'Novo';
+    const title = document.createElement('h3');
+    title.textContent = `${reportTypeLabels[report.document_type] || 'Documento'} · ${student.student_name || 'Estudante'}`;
+    const summary = document.createElement('p');
+    summary.textContent = `${student.course || 'Curso não informado'} · Estágio ${student.internship_number || 'sem número'}`;
+    const received = document.createElement('small');
+    received.textContent = `Recebido em ${new Date(report.submitted_at).toLocaleString('pt-BR')}`;
+    info.append(tag, title, summary);
+    heading.append(info, received);
+    const details = document.createElement('div');
+    details.className = 'report-admin-details';
+    [
+      ['Turma', report.student_class],
+      ['Período do estágio', report.internship_period],
+      ['Carga horária', `${report.total_workload} horas`],
+      ['Arquivo', `${report.original_filename} · ${formatFileSize(report.file_size)}`],
+      ['E-mail', student.student_email],
+      ['CPF', student.student_cpf]
+    ].forEach(([label, value]) => details.append(detailItem(label, value)));
+    const actions = document.createElement('div');
+    actions.className = 'report-admin-actions';
+    const download = document.createElement('button');
+    download.type = 'button';
+    download.className = 'admin-button primary report-download';
+    download.textContent = 'Baixar documento';
+    const accepted = document.createElement('button');
+    accepted.type = 'button';
+    accepted.className = 'admin-button ghost report-accept';
+    accepted.textContent = report.status === 'aceito' ? 'Conferido' : 'Marcar como conferido';
+    accepted.disabled = report.status === 'aceito';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'admin-button danger-outline report-delete';
+    remove.textContent = 'Apagar documento';
+    actions.append(download, accepted, remove);
+    card.append(heading, details, actions);
+    reportList.append(card);
   });
 }
 
@@ -500,10 +570,52 @@ tceList.addEventListener('click', event => {
   if (request) openTceDialog(request);
 });
 
+reportList.addEventListener('click', async event => {
+  const card = event.target.closest('.report-admin-card');
+  const button = event.target.closest('button');
+  if (!card || !button) return;
+  const report = reportSubmissions.find(item => item.id === card.dataset.id);
+  if (!report) return;
+  if (button.classList.contains('report-download')) {
+    button.disabled = true;
+    button.textContent = 'Preparando…';
+    const { data, error } = await supabase.storage.from('internship-reports').download(report.storage_path);
+    button.disabled = false;
+    button.textContent = 'Baixar documento';
+    if (error) { alert('Não foi possível baixar o documento. Tente novamente.'); return; }
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.original_filename || `${report.document_type}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return;
+  }
+  if (button.classList.contains('report-accept')) {
+    button.disabled = true;
+    const { error } = await supabase.from('internship_report_submissions').update({ status: 'aceito', reviewed_at: new Date().toISOString() }).eq('id', report.id);
+    if (error) { button.disabled = false; alert('Não foi possível atualizar o documento.'); return; }
+    await loadRecords();
+    return;
+  }
+  if (button.classList.contains('report-delete')) {
+    const studentName = report.internships?.student_name || 'o estudante';
+    if (!confirm(`Apagar definitivamente o ${reportTypeLabels[report.document_type]} de ${studentName}?\n\nBaixe o documento antes de continuar. Esta ação libera espaço no armazenamento e não poderá ser desfeita.`)) return;
+    button.disabled = true;
+    button.textContent = 'Apagando…';
+    const { error: storageError } = await supabase.storage.from('internship-reports').remove([report.storage_path]);
+    if (storageError) { button.disabled = false; button.textContent = 'Apagar documento'; alert('Não foi possível apagar o arquivo. Tente novamente.'); return; }
+    const { error } = await supabase.rpc('delete_internship_report', { p_report_id: report.id });
+    if (error) alert('O arquivo foi apagado, mas o registro não pôde ser removido. Atualize a página e tente novamente.');
+    await loadRecords();
+  }
+});
+
 document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab === button));
   $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
   $('#requests-view').hidden = button.dataset.adminView !== 'requests';
+  $('#reports-view').hidden = button.dataset.adminView !== 'reports';
   $('#advisors-view').hidden = button.dataset.adminView !== 'advisors';
   $('#maintenance-view').hidden = button.dataset.adminView !== 'maintenance';
   if (button.dataset.adminView === 'maintenance') loadMaintenanceMetrics();

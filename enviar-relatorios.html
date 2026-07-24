@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Enviar relatórios de estágio | COERI</title>
+  <link rel="stylesheet" href="assets/styles.css?v=20260724-2">
+  <link rel="stylesheet" href="assets/report-upload.css?v=20260724-1">
+</head>
+<body>
+<div class="topbar"><div class="container"><span>IFMS Campus Três Lagoas · COERI</span><a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a></div></div>
+<header class="site-header"><div class="container nav-wrap"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span><strong>COERI · Estágios</strong><span>IFMS Campus Três Lagoas</span></span></a><button class="menu-btn" aria-expanded="false">Menu</button><nav class="nav-links"><a href="consultar-protocolo">Consultar protocolo</a><a href="como-comecar">Como começar</a><a href="empresas">Empresas</a><a aria-current="page" href="relatorios">Relatórios</a><a href="convalidacao">Convalidação</a><a href="para-empresas">Para empresas</a><a class="nav-cta" href="formulario-tce">Solicitar TCE</a></nav></div></header>
+<main>
+  <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="./">Início</a> / <a href="relatorios">Relatórios</a> / Enviar</div><h1>Enviar documentos do estágio</h1><p>Use este formulário para encaminhar seus relatórios diretamente à área restrita da COERI.</p></div></section>
+  <section class="section section-soft">
+    <div class="container report-upload-shell">
+      <div class="callout warning"><strong>Antes de enviar</strong><p>Confira o preenchimento e todas as assinaturas. Os arquivos devem estar no formato PDF e ter até 10 MB cada.</p></div>
+      <form id="report-upload-form" class="report-upload-card">
+        <section>
+          <span class="eyebrow">Identificação</span>
+          <h2>Dados do estudante</h2>
+          <p>O CPF e o e-mail serão usados somente para localizar seu estágio em andamento. A consulta não exibirá dados pessoais.</p>
+          <div class="report-grid">
+            <label>CPF<input id="report-cpf" name="cpf" required inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"></label>
+            <label>E-mail institucional<input id="report-email" name="email" required type="email" autocomplete="email" placeholder="nome@estudante.ifms.edu.br"></label>
+            <label>Turma<input name="student_class" required maxlength="120" placeholder="Ex.: TADS 2026/1"></label>
+            <label>Período de realização do estágio<input name="internship_period" required maxlength="160" placeholder="Ex.: 01/03/2026 a 31/12/2026"></label>
+            <label>Carga horária total<input name="total_workload" required type="number" inputmode="numeric" min="1" max="10000" placeholder="Ex.: 270"><small>Informe a quantidade total de horas.</small></label>
+          </div>
+        </section>
+        <section>
+          <span class="eyebrow">Documentos</span>
+          <h2>Selecione o que deseja entregar</h2>
+          <p>Você pode enviar um ou mais documentos na mesma solicitação.</p>
+          <div class="file-grid">
+            <label class="file-field"><strong>Relatório parcial</strong><span>PDF · até 10 MB</span><input name="partial_report" type="file" accept="application/pdf,.pdf"></label>
+            <label class="file-field"><strong>Relatório final</strong><span>PDF · até 10 MB</span><input name="final_report" type="file" accept="application/pdf,.pdf"></label>
+            <label class="file-field"><strong>Avaliação pelo supervisor</strong><span>PDF · até 10 MB</span><input name="supervisor_evaluation" type="file" accept="application/pdf,.pdf"></label>
+          </div>
+        </section>
+        <label class="consent-check"><input type="checkbox" required><span>Declaro que os documentos enviados correspondem ao meu estágio e autorizo seu tratamento pela COERI para conferência e registro acadêmico.</span></label>
+        <div id="report-turnstile"></div>
+        <p id="report-upload-message" class="form-message" role="alert"></p>
+        <button class="btn btn-green report-submit" type="submit">Enviar documentos</button>
+        <p class="privacy">Os arquivos serão armazenados em área privada e poderão ser acessados somente pela COERI. Em caso de problema, escreva para <a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a>.</p>
+      </form>
+    </div>
+  </section>
+</main>
+<footer class="site-footer"><div class="container"><div class="footer-grid"><div><h3>COERI · Estágios</h3><p>IFMS Campus Três Lagoas</p></div><div><h3>Acesso rápido</h3><a href="./">Página inicial</a><a href="relatorios">Modelos de relatórios</a></div><div><h3>Contato</h3><a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a><a href="tel:+556720200307">(67) 2020-0307</a></div></div><div class="footer-bottom">Página informativa desenvolvida pela COERI do IFMS Campus Três Lagoas.</div></div></footer>
+<script src="assets/main.js"></script>
+<script src="assets/supabase-config.js?v=20260720-3"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
+<script type="module" src="assets/report-upload.js?v=20260724-1"></script>
+</body>
+</html>
