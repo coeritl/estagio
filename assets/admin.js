@@ -873,6 +873,18 @@ document.querySelectorAll('[data-close-agreement-import]').forEach(button=>butto
 document.querySelectorAll('[data-close-advisor]').forEach(button=>button.addEventListener('click',()=>advisorDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
+
+document.querySelectorAll('.action-menu').forEach(menu => {
+  menu.addEventListener('toggle', () => {
+    if (!menu.open) return;
+    document.querySelectorAll('.action-menu[open]').forEach(other => { if (other !== menu) other.open = false; });
+  });
+  menu.querySelectorAll('button').forEach(button => button.addEventListener('click', () => { if (!button.disabled) menu.open = false; }));
+});
+document.addEventListener('click', event => {
+  if (event.target.closest('.action-menu')) return;
+  document.querySelectorAll('.action-menu[open]').forEach(menu => { menu.open = false; });
+});
 passwordForm.addEventListener('submit', async event => {
   event.preventDefault();
   const message = $('#password-message');
