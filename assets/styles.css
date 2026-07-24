@@ -152,13 +152,14 @@ p, li, a, strong, span { overflow-wrap: break-word; }
 .download-help summary { color:var(--green-900); font-weight:800; cursor:pointer; }
 .download-help ol { margin:.7rem 0 0; padding-left:1.25rem; }
 .download-help li { color:#35483b; }
-.featured-download { display:grid; grid-template-columns:auto minmax(0,1fr) auto; min-height:92px; border:1px solid #c9d8ce; border-left:5px solid var(--amber); background:#fff; box-shadow:0 5px 15px rgba(20,58,37,.045); }
+.download-card.featured-download { display:grid; grid-template-columns:52px minmax(0,1fr) auto; align-items:center; justify-content:initial; min-height:92px; border:1px solid #c9d8ce; border-left:5px solid var(--amber); background:#fff; box-shadow:0 5px 15px rgba(20,58,37,.045); }
+.featured-download>div:nth-child(2) { width:100%; min-width:0; justify-self:stretch; text-align:left; }
 .download-card-icon { width:42px; height:42px; display:grid; place-items:center; border-radius:11px; background:#fff1c5; color:#745100; font-size:1.3rem; font-weight:950; }
 .featured-download strong { font-size:1.05rem; }
 .download-action { background:var(--green-900); color:#fff; }
 .download-action:hover { background:#034725; color:#fff; }
-@media(max-width:760px){.report-process-grid{grid-template-columns:1fr}.featured-download{grid-template-columns:auto minmax(0,1fr)}.featured-download .download-action{grid-column:1/-1;width:100%}}
-@media(max-width:430px){.report-process-card{grid-template-columns:auto minmax(0,1fr)}.featured-download{grid-template-columns:1fr}.featured-download .download-action{grid-column:auto}}
+@media(max-width:760px){.report-process-grid{grid-template-columns:1fr}.download-card.featured-download{grid-template-columns:52px minmax(0,1fr)}.featured-download .download-action{grid-column:1/-1;width:100%}}
+@media(max-width:430px){.report-process-card{grid-template-columns:auto minmax(0,1fr)}.download-card.featured-download{grid-template-columns:1fr}.featured-download .download-action{grid-column:auto}}
 .callout { border:1px solid #efd18b; border-left:7px solid var(--amber); background:#fff8e7; border-radius:0 16px 16px 0; padding:1.45rem 1.55rem; margin:1.6rem 0; box-shadow:0 10px 26px rgba(104,74,6,.08); font-size:1.02rem; }
 .callout > strong:first-child { display:block; color:#5e4308; font-size:1.15rem; line-height:1.25; margin-bottom:.35rem; }
 .callout.green { border-color:var(--green-700); background:var(--green-50); }
