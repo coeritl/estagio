@@ -39,24 +39,49 @@ function buildWeeklySchedule() {
   }
   const schedule = [];
   for (const row of selected) {
-    const start = $('.time-start', row).value;
-    const end = $('.time-end', row).value;
-    if (!start || !end) {
-      scheduleMessage.textContent = `Informe os horários de entrada e saída de ${row.dataset.weekday.toLowerCase()}.`;
+    const start1 = $('.time-start-1', row).value;
+    const end1 = $('.time-end-1', row).value;
+    const start2 = $('.time-start-2', row).value;
+    const end2 = $('.time-end-2', row).value;
+    if (!start1 || !end1) {
+      scheduleMessage.textContent = `Informe os horários do primeiro período de ${row.dataset.weekday.toLowerCase()}.`;
       return '';
     }
-    const [startHour, startMinute] = start.split(':').map(Number);
-    const [endHour, endMinute] = end.split(':').map(Number);
-    const duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-    if (duration <= 0) {
-      scheduleMessage.textContent = `O horário de saída de ${row.dataset.weekday.toLowerCase()} deve ser posterior ao de entrada.`;
+    if ((start2 && !end2) || (!start2 && end2)) {
+      scheduleMessage.textContent = `Preencha a entrada e a saída do segundo período de ${row.dataset.weekday.toLowerCase()}.`;
       return '';
+    }
+    const minutes = value => {
+      const [hour, minute] = value.split(':').map(Number);
+      return hour * 60 + minute;
+    };
+    const start1Minutes = minutes(start1);
+    const end1Minutes = minutes(end1);
+    if (end1Minutes <= start1Minutes) {
+      scheduleMessage.textContent = `A saída do primeiro período de ${row.dataset.weekday.toLowerCase()} deve ser posterior à entrada.`;
+      return '';
+    }
+    let duration = end1Minutes - start1Minutes;
+    let formatted = `${start1} / ${end1}`;
+    if (start2 && end2) {
+      const start2Minutes = minutes(start2);
+      const end2Minutes = minutes(end2);
+      if (end2Minutes <= start2Minutes) {
+        scheduleMessage.textContent = `A saída do segundo período de ${row.dataset.weekday.toLowerCase()} deve ser posterior à entrada.`;
+        return '';
+      }
+      if (start2Minutes < end1Minutes) {
+        scheduleMessage.textContent = `O segundo período de ${row.dataset.weekday.toLowerCase()} deve começar após o término do primeiro.`;
+        return '';
+      }
+      duration += end2Minutes - start2Minutes;
+      formatted += ` e ${start2} / ${end2}`;
     }
     if (duration > 360) {
       scheduleMessage.textContent = `${row.dataset.weekday} ultrapassa o limite de 6 horas diárias.`;
       return '';
     }
-    schedule.push(`${row.dataset.weekday}: ${start} / ${end}`);
+    schedule.push(`${row.dataset.weekday}: ${formatted}`);
   }
   scheduleMessage.textContent = '';
   return schedule.join('\n');
@@ -168,7 +193,7 @@ function initializeForm() {
     const timeFields = [...row.querySelectorAll('input[type="time"]')];
     timeFields.forEach(field => {
       field.disabled = !check.checked;
-      field.required = check.checked;
+      field.required = check.checked && (field.classList.contains('time-start-1') || field.classList.contains('time-end-1'));
       if (!check.checked) field.value = '';
     });
     $('#schedule-message').textContent = '';
