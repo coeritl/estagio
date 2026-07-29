@@ -10,7 +10,7 @@ const allowedOrigins = new Set([
 const labels = {
   recebido: "Recebido pela COERI",
   em_processamento: "Em processamento pela COERI",
-  tce_gerado: "TCE gerado e enviado para assinaturas",
+  tce_gerado: "TCE gerado e encaminhado para assinaturas",
   pendente_correcao: "Pendente de correção",
   tce_negado: "TCE negado — consulte a COERI",
 };

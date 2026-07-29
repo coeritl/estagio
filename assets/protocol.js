@@ -39,7 +39,7 @@ form.addEventListener('submit', async event => {
       recebido: 'Sua solicitação foi registrada e aguarda processamento pela COERI.',
       em_processamento: 'A COERI está conferindo as informações e preparando o seu TCE.',
       pendente_correcao: 'Existem informações que precisam ser corrigidas. Consulte a orientação abaixo.',
-      tce_gerado: 'O documento foi gerado e enviado para assinaturas.',
+      tce_gerado: 'O documento foi gerado e encaminhado para assinaturas.',
       tce_negado: 'Não foi possível dar continuidade à solicitação. Consulte a COERI.'
     };
     document.querySelector('#protocol-result-note').textContent = data.note || defaultNotes[data.status] || 'Acompanhe esta página para novas atualizações.';

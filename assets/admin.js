@@ -158,10 +158,12 @@ function requestProtocol(request) {
 const publicStatusLabels = {
   recebido: 'Recebido pela COERI',
   em_processamento: 'Em processamento pela COERI',
-  tce_gerado: 'TCE gerado e enviado para assinaturas',
+  tce_gerado: 'TCE gerado e encaminhado para assinaturas',
   pendente_correcao: 'Pendente de correção',
   tce_negado: 'TCE negado — consulte a COERI'
 };
+
+const generatedTceNote = 'TCE gerado e encaminhado para assinaturas. Confira o e-mail e o WhatsApp informados. O remetente será o Autentique.';
 
 function protocolStatus(request) {
   return protocolStatuses.find(item => item.protocol === request.public_protocol) || null;
@@ -281,6 +283,7 @@ function openTceDialog(request) {
   $('#tce-public-note').value = currentStatus?.public_note || '';
   $('#tce-document-url').value = currentStatus?.document_url || '';
   syncTceStatusFields();
+  $('#generate-tce-button').textContent = currentStatus?.status === 'tce_gerado' ? 'Registrar no acompanhamento' : 'Gerar TCE';
   const details = $('#tce-request-details');
   details.replaceChildren();
   const fields = [
@@ -623,16 +626,71 @@ document.querySelectorAll('[data-admin-view]').forEach(button => button.addEvent
 
 tceProcessForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const button = tceProcessForm.querySelector('[type="submit"]');
+  const button = $('#generate-tce-button');
   const message = $('#tce-process-message');
   const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
-  const savedPublicStatus = request ? protocolStatus(request) : null;
-  if (!savedPublicStatus || savedPublicStatus.status !== 'tce_gerado' || !/^https:\/\//i.test(savedPublicStatus.document_url || '')) {
-    message.textContent = 'Antes de registrar no acompanhamento, selecione “TCE gerado”, informe o link do Autentique e salve o status.';
+  if (!request?.public_protocol) {
+    message.textContent = 'Esta solicitação antiga não possui protocolo público. Entre em contato com o suporte antes de continuar.';
+    return;
+  }
+  if ($('#tce-public-status').value !== 'tce_gerado') {
+    $('#tce-public-status').value = 'tce_gerado';
+    $('#tce-public-note').value = generatedTceNote;
+    syncTceStatusFields();
+    button.disabled = true;
+    message.textContent = 'Atualizando o status público…';
+    const { error: generatedStatusError } = await supabase.from('tce_protocol_statuses').update({
+      status: 'tce_gerado',
+      public_note: generatedTceNote,
+      document_url: null
+    }).eq('protocol', request.public_protocol);
+    button.disabled = false;
+    if (generatedStatusError) {
+      $('#tce-public-status').value = protocolStatus(request)?.status || 'recebido';
+      syncTceStatusFields();
+      message.textContent = 'Não foi possível atualizar o status público.';
+      return;
+    }
+    const currentStatus = protocolStatus(request);
+    if (currentStatus) Object.assign(currentStatus, { status: 'tce_gerado', public_note: generatedTceNote, document_url: null });
+    button.textContent = 'Confirmar TCE gerado';
+    message.textContent = 'O estudante já verá “TCE gerado e encaminhado para assinaturas”. Informe agora o link do documento e clique em “Confirmar TCE gerado”.';
+    $('#tce-document-url').focus();
+    return;
+  }
+  const documentUrl = $('#tce-document-url').value.trim();
+  if (!/^https:\/\//i.test(documentUrl)) {
+    message.textContent = 'Informe o link completo do documento para assinatura.';
+    $('#tce-document-url').focus();
+    return;
+  }
+  if (!$('#tce-insurance-provider').value) {
+    message.textContent = 'Selecione quem fornece o seguro do estagiário.';
+    $('#tce-insurance-provider').focus();
     return;
   }
   button.disabled = true;
-  message.textContent = 'Registrando no acompanhamento…';
+  message.textContent = 'Salvando o status e registrando no acompanhamento…';
+  const { error: reservationError } = await supabase.rpc('reserve_advisor_slot', {
+    p_advisor_name: request.advisor_name,
+    p_protocol: request.public_protocol,
+    p_start_date: request.start_date
+  });
+  if (reservationError) {
+    button.disabled = false;
+    message.textContent = reservationError.message?.includes('ADVISOR_CAPACITY_REACHED') ? 'Este professor já atingiu cinco orientações no semestre. Selecione outro orientador no cadastro antes de continuar.' : 'Não foi possível reservar a vaga deste orientador.';
+    return;
+  }
+  const { error: statusError } = await supabase.from('tce_protocol_statuses').update({
+    status: 'tce_gerado',
+    public_note: generatedTceNote,
+    document_url: documentUrl
+  }).eq('protocol', request.public_protocol);
+  if (statusError) {
+    button.disabled = false;
+    message.textContent = 'Não foi possível salvar o status público e o link do documento.';
+    return;
+  }
   const { error } = await supabase.rpc('process_tce_request', {
     p_request_id: $('#tce-request-id').value,
     p_internship_number: $('#tce-internship-number').value.trim() || null,
@@ -640,8 +698,16 @@ tceProcessForm.addEventListener('submit', async event => {
     p_final_report_date: $('#tce-final-date').value || null,
     p_insurance_provider: $('#tce-insurance-provider').value
   });
+  if (error) {
+    button.disabled = false;
+    message.textContent = 'O status e o link foram salvos, mas não foi possível registrar o acompanhamento. Verifique os campos e tente novamente.';
+    return;
+  }
+  await supabase.from('tce_protocol_statuses').update({
+    public_note: generatedTceNote,
+    document_url: documentUrl
+  }).eq('protocol', request.public_protocol);
   button.disabled = false;
-  if (error) { message.textContent = 'Não foi possível processar a solicitação. Verifique os campos e tente novamente.'; return; }
   tceDialog.close();
   await loadRecords();
 });
