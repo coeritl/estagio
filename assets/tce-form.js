@@ -4,6 +4,10 @@ const config = window.SUPABASE_CONFIG || {};
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 let captchaToken = '';
 let widgetId;
+let syncCompanyFields = () => {};
+let syncGuardianFields = () => {};
+let syncScholarshipField = () => {};
+let syncOtherBenefitsField = () => {};
 
 function addBusinessDays(date, count) {
   const result = new Date(date);
@@ -172,10 +176,10 @@ function initializeForm() {
   form.elements.start_date.min = addBusinessDays(new Date(), 5);
 
   const guardianFields = $('#guardian-fields');
-  const syncCompanyFields = setConditional('request_type', 'externo', $('#company-fields'), [...$('#company-fields').querySelectorAll('input')]);
-  const syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
-  const syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
-  const syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
+  syncCompanyFields = setConditional('request_type', 'externo', $('#company-fields'), [...$('#company-fields').querySelectorAll('input')]);
+  syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
+  syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
+  syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
   form.addEventListener('change', event => {
     if (event.target.name !== 'requires_epi') return;
     const needsEpi = event.target.value === 'true';
