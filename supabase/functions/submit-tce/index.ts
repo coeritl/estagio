@@ -60,6 +60,7 @@ export default { async fetch(request: Request) {
     const isPaid = bool(input.is_paid);
     const requiresEpi = bool(input.requires_epi);
     const requestType = text(input.request_type, 10);
+    const insuranceProvider = text(input.insurance_provider, 30);
     if (!["externo", "interno"].includes(requestType)) return response(origin, 400, { error: "Selecione o tipo de estágio." });
     const isInternal = requestType === "interno";
     const normalizedRequestedProtocol = text(requestedProtocol, 24).toUpperCase();
@@ -94,6 +95,9 @@ export default { async fetch(request: Request) {
       is_paid: isPaid,
       scholarship_amount: isPaid ? Number(input.scholarship_amount) : null,
       other_benefits: isPaid ? text(input.other_benefits, 500) || null : null,
+      insurance_provider: insuranceProvider,
+      insurance_company_name: insuranceProvider === "Empresa concedente" ? text(input.insurance_company_name, 180) : null,
+      insurance_policy_number: insuranceProvider === "Empresa concedente" ? text(input.insurance_policy_number, 100) : null,
       weekly_schedule: text(input.weekly_schedule, 1500),
       start_date: text(input.start_date, 10),
       expected_end_date: text(input.expected_end_date, 10),
@@ -115,7 +119,7 @@ export default { async fetch(request: Request) {
     const required = [
       "request_type", "student_name", "student_cpf", "student_sex", "student_birth_date",
       "student_course", "student_period", "student_phone",
-      "internship_modality", "advisor_name", "weekly_schedule",
+      "internship_modality", "advisor_name", "insurance_provider", "weekly_schedule",
       "start_date", "expected_end_date", "internship_sector", "activity_plan", "supervisor_name",
       "supervisor_email", "supervisor_phone", "supervisor_education", "supervisor_experience", "epi_types",
     ] as const;
@@ -125,6 +129,12 @@ export default { async fetch(request: Request) {
     }
     if (isPaid && (!Number.isFinite(payload.scholarship_amount) || payload.scholarship_amount < 0)) {
       return response(origin, 400, { error: "Informe um valor de bolsa válido." });
+    }
+    if (!["IFMS", "Empresa concedente"].includes(payload.insurance_provider)) {
+      return response(origin, 400, { error: "Informe quem oferece o seguro do estagiário." });
+    }
+    if (payload.insurance_provider === "Empresa concedente" && (!payload.insurance_company_name || !payload.insurance_policy_number)) {
+      return response(origin, 400, { error: "Informe a seguradora e o número da apólice." });
     }
     if (payload.activity_plan.length < 50) return response(origin, 400, { error: "O plano de atividades deve ter pelo menos 50 caracteres." });
     if (isMinor && (!payload.guardian_name || !payload.guardian_email || !payload.guardian_cpf || !payload.guardian_phone)) {

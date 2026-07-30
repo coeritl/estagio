@@ -62,6 +62,16 @@ create table if not exists public.tce_requests (
   advisor_name text not null,
   is_paid boolean not null default false,
   scholarship_amount numeric(10,2),
+  insurance_provider text not null check (insurance_provider in ('IFMS', 'Empresa concedente')),
+  insurance_company_name text,
+  insurance_policy_number text,
+  constraint tce_requests_company_insurance_details check (
+    insurance_provider <> 'Empresa concedente'
+    or (
+      nullif(trim(insurance_company_name), '') is not null
+      and nullif(trim(insurance_policy_number), '') is not null
+    )
+  ),
   weekly_schedule text not null,
   start_date date not null,
   expected_end_date date not null,
@@ -110,6 +120,20 @@ alter table public.internships add column if not exists academic_student_importe
 alter table public.tce_requests add column if not exists supervisor_phone text;
 alter table public.tce_requests add column if not exists public_protocol text unique;
 alter table public.tce_requests add column if not exists other_benefits text;
+alter table public.tce_requests add column if not exists insurance_provider text;
+alter table public.tce_requests add column if not exists insurance_company_name text;
+alter table public.tce_requests add column if not exists insurance_policy_number text;
+alter table public.tce_requests drop constraint if exists tce_requests_insurance_provider_check;
+alter table public.tce_requests add constraint tce_requests_insurance_provider_check check (insurance_provider is null or insurance_provider in ('IFMS', 'Empresa concedente'));
+alter table public.tce_requests drop constraint if exists tce_requests_company_insurance_details;
+alter table public.tce_requests add constraint tce_requests_company_insurance_details check (
+  insurance_provider is null
+  or insurance_provider <> 'Empresa concedente'
+  or (
+    nullif(trim(insurance_company_name), '') is not null
+    and nullif(trim(insurance_policy_number), '') is not null
+  )
+);
 alter table public.tce_protocol_statuses add column if not exists document_url text;
 alter table public.tce_protocol_statuses drop constraint if exists tce_protocol_statuses_status_check;
 alter table public.tce_protocol_statuses add constraint tce_protocol_statuses_status_check check (status in ('recebido', 'em_processamento', 'tce_gerado', 'pendente_correcao', 'tce_negado'));
