@@ -35,7 +35,11 @@ form.addEventListener('submit', async event => {
     message.textContent = 'Selecione pelo menos um documento para enviar. Em caso de dúvida, escreva para coeri.tl@ifms.edu.br.';
     return;
   }
-  if (files.some(file => file.type !== 'application/pdf' || file.size > 10 * 1024 * 1024)) {
+  const invalidFile = files.some(file => {
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    return !isPdf || file.size > 10 * 1024 * 1024;
+  });
+  if (invalidFile) {
     message.textContent = 'Envie somente arquivos PDF de até 10 MB. Se o problema persistir, escreva para coeri.tl@ifms.edu.br.';
     return;
   }
@@ -56,7 +60,7 @@ form.addEventListener('submit', async event => {
       body: data
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error);
+    if (!response.ok) throw new Error(result.error || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.');
     message.className = 'form-message success';
     message.textContent = `${result.message} Comprovante do envio: ${result.receipt}.`;
     form.reset();

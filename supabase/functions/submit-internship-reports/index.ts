@@ -26,9 +26,9 @@ function headers(origin: string) {
 function answer(origin: string, status: number, payload: Record<string, unknown>) {
   return new Response(JSON.stringify(payload), { status, headers: headers(origin) });
 }
-function failure(origin: string, status = 400) {
+function failure(origin: string, status = 400, message?: string) {
   return answer(origin, status, {
-    error: `Não foi possível concluir o envio. Confira os dados e tente novamente. Se o problema persistir, entre em contato com a COERI pelo e-mail ${coeriEmail}.`
+    error: message || `Não foi possível concluir o envio. Confira os dados e tente novamente. Se o problema persistir, entre em contato com a COERI pelo e-mail ${coeriEmail}.`
   });
 }
 
@@ -51,7 +51,10 @@ Deno.serve(async request => {
       body: captchaForm
     });
     const captcha = await captchaResponse.json();
-    if (!captcha.success) return failure(origin, 403);
+    if (!captcha.success) {
+      console.warn("report-upload: captcha-rejected");
+      return failure(origin, 403, `Não foi possível validar o CAPTCHA. Recarregue a página e tente novamente. Se o problema persistir, escreva para ${coeriEmail}.`);
+    }
 
     const cpf = String(form.get("cpf") || "").replace(/\D/g, "");
     const email = String(form.get("email") || "").trim().toLowerCase();
@@ -66,13 +69,17 @@ Deno.serve(async request => {
       !Number.isInteger(totalWorkload) ||
       totalWorkload < 1 ||
       totalWorkload > 10000
-    ) return failure(origin);
+    ) return failure(origin, 400, `Confira o CPF, o e-mail institucional, a turma, o período e a carga horária informados. Se precisar de ajuda, escreva para ${coeriEmail}.`);
 
     const files = Object.entries(types)
       .map(([field, documentType]) => ({ file: form.get(field), documentType }))
       .filter(item => item.file instanceof File && item.file.size > 0) as Array<{file: File; documentType: string}>;
-    if (!files.length) return failure(origin);
-    if (files.some(item => item.file.type !== "application/pdf" || item.file.size > maxSize)) return failure(origin);
+    if (!files.length) return failure(origin, 400, "Selecione pelo menos um documento para enviar.");
+    const invalidFile = files.some(item => {
+      const isPdf = item.file.type === "application/pdf" || item.file.name.toLowerCase().endsWith(".pdf");
+      return !isPdf || item.file.size > maxSize;
+    });
+    if (invalidFile) return failure(origin, 400, "Envie somente arquivos PDF de até 10 MB cada.");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -88,7 +95,18 @@ Deno.serve(async request => {
       String(item.student_cpf || "").replace(/\D/g, "") === cpf &&
       String(item.student_email || "").trim().toLowerCase() === email
     );
-    if (matchError || identified.length !== 1) return failure(origin);
+    if (matchError) {
+      console.error("report-upload: internship-query-failed", matchError.message);
+      return failure(origin, 500, `Não foi possível consultar o cadastro agora. Tente novamente em alguns minutos ou escreva para ${coeriEmail}.`);
+    }
+    if (!identified.length) {
+      console.warn("report-upload: no-matching-active-internship");
+      return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF e este e-mail institucional. Confira os dados ou escreva para ${coeriEmail} para atualizar o cadastro.`);
+    }
+    if (identified.length > 1) {
+      console.warn("report-upload: duplicate-matching-active-internship");
+      return failure(origin, 409, `Há mais de um estágio em andamento vinculado a estes dados. Entre em contato com a COERI pelo e-mail ${coeriEmail}.`);
+    }
 
     const submissionCode = crypto.randomUUID();
     const rows = [];
@@ -119,7 +137,8 @@ Deno.serve(async request => {
       message: "Documentos enviados para a COERI com sucesso.",
       receipt: submissionCode.split("-")[0].toUpperCase()
     });
-  } catch {
+  } catch (error) {
+    console.error("report-upload: unexpected-failure", error instanceof Error ? error.message : String(error));
     if (storedPaths.length) {
       const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       await supabase.storage.from("internship-reports").remove(storedPaths);
