@@ -14,7 +14,7 @@
   <section class="page-hero"><div class="container"><div class="breadcrumbs"><a href="./">Início</a> / <a href="relatorios">Relatórios</a> / Enviar</div><h1>Enviar documentos do estágio</h1><p>Use este formulário para encaminhar seus relatórios diretamente à área restrita da COERI.</p></div></section>
   <section class="section section-soft">
     <div class="container report-upload-shell">
-      <div class="callout warning"><strong>Antes de enviar</strong><p>Confira o preenchimento e todas as assinaturas. Os arquivos devem estar no formato PDF e ter até 10 MB cada.</p></div>
+      <div class="callout warning"><strong>Antes de enviar</strong><p>Confira o preenchimento e todas as assinaturas. Os arquivos devem estar no formato PDF, ter até 10 MB cada e somar no máximo 15 MB por envio. Se necessário, envie um documento por vez.</p></div>
       <form id="report-upload-form" class="report-upload-card">
         <section>
           <span class="eyebrow">Identificação</span>
@@ -31,7 +31,7 @@
         <section>
           <span class="eyebrow">Documentos</span>
           <h2>Selecione o que deseja entregar</h2>
-          <p>Você pode enviar um ou mais documentos na mesma solicitação.</p>
+          <p>Você pode enviar um ou mais documentos na mesma solicitação, desde que o total não ultrapasse 15 MB.</p>
           <div class="file-grid">
             <label class="file-field"><strong>Relatório parcial</strong><span>PDF · até 10 MB</span><input name="partial_report" type="file" accept="application/pdf,.pdf"></label>
             <label class="file-field"><strong>Relatório final</strong><span>PDF · até 10 MB</span><input name="final_report" type="file" accept="application/pdf,.pdf"></label>
@@ -51,6 +51,6 @@
 <script src="assets/main.js"></script>
 <script src="assets/supabase-config.js?v=20260720-3"></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
-<script type="module" src="assets/report-upload.js?v=20260731-1"></script>
+<script type="module" src="assets/report-upload.js?v=20260731-2"></script>
 </body>
 </html>

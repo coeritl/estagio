@@ -2,6 +2,8 @@ const form = document.querySelector('#report-upload-form');
 const message = document.querySelector('#report-upload-message');
 const cpfInput = document.querySelector('#report-cpf');
 const config = window.SUPABASE_CONFIG || {};
+const maxFileSize = 10 * 1024 * 1024;
+const maxRequestSize = 15 * 1024 * 1024;
 let captchaToken = '';
 let widgetId;
 
@@ -37,10 +39,15 @@ form.addEventListener('submit', async event => {
   }
   const invalidFile = files.some(file => {
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    return !isPdf || file.size > 10 * 1024 * 1024;
+    return !isPdf || file.size > maxFileSize;
   });
   if (invalidFile) {
     message.textContent = 'Envie somente arquivos PDF de até 10 MB. Se o problema persistir, escreva para coeri.tl@ifms.edu.br.';
+    return;
+  }
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalSize > maxRequestSize) {
+    message.textContent = 'Os arquivos somam mais de 15 MB. Envie os documentos em etapas separadas, preenchendo novamente o formulário para cada envio.';
     return;
   }
   if (!captchaToken) {
@@ -65,7 +72,10 @@ form.addEventListener('submit', async event => {
     message.textContent = `${result.message} Comprovante do envio: ${result.receipt}.`;
     form.reset();
   } catch (error) {
-    message.textContent = error.message || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.';
+    const connectionFailed = error instanceof TypeError || error.message === 'Failed to fetch';
+    message.textContent = connectionFailed
+      ? 'A transferência dos arquivos foi interrompida. Confira sua conexão e tente novamente. Se selecionou mais de um PDF, envie um documento por vez. Se o problema persistir, escreva para coeri.tl@ifms.edu.br.'
+      : error.message || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.';
   } finally {
     button.disabled = false;
     button.textContent = 'Enviar documentos';

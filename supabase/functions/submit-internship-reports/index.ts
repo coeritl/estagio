@@ -9,6 +9,7 @@ const allowedOrigins = new Set([
 ]);
 const coeriEmail = "coeri.tl@ifms.edu.br";
 const maxSize = 10 * 1024 * 1024;
+const maxRequestSize = 15 * 1024 * 1024;
 const types: Record<string, string> = {
   partial_report: "parcial",
   final_report: "final",
@@ -80,6 +81,10 @@ Deno.serve(async request => {
       return !isPdf || item.file.size > maxSize;
     });
     if (invalidFile) return failure(origin, 400, "Envie somente arquivos PDF de até 10 MB cada.");
+    const totalSize = files.reduce((sum, item) => sum + item.file.size, 0);
+    if (totalSize > maxRequestSize) {
+      return failure(origin, 413, "Os arquivos somam mais de 15 MB. Envie os documentos em etapas separadas.");
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
