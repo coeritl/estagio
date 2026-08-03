@@ -297,6 +297,7 @@ function openTceDialog(request) {
     ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não'],
     ['Outros benefícios', request.other_benefits],
     ['Seguro', request.insurance_provider], ['Seguradora', request.insurance_company_name], ['Número da apólice', request.insurance_policy_number],
+    ['Capital segurado', request.insurance_coverage_amount ? `R$ ${Number(request.insurance_coverage_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null],
     ['Horário semanal', request.weekly_schedule], ['Início', formatDate(request.start_date)], ['Previsão de término', formatDate(request.expected_end_date)],
     ['Setor', request.internship_sector], ['Plano de atividades', request.activity_plan], ['Supervisor', request.supervisor_name],
     ['E-mail do supervisor', request.supervisor_email], ['WhatsApp do supervisor', request.supervisor_phone], ['Formação do supervisor', request.supervisor_education], ['Formação/experiência', request.supervisor_experience],

@@ -98,6 +98,7 @@ export default { async fetch(request: Request) {
       insurance_provider: insuranceProvider,
       insurance_company_name: insuranceProvider === "Empresa concedente" ? text(input.insurance_company_name, 180) : null,
       insurance_policy_number: insuranceProvider === "Empresa concedente" ? text(input.insurance_policy_number, 100) : null,
+      insurance_coverage_amount: insuranceProvider === "Empresa concedente" ? Number(input.insurance_coverage_amount) : null,
       weekly_schedule: text(input.weekly_schedule, 1500),
       start_date: text(input.start_date, 10),
       expected_end_date: text(input.expected_end_date, 10),
@@ -133,8 +134,8 @@ export default { async fetch(request: Request) {
     if (!["IFMS", "Empresa concedente"].includes(payload.insurance_provider)) {
       return response(origin, 400, { error: "Informe quem oferece o seguro do estagiário." });
     }
-    if (payload.insurance_provider === "Empresa concedente" && (!payload.insurance_company_name || !payload.insurance_policy_number)) {
-      return response(origin, 400, { error: "Informe a seguradora e o número da apólice." });
+    if (payload.insurance_provider === "Empresa concedente" && (!payload.insurance_company_name || !payload.insurance_policy_number || !Number.isFinite(payload.insurance_coverage_amount) || payload.insurance_coverage_amount <= 0)) {
+      return response(origin, 400, { error: "Informe a seguradora, o número da apólice e o valor do capital segurado." });
     }
     if (payload.activity_plan.length < 50) return response(origin, 400, { error: "O plano de atividades deve ter pelo menos 50 caracteres." });
     if (isMinor && (!payload.guardian_name || !payload.guardian_email || !payload.guardian_cpf || !payload.guardian_phone)) {

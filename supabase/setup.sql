@@ -65,11 +65,13 @@ create table if not exists public.tce_requests (
   insurance_provider text not null check (insurance_provider in ('IFMS', 'Empresa concedente')),
   insurance_company_name text,
   insurance_policy_number text,
+  insurance_coverage_amount numeric(14,2),
   constraint tce_requests_company_insurance_details check (
     insurance_provider <> 'Empresa concedente'
     or (
       nullif(trim(insurance_company_name), '') is not null
       and nullif(trim(insurance_policy_number), '') is not null
+      and insurance_coverage_amount > 0
     )
   ),
   weekly_schedule text not null,
@@ -123,6 +125,7 @@ alter table public.tce_requests add column if not exists other_benefits text;
 alter table public.tce_requests add column if not exists insurance_provider text;
 alter table public.tce_requests add column if not exists insurance_company_name text;
 alter table public.tce_requests add column if not exists insurance_policy_number text;
+alter table public.tce_requests add column if not exists insurance_coverage_amount numeric(14,2);
 alter table public.tce_requests drop constraint if exists tce_requests_insurance_provider_check;
 alter table public.tce_requests add constraint tce_requests_insurance_provider_check check (insurance_provider is null or insurance_provider in ('IFMS', 'Empresa concedente'));
 alter table public.tce_requests drop constraint if exists tce_requests_company_insurance_details;
@@ -132,6 +135,7 @@ alter table public.tce_requests add constraint tce_requests_company_insurance_de
   or (
     nullif(trim(insurance_company_name), '') is not null
     and nullif(trim(insurance_policy_number), '') is not null
+    and insurance_coverage_amount > 0
   )
 );
 alter table public.tce_protocol_statuses add column if not exists document_url text;

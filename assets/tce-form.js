@@ -181,7 +181,7 @@ function initializeForm() {
   syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
   syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
   syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
-  syncInsuranceCompanyFields = setConditional('insurance_provider', 'Empresa concedente', $('#insurance-company-fields'), [form.elements.insurance_company_name, form.elements.insurance_policy_number]);
+  syncInsuranceCompanyFields = setConditional('insurance_provider', 'Empresa concedente', $('#insurance-company-fields'), [form.elements.insurance_company_name, form.elements.insurance_policy_number, form.elements.insurance_coverage_amount]);
   form.addEventListener('change', event => {
     if (event.target.name !== 'requires_epi') return;
     const needsEpi = event.target.value === 'true';
