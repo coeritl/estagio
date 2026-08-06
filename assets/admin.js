@@ -598,6 +598,26 @@ reportList.addEventListener('click', async event => {
   }
   if (button.classList.contains('report-accept')) {
     button.disabled = true;
+    if (report.document_type === 'avaliacao_supervisor') {
+      const studentName = report.internships?.student_name || 'o estudante';
+      if (!confirm(`Ao marcar a avaliação do supervisor como conferida, o estágio de ${studentName} será concluído e removido do acompanhamento. Todos os documentos enviados desse estágio também serão apagados.\n\nBaixe os arquivos necessários antes de continuar. Deseja concluir o estágio?`)) {
+        button.disabled = false;
+        return;
+      }
+      const { data: storagePaths, error } = await supabase.rpc('accept_supervisor_evaluation_and_complete', { p_report_id: report.id });
+      if (error) {
+        button.disabled = false;
+        alert('Não foi possível conferir a avaliação e concluir o estágio. Tente novamente.');
+        return;
+      }
+      if (storagePaths?.length) {
+        const { error: storageError } = await supabase.storage.from('internship-reports').remove(storagePaths);
+        if (storageError) alert('O estágio foi concluído, mas alguns arquivos não puderam ser apagados do armazenamento. Informe a manutenção do sistema.');
+      }
+      await loadRecords();
+      alert(`A avaliação foi conferida e o estágio de ${studentName} foi concluído.`);
+      return;
+    }
     const { error } = await supabase.from('internship_report_submissions').update({ status: 'aceito', reviewed_at: new Date().toISOString() }).eq('id', report.id);
     if (error) { button.disabled = false; alert('Não foi possível atualizar o documento.'); return; }
     await loadRecords();

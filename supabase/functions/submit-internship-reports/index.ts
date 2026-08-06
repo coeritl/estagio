@@ -93,12 +93,11 @@ Deno.serve(async request => {
     );
     const { data: matches, error: matchError } = await supabase
       .from("internships")
-      .select("id,student_cpf,student_email")
+      .select("id,student_cpf")
       .eq("status", "em_andamento")
       .limit(2000);
     const identified = (matches || []).filter(item =>
-      String(item.student_cpf || "").replace(/\D/g, "") === cpf &&
-      String(item.student_email || "").trim().toLowerCase() === email
+      String(item.student_cpf || "").replace(/\D/g, "") === cpf
     );
     if (matchError) {
       console.error("report-upload: internship-query-failed", matchError.message);
@@ -106,11 +105,11 @@ Deno.serve(async request => {
     }
     if (!identified.length) {
       console.warn("report-upload: no-matching-active-internship");
-      return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF e este e-mail institucional. Confira os dados ou escreva para ${coeriEmail} para atualizar o cadastro.`);
+      return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF. Confira o número informado ou escreva para ${coeriEmail}.`);
     }
     if (identified.length > 1) {
       console.warn("report-upload: duplicate-matching-active-internship");
-      return failure(origin, 409, `Há mais de um estágio em andamento vinculado a estes dados. Entre em contato com a COERI pelo e-mail ${coeriEmail}.`);
+      return failure(origin, 409, `Há mais de um estágio em andamento vinculado a este CPF. Entre em contato com a COERI pelo e-mail ${coeriEmail} para identificar o cadastro correto.`);
     }
 
     const submissionCode = crypto.randomUUID();
