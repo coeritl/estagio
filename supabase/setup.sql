@@ -44,7 +44,7 @@ create table if not exists public.tce_requests (
   student_birth_date date not null,
   student_email text not null check (
     position('@' in student_email) > 1
-    and split_part(lower(trim(student_email)), '@', 2) = 'estudante.ifms.edu.br'
+    and split_part(lower(trim(student_email)), '@', 2) in ('estudante.ifms.edu.br', 'ifms.edu.br')
   ),
   student_course text not null,
   student_period text not null,

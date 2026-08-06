@@ -87,8 +87,8 @@ export default { async fetch(request: Request) {
     if (!captcha.success) return response(origin, 403, { error: "Não foi possível validar o CAPTCHA. Tente novamente." });
 
     const studentEmail = text(input.student_email, 254).toLowerCase();
-    if (!/^[^@\s]+@estudante\.ifms\.edu\.br$/.test(studentEmail)) {
-      return response(origin, 400, { error: "Use seu e-mail institucional @estudante.ifms.edu.br." });
+    if (!/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(studentEmail)) {
+      return response(origin, 400, { error: "Use seu e-mail institucional @estudante.ifms.edu.br ou @ifms.edu.br." });
     }
 
     const isMinor = bool(input.is_minor);

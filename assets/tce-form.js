@@ -224,8 +224,8 @@ form.addEventListener('submit', async event => {
   const message = $('#tce-form-message');
   const email = form.elements.student_email.value.trim().toLowerCase();
   if (!validateDocuments()) return;
-  if (!/^[^@\s]+@estudante\.ifms\.edu\.br$/.test(email)) {
-    message.textContent = 'Use seu e-mail institucional @estudante.ifms.edu.br.';
+  if (!/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(email)) {
+    message.textContent = 'Use seu e-mail institucional @estudante.ifms.edu.br ou @ifms.edu.br.';
     form.elements.student_email.focus();
     return;
   }
