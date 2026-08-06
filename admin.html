@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260724-2">
+  <link rel="stylesheet" href="assets/admin.css?v=20260806-1">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -43,6 +43,7 @@
           <button class="admin-tab active" type="button" data-admin-view="tracking">Acompanhamento</button>
           <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button>
           <button class="admin-tab" type="button" data-admin-view="reports">Relatórios recebidos <span id="report-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="notifications">Notificações <span id="notification-count">0</span></button>
           <button class="admin-tab" type="button" data-admin-view="advisors">Orientadores <span id="advisor-count">0</span></button>
           <button class="admin-tab" type="button" data-admin-view="maintenance">Manutenção</button>
         </nav>
@@ -81,6 +82,12 @@
           <div class="requests-intro"><div><span class="admin-kicker">Documentos enviados</span><h2>Relatórios recebidos</h2><p>Baixe os documentos para o computador antes de apagá-los. A exclusão libera espaço e não poderá ser desfeita.</p></div></div>
           <section class="report-admin-list" id="report-admin-list" aria-live="polite"></section>
           <div class="empty-state" id="report-empty-state"><div>📄</div><h2>Nenhum relatório recebido</h2><p>Os documentos enviados pelos estudantes aparecerão aqui.</p></div>
+        </section>
+
+        <section id="notifications-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Comunicação automática</span><h2>Central de notificações</h2><p>Acompanhe mensagens pendentes, enviadas pelo Gmail ou com falha. “Enviado” não confirma leitura nem chegada à caixa de entrada.</p></div></div>
+          <section class="notification-admin-list" id="notification-admin-list" aria-live="polite"></section>
+          <div class="empty-state" id="notification-empty-state"><div>✉️</div><h2>Nenhuma notificação registrada</h2><p>As mensagens automáticas aparecerão aqui.</p></div>
         </section>
 
         <section id="advisors-view" hidden>
@@ -219,6 +226,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260806-1"></script>
+  <script type="module" src="assets/admin.js?v=20260806-2"></script>
 </body>
 </html>

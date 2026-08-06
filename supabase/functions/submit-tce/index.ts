@@ -28,6 +28,41 @@ function response(origin: string | null, status: number, body: Record<string, un
 const text = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 const bool = (value: unknown) => value === true;
 
+async function notifyTceReceived(supabase: any, payload: any, protocol: string) {
+  const { data: notification, error } = await supabase.from("email_notifications").upsert({
+    event_type: "tce_recebido",
+    reference_key: protocol,
+    recipient_email: payload.student_email,
+    student_name: payload.student_name,
+    subject: "Solicitação de TCE recebida pela COERI",
+    template_data: { protocol },
+  }, { onConflict: "event_type,reference_key", ignoreDuplicates: true }).select("*").maybeSingle();
+  if (error || !notification) return;
+  const scriptUrl = Deno.env.get("GOOGLE_APPS_SCRIPT_URL") || "";
+  const scriptSecret = Deno.env.get("GOOGLE_APPS_SCRIPT_SECRET") || "";
+  if (!scriptUrl || !scriptSecret) {
+    await supabase.from("email_notifications").update({ status: "falhou", attempts: 1, error_message: "Google Apps Script ainda não configurado." }).eq("id", notification.id);
+    return;
+  }
+  try {
+    const scriptResponse = await fetch(scriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: scriptSecret, notificationId: notification.id, type: notification.event_type,
+        to: notification.recipient_email, subject: notification.subject,
+        studentName: notification.student_name, data: notification.template_data,
+      }),
+    });
+    const result = await scriptResponse.json().catch(() => ({}));
+    if (!scriptResponse.ok || !result.success) throw new Error(result.error || `Google respondeu com HTTP ${scriptResponse.status}.`);
+    await supabase.from("email_notifications").update({ status: "enviado", attempts: 1, error_message: null, provider_response: result, sent_at: new Date().toISOString() }).eq("id", notification.id);
+  } catch (notificationError) {
+    const message = notificationError instanceof Error ? notificationError.message : String(notificationError);
+    await supabase.from("email_notifications").update({ status: "falhou", attempts: 1, error_message: message.slice(0, 1000) }).eq("id", notification.id);
+  }
+}
+
 export default { async fetch(request: Request) {
   const origin = request.headers.get("origin");
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors(origin) });
@@ -173,6 +208,7 @@ export default { async fetch(request: Request) {
       await supabase.from("tce_requests").delete().eq("id", data.id);
       throw statusError;
     }
+    await notifyTceReceived(supabase, payload, publicProtocol);
     return response(origin, 201, { protocol: publicProtocol });
   } catch (error) {
     console.error(error);

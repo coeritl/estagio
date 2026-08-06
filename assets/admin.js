@@ -20,6 +20,7 @@ const advisorForm = $('#advisor-form');
 const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
 const reportList = $('#report-admin-list');
+const notificationList = $('#notification-admin-list');
 const tceDialog = $('#tce-dialog');
 const tceProcessForm = $('#tce-process-form');
 const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
@@ -28,6 +29,7 @@ let supabase;
 let records = [];
 let tceRequests = [];
 let reportSubmissions = [];
+let emailNotifications = [];
 let protocolStatuses = [];
 let lastCopiedReminderBatch = null;
 let pendingAcademicImport = [];
@@ -118,14 +120,15 @@ function setView(authenticated, email = '') {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, reportsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult] = await Promise.all([
+  const [internshipsResult, requestsResult, reportsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult, notificationsResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
     supabase.from('internship_report_submissions').select('*,internships(student_name,student_email,student_cpf,course,internship_number)').order('submitted_at', { ascending: false }),
     supabase.from('tce_protocol_statuses').select('*').order('updated_at', { ascending: false }),
     supabase.from('internship_agreements').select('*').order('external_institution'),
     supabase.from('internship_advisors').select('*').order('display_order').order('name'),
-    supabase.rpc('get_advisor_availability', { p_start_date: new Date().toISOString().slice(0,10) })
+    supabase.rpc('get_advisor_availability', { p_start_date: new Date().toISOString().slice(0,10) }),
+    supabase.from('email_notifications').select('*').order('created_at', { ascending: false }).limit(500)
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
@@ -135,10 +138,61 @@ async function loadRecords() {
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
+  emailNotifications = notificationsResult.error ? [] : (notificationsResult.data || []);
   render();
   renderTceRequests();
   renderReportSubmissions();
   renderAdvisors();
+  renderEmailNotifications();
+}
+
+const notificationTypeLabels = {
+  tce_recebido: 'Solicitação de TCE recebida',
+  tce_gerado: 'TCE enviado para assinaturas',
+  estagio_concluido: 'Estágio concluído'
+};
+
+function renderEmailNotifications() {
+  notificationList.replaceChildren();
+  const attentionCount = emailNotifications.filter(item => item.status !== 'enviado').length;
+  $('#notification-count').textContent = attentionCount;
+  $('#notification-empty-state').hidden = emailNotifications.length > 0;
+  emailNotifications.forEach(item => {
+    const card = document.createElement('article');
+    card.className = `notification-card status-${item.status}`;
+    card.dataset.id = item.id;
+    const content = document.createElement('div');
+    content.className = 'notification-content';
+    const heading = document.createElement('div');
+    heading.className = 'notification-heading';
+    const status = document.createElement('span');
+    status.className = 'notification-status';
+    status.textContent = item.status === 'enviado' ? 'Enviado pelo Gmail' : item.status === 'falhou' ? 'Falhou' : 'Pendente';
+    const title = document.createElement('h3');
+    title.textContent = `${notificationTypeLabels[item.event_type] || 'Notificação'} · ${item.student_name}`;
+    heading.append(status, title);
+    const destination = document.createElement('p');
+    destination.textContent = item.recipient_email;
+    const meta = document.createElement('p');
+    meta.className = 'notification-meta';
+    meta.textContent = `${item.attempts} tentativa${item.attempts === 1 ? '' : 's'} · ${item.sent_at ? `enviado em ${new Date(item.sent_at).toLocaleString('pt-BR')}` : `criado em ${new Date(item.created_at).toLocaleString('pt-BR')}`}`;
+    content.append(heading, destination, meta);
+    if (item.error_message) {
+      const error = document.createElement('p');
+      error.className = 'notification-error';
+      error.textContent = item.error_message;
+      content.append(error);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'notification-actions';
+    if (item.status !== 'enviado') {
+      const retry = document.createElement('button');
+      retry.type = 'button'; retry.className = 'admin-button ghost notification-retry'; retry.textContent = 'Tentar novamente';
+      actions.append(retry);
+    }
+    card.append(content, actions);
+    notificationList.append(card);
+  });
 }
 
 function detailItem(label, value) {
@@ -604,18 +658,18 @@ reportList.addEventListener('click', async event => {
         button.disabled = false;
         return;
       }
-      const { data: storagePaths, error } = await supabase.rpc('accept_supervisor_evaluation_and_complete', { p_report_id: report.id });
-      if (error) {
+      const { data: result, error } = await supabase.functions.invoke('manage-email-notification', {
+        body: { action: 'complete_internship', report_id: report.id }
+      });
+      if (error || !result?.completed) {
         button.disabled = false;
         alert('Não foi possível conferir a avaliação e concluir o estágio. Tente novamente.');
         return;
       }
-      if (storagePaths?.length) {
-        const { error: storageError } = await supabase.storage.from('internship-reports').remove(storagePaths);
-        if (storageError) alert('O estágio foi concluído, mas alguns arquivos não puderam ser apagados do armazenamento. Informe a manutenção do sistema.');
-      }
       await loadRecords();
-      alert(`A avaliação foi conferida e o estágio de ${studentName} foi concluído.`);
+      alert(result.sent
+        ? `A avaliação foi conferida, o estágio de ${studentName} foi concluído e a notificação foi enviada.`
+        : `A avaliação foi conferida e o estágio de ${studentName} foi concluído. O e-mail ficou pendente na Central de notificações.`);
       return;
     }
     const { error } = await supabase.from('internship_report_submissions').update({ status: 'aceito', reviewed_at: new Date().toISOString() }).eq('id', report.id);
@@ -636,11 +690,25 @@ reportList.addEventListener('click', async event => {
   }
 });
 
+notificationList.addEventListener('click', async event => {
+  const button = event.target.closest('.notification-retry');
+  const card = event.target.closest('.notification-card');
+  if (!button || !card) return;
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+  const { data, error } = await supabase.functions.invoke('manage-email-notification', {
+    body: { action: 'retry', notification_id: card.dataset.id }
+  });
+  if (error || !data?.sent) alert(data?.error || 'Não foi possível enviar a notificação. Confira a configuração do Google Apps Script.');
+  await loadRecords();
+});
+
 document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab === button));
   $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
   $('#requests-view').hidden = button.dataset.adminView !== 'requests';
   $('#reports-view').hidden = button.dataset.adminView !== 'reports';
+  $('#notifications-view').hidden = button.dataset.adminView !== 'notifications';
   $('#advisors-view').hidden = button.dataset.adminView !== 'advisors';
   $('#maintenance-view').hidden = button.dataset.adminView !== 'maintenance';
   if (button.dataset.adminView === 'maintenance') loadMaintenanceMetrics();
@@ -729,6 +797,12 @@ tceProcessForm.addEventListener('submit', async event => {
     public_note: generatedTceNote,
     document_url: documentUrl
   }).eq('protocol', request.public_protocol);
+  const { data: notificationResult } = await supabase.functions.invoke('manage-email-notification', {
+    body: { action: 'tce_generated', protocol: request.public_protocol, document_url: documentUrl }
+  });
+  if (!notificationResult?.sent) {
+    alert('O TCE foi registrado, mas o e-mail não foi enviado. Ele aparece como pendente na Central de notificações.');
+  }
   button.disabled = false;
   tceDialog.close();
   await loadRecords();
