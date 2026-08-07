@@ -613,9 +613,14 @@ async function handleCardAction(event) {
   if (event.target.closest('.final-reminder')) openMessage(record, 'final');
   if (event.target.closest('.complete-button')) {
     if (!confirm(`Concluir e excluir permanentemente o cadastro de ${record.student_name}? Esta ação não poderá ser desfeita.`)) return;
-    const { error } = await supabase.rpc('complete_internship', { p_internship_id: record.id });
-    if (error) { alert('Não foi possível concluir e excluir o cadastro. Tente novamente.'); return; }
+    const { data: result, error } = await supabase.functions.invoke('manage-email-notification', {
+      body: { action: 'complete_internship', internship_id: record.id }
+    });
+    if (error || !result?.completed) { alert('Não foi possível concluir e excluir o cadastro. Tente novamente.'); return; }
     await loadRecords();
+    alert(result.sent
+      ? `O estágio de ${record.student_name} foi concluído e a notificação foi enviada.`
+      : `O estágio de ${record.student_name} foi concluído. O e-mail ficou pendente na Central de notificações.`);
   }
 }
 

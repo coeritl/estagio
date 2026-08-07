@@ -90,6 +90,29 @@ Deno.serve(async request => {
     }
 
     if (input.action === "complete_internship") {
+      if (input.internship_id && !input.report_id) {
+        const internshipId = String(input.internship_id);
+        const { data: internship, error } = await service.from("internships")
+          .select("id,student_name,student_email,internship_number,course")
+          .eq("id", internshipId).single();
+        if (error) return json(404, { error: "Estágio não encontrado." });
+
+        let emailResult = { sent: false, error: "O estudante não possui e-mail cadastrado." };
+        if (internship.student_email) {
+          const notification = await createOrGet(service, {
+            event_type: "estagio_concluido", reference_key: internshipId,
+            recipient_email: internship.student_email, student_name: internship.student_name,
+            subject: "Confirmação de finalização do estágio",
+            template_data: { internshipNumber: internship.internship_number || "", course: internship.course || "" },
+          });
+          emailResult = await dispatch(service, notification);
+        }
+
+        const { error: completionError } = await caller.rpc("complete_internship", { p_internship_id: internshipId });
+        if (completionError) return json(500, { error: "O e-mail foi processado, mas não foi possível concluir o estágio." });
+        return json(200, { completed: true, ...emailResult });
+      }
+
       const { data: report, error } = await service.from("internship_report_submissions")
         .select("id,document_type,internship_id,internships(student_name,student_email,internship_number,course)")
         .eq("id", input.report_id).single();
