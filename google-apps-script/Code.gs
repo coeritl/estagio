@@ -19,6 +19,7 @@ function doPost(e) {
       if (previous) return output_({ success: true, duplicate: true, sentAt: previous });
 
       var model = emailModel_(input.type, input.studentName || 'estudante', input.data || {});
+      model.html = sanitizeEmailHtml_(model.html);
       GmailApp.sendEmail(input.to, input.subject || model.subject, model.plainText, {
         htmlBody: model.html,
         name: 'COERI · IFMS Campus Três Lagoas',
@@ -75,9 +76,9 @@ function emailModel_(type, studentName, data) {
       introduction: 'A solicitação do seu <strong>Termo de Compromisso de Estágio — TCE</strong> foi concluída e registrada pela COERI.',
       highlight: protocol ? '<div style="font-size:13px;color:#217346;font-weight:bold;text-transform:uppercase;letter-spacing:.6px">Número do protocolo</div><div style="margin-top:8px;font-size:28px;font-weight:bold;color:#0d633c;letter-spacing:1px">' + protocol + '</div>' : '',
       steps: [
-        ['🔎', 'Consulte o protocolo no Portal da COERI', 'Use o número acima na opção <strong>Consultar protocolo</strong> para acompanhar o andamento.'],
-        ['📩', 'Aguarde o envio para assinatura', 'Assim que o TCE for emitido, será enviado um link aos contatos informados.'],
-        ['✍️', 'Procure pelo remetente Autentique', 'Verifique também as pastas de spam, lixo eletrônico e mensagens arquivadas.']
+        ['1', 'Consulte o protocolo no Portal da COERI', 'Use o número acima na opção <strong>Consultar protocolo</strong> para acompanhar o andamento.'],
+        ['2', 'Aguarde o envio para assinatura', 'Assim que o TCE for emitido, será enviado um link aos contatos informados.'],
+        ['3', 'Procure pelo remetente Autentique', 'Verifique também as pastas de spam, lixo eletrônico e mensagens arquivadas.']
       ],
       warning: 'O estágio somente poderá ser iniciado após a emissão do TCE e a assinatura do documento por todas as partes envolvidas.',
       closing: 'Guarde o número do protocolo para consultar o andamento da solicitação.'
@@ -107,7 +108,7 @@ function emailModel_(type, studentName, data) {
       subtitle: 'A documentação final foi recebida e os procedimentos de encerramento foram concluídos.',
       greeting: 'Olá, ' + firstName + '!',
       introduction: 'Conforme os relatórios e documentos entregues, seu estágio foi devidamente <strong>registrado e finalizado no sistema</strong>.',
-      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">✅ Procedimento concluído</div><div style="margin-top:6px;color:#3d5c4b">Não há, neste momento, pendências documentais relacionadas ao encerramento deste estágio junto à COERI.</div>',
+      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">Procedimento concluído</div><div style="margin-top:6px;color:#3d5c4b">Não há, neste momento, pendências documentais relacionadas ao encerramento deste estágio junto à COERI.</div>',
       steps: [], warning: '',
       closing: 'Recomendamos que você mantenha uma cópia dos relatórios e documentos assinados para seus registros pessoais.'
     };
@@ -137,6 +138,11 @@ function renderEmail_(content) {
 }
 
 function output_(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
+function sanitizeEmailHtml_(html) {
+  return String(html)
+    .split('🔎').join('1').split('📩').join('2').split('✍️').join('3')
+    .split('✅').join('').split('📚').join('1').split('🔄').join('2');
+}
 function escapeHtml_(value) { return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function safeUrl_(value) { var url = String(value); return /^https:\/\//i.test(url) ? escapeHtml_(url) : ''; }
 function stripHtml_(value) { return String(value).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); }
