@@ -149,7 +149,8 @@ async function loadRecords() {
 const notificationTypeLabels = {
   tce_recebido: 'Solicitação de TCE recebida',
   tce_gerado: 'TCE enviado para assinaturas',
-  estagio_concluido: 'Estágio concluído'
+  estagio_concluido: 'Estágio concluído',
+  previsao_termino: 'Previsão de término atingida'
 };
 
 function renderEmailNotifications() {

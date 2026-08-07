@@ -35,6 +35,30 @@ function doPost(e) {
   }
 }
 
+/** Executada diariamente por um acionador baseado em tempo. */
+function checkEndingInternships() {
+  var properties = PropertiesService.getScriptProperties();
+  var url = properties.getProperty('SUPABASE_DUE_CHECK_URL');
+  var secret = properties.getProperty('WEBHOOK_SECRET');
+  if (!url || !secret) throw new Error('Configuração da verificação diária incompleta.');
+  var response = UrlFetchApp.fetch(url, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ secret: secret })
+  });
+  var result = JSON.parse(response.getContentText() || '{}');
+  if (response.getResponseCode() >= 300 || !result.success) throw new Error(result.error || 'Falha na verificação diária.');
+  return result;
+}
+
+/** Execute uma vez para criar ou substituir o acionador diário das 8h. */
+function installDailyEndingTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'checkEndingInternships') ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger('checkEndingInternships')
+    .timeBased().atHour(8).everyDays(1).inTimezone('America/Cuiaba').create();
+}
+
 function emailModel_(type, studentName, data) {
   var firstName = escapeHtml_(String(studentName).trim().split(/\s+/)[0] || 'estudante');
   var protocol = escapeHtml_(data.protocol || '');
@@ -87,9 +111,21 @@ function emailModel_(type, studentName, data) {
       steps: [], warning: '',
       closing: 'Recomendamos que você mantenha uma cópia dos relatórios e documentos assinados para seus registros pessoais.'
     };
+  } else if (type === 'previsao_termino') {
+    var endingDate = escapeHtml_(data.expectedEndDateFormatted || data.expectedEndDate || '');
+    return {
+      subject: 'A previsão de término do seu estágio foi atingida',
+      plainText: 'A previsão de término do seu estágio foi atingida. Informe à COERI se o estágio foi encerrado ou se haverá continuidade das atividades.',
+      html: renderEndingEmail_(firstName, endingDate)
+    };
   } else throw new Error('Tipo de mensagem inválido.');
 
   return { subject: content.subject, plainText: stripHtml_(content.introduction + ' ' + content.closing), html: renderEmail_(content) };
+}
+
+function renderEndingEmail_(firstName, endingDate) {
+  var dateLine = endingDate ? '<p style="margin:12px 0 0;font-size:15px;line-height:24px"><strong>Data prevista:</strong> ' + endingDate + '</p>' : '';
+  return '<!doctype html><html lang="pt-BR"><body style="margin:0;padding:0;background:#eef2f1;font-family:Arial,Helvetica,sans-serif;color:#26332f"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef2f1"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px rgba(20,60,45,.10)"><tr><td style="height:8px;background:#16834b">&nbsp;</td></tr><tr><td style="background:#0d633c;padding:34px 38px 30px"><div style="font-size:13px;color:#d7f3e4;font-weight:bold">ACOMPANHAMENTO DE ESTÁGIO · COERI</div><h1 style="margin:8px 0 10px;font-size:29px;line-height:37px;color:#fff">Previsão de término do estágio</h1><p style="margin:0;font-size:16px;line-height:25px;color:#edf8f2">A data prevista para encerramento do seu estágio foi atingida. Veja como proceder.</p></td></tr><tr><td style="padding:30px 38px 18px"><p style="margin:0;font-size:16px;line-height:26px">Olá, ' + firstName + '!</p><p style="margin:12px 0 0;font-size:16px;line-height:26px">Conforme o período registrado no seu Termo de Compromisso de Estágio, a <strong>previsão de término do estágio foi atingida</strong>.</p><p style="margin:12px 0 0;font-size:16px;line-height:26px">Agora, é necessário informar à COERI se o estágio foi encerrado ou se haverá continuidade das atividades.</p>' + dateLine + '</td></tr><tr><td style="padding:0 38px 14px"><div style="font-size:13px;color:#16834b;font-weight:bold;text-transform:uppercase">Se o estágio foi encerrado</div></td></tr><tr><td style="padding:0 38px 20px"><table role="presentation" width="100%" style="background:#eef9f2;border:1px solid #b9dfc7;border-radius:12px"><tr><td width="58" style="padding:20px 0 20px 20px;font-size:30px">📚</td><td style="padding:19px 20px 19px 12px"><div style="font-size:18px;font-weight:bold;color:#145d36">Envie os documentos finais</div><div style="margin-top:7px;font-size:15px;line-height:23px;color:#3d5c4b">Encaminhe o <strong>Relatório Final de Estágio</strong> e a <strong>Avaliação do Estagiário pelo Supervisor</strong>, devidamente preenchidos e assinados.</div></td></tr></table></td></tr><tr><td align="center" style="padding:0 38px 28px"><a href="https://coeri.tl.ifms.edu.br/relatorios" style="display:inline-block;background:#16834b;color:#fff;text-decoration:none;font-size:15px;font-weight:bold;padding:13px 24px;border-radius:9px">Acessar relatórios e orientações</a></td></tr><tr><td style="padding:0 38px 14px"><div style="font-size:13px;color:#16834b;font-weight:bold;text-transform:uppercase">Se você continuará no estágio</div></td></tr><tr><td style="padding:0 38px 24px"><table role="presentation" width="100%" style="background:#f4f8fb;border:1px solid #cfdde7;border-radius:12px"><tr><td width="58" style="padding:20px 0 20px 20px;font-size:30px">🔄</td><td style="padding:19px 20px 19px 12px"><div style="font-size:18px;font-weight:bold;color:#244d65">Informe a COERI para prorrogação</div><div style="margin-top:7px;font-size:15px;line-height:23px;color:#52615b">Caso continue atuando na unidade concedente, informe a COERI para o registro da prorrogação e os procedimentos necessários à continuidade regular do estágio.</div></td></tr></table></td></tr><tr><td style="padding:0 38px 26px"><table role="presentation" width="100%" style="background:#fff7e8;border-left:5px solid #e5a11a;border-radius:8px"><tr><td style="padding:17px 18px;font-size:15px;line-height:23px;color:#65490f"><strong>Importante:</strong> se houver continuidade após a previsão de término, a situação deve ser informada à COERI para atualização e registro da prorrogação.</td></tr></table></td></tr><tr><td align="center" style="padding:2px 38px 34px"><a href="mailto:coeri.tl@ifms.edu.br" style="display:inline-block;background:#16834b;color:#fff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 28px;border-radius:9px">Informar a COERI</a><div style="margin-top:14px;font-size:13px;color:#6c7974">coeri.tl@ifms.edu.br</div></td></tr><tr><td style="border-top:1px solid #e6ece9;padding:25px 38px"><p style="margin:0 0 12px;font-size:15px;line-height:23px">Em caso de dúvida, consulte o Portal da COERI.</p><p style="margin:0;font-size:15px;line-height:23px">Atenciosamente,<br><strong>Coordenação de Extensão e Relações Institucionais — COERI</strong><br>IFMS Campus Três Lagoas</p></td></tr><tr><td style="background:#173d2e;padding:23px 38px;text-align:center;font-size:13px;color:#d6e6df"><a href="https://coeri.tl.ifms.edu.br/" style="color:#fff;font-weight:bold">coeri.tl.ifms.edu.br</a> &nbsp;·&nbsp; <a href="mailto:coeri.tl@ifms.edu.br" style="color:#fff;font-weight:bold">coeri.tl@ifms.edu.br</a></td></tr><tr><td style="height:5px;background:#c9303e">&nbsp;</td></tr></table></td></tr></table></body></html>';
 }
 
 function renderEmail_(content) {
