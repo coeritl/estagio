@@ -15,6 +15,11 @@ const types: Record<string, string> = {
   final_report: "final",
   supervisor_evaluation: "avaliacao_supervisor"
 };
+const documentLabels: Record<string, string> = {
+  parcial: "Relatório parcial",
+  final: "Relatório final",
+  avaliacao_supervisor: "Avaliação do estagiário pelo supervisor"
+};
 
 function headers(origin: string) {
   return {
@@ -31,6 +36,45 @@ function failure(origin: string, status = 400, message?: string) {
   return answer(origin, status, {
     error: message || `Não foi possível concluir o envio. Confira os dados e tente novamente. Se o problema persistir, entre em contato com a COERI pelo e-mail ${coeriEmail}.`
   });
+}
+
+async function dispatchEmail(service: any, notification: any) {
+  const url = Deno.env.get("GOOGLE_APPS_SCRIPT_URL") || "";
+  const secret = Deno.env.get("GOOGLE_APPS_SCRIPT_SECRET") || "";
+  const attempts = Number(notification.attempts || 0) + 1;
+  if (!url || !secret) {
+    await service.from("email_notifications").update({ status: "falhou", attempts, error_message: "Google Apps Script não configurado." }).eq("id", notification.id);
+    return false;
+  }
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret,
+        notificationId: notification.id,
+        type: notification.event_type,
+        to: notification.recipient_email,
+        subject: notification.subject,
+        studentName: notification.student_name,
+        data: notification.template_data
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) throw new Error(result.error || `Google respondeu com HTTP ${response.status}.`);
+    await service.from("email_notifications").update({
+      status: "enviado",
+      attempts,
+      error_message: null,
+      provider_response: result,
+      sent_at: new Date().toISOString()
+    }).eq("id", notification.id);
+    return true;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await service.from("email_notifications").update({ status: "falhou", attempts, error_message: errorMessage.slice(0, 1000) }).eq("id", notification.id);
+    return false;
+  }
 }
 
 Deno.serve(async request => {
@@ -93,7 +137,7 @@ Deno.serve(async request => {
     );
     const { data: matches, error: matchError } = await supabase
       .from("internships")
-      .select("id,student_cpf")
+      .select("id,student_cpf,student_name")
       .eq("status", "em_andamento")
       .limit(2000);
     const identified = (matches || []).filter(item =>
@@ -131,7 +175,8 @@ Deno.serve(async request => {
         file_size: file.size,
         student_class: studentClass,
         internship_period: internshipPeriod,
-        total_workload: totalWorkload
+        total_workload: totalWorkload,
+        contact_email: email
       });
     }
     const { error: insertError } = await supabase.from("internship_report_submissions").insert(rows);
@@ -142,10 +187,27 @@ Deno.serve(async request => {
         .eq("id", identified[0].id);
       if (receivedError) console.error("report-upload: partial-received-marker-failed", receivedError.message);
     }
+    let emailSent = false;
+    try {
+      const documentNames = rows.map(row => documentLabels[row.document_type] || row.document_type);
+      const { data: notification, error: notificationError } = await supabase.from("email_notifications").insert({
+        event_type: "relatorios_recebidos",
+        reference_key: submissionCode,
+        recipient_email: email,
+        student_name: identified[0].student_name,
+        subject: "Documentação de estágio recebida pela COERI",
+        template_data: { documentTypes: documentNames }
+      }).select("*").single();
+      if (notificationError) throw notificationError;
+      emailSent = await dispatchEmail(supabase, notification);
+    } catch (notificationError) {
+      console.error("report-upload: receipt-email-failed", notificationError instanceof Error ? notificationError.message : String(notificationError));
+    }
     return answer(origin, 200, {
       success: true,
       message: "Documentos enviados para a COERI com sucesso.",
-      receipt: submissionCode.split("-")[0].toUpperCase()
+      receipt: submissionCode.split("-")[0].toUpperCase(),
+      email_sent: emailSent
     });
   } catch (error) {
     console.error("report-upload: unexpected-failure", error instanceof Error ? error.message : String(error));

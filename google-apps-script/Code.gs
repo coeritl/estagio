@@ -112,6 +112,43 @@ function emailModel_(type, studentName, data) {
       steps: [], warning: '',
       closing: 'Recomendamos que você mantenha uma cópia dos relatórios e documentos assinados para seus registros pessoais.'
     };
+  } else if (type === 'relatorios_recebidos') {
+    var receivedDocuments = (data.documentTypes || []).map(escapeHtml_).join(', ');
+    content = {
+      subject: 'Documentação de estágio recebida pela COERI',
+      kicker: 'DOCUMENTOS DE ESTÁGIO · COERI',
+      title: 'Documentação recebida',
+      subtitle: 'Seu envio foi registrado e será analisado pela Coordenação.',
+      greeting: 'Olá, ' + firstName + '!',
+      introduction: 'Recebemos sua documentação de estágio pelo Portal da COERI.',
+      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">Envio registrado com sucesso</div>' + (receivedDocuments ? '<div style="margin-top:7px;color:#3d5c4b">Documentos: ' + receivedDocuments + '.</div>' : ''),
+      steps: [
+        ['1', 'Aguarde a análise da COERI', 'A Coordenação conferirá o preenchimento, as assinaturas e as informações apresentadas.'],
+        ['2', 'Monitore seu e-mail institucional', 'Você receberá uma nova mensagem se houver necessidade de correção ou quando o procedimento for concluído.'],
+        ['3', 'Não reenvie sem orientação', 'Aguarde o retorno da COERI para evitar documentos duplicados.']
+      ],
+      warning: 'Este e-mail confirma apenas o recebimento. A documentação ainda passará por conferência.',
+      closing: 'Acompanhe seu e-mail institucional nos próximos dias.'
+    };
+  } else if (type === 'relatorio_correcao') {
+    var reportType = escapeHtml_(data.reportType || 'Documento de estágio');
+    var correctionNote = escapeHtml_(data.correctionNote || '').replace(/\n/g, '<br>');
+    content = {
+      subject: 'Correção necessária na documentação de estágio',
+      kicker: 'ANÁLISE DE DOCUMENTOS · COERI',
+      title: 'Documento precisa de correção',
+      subtitle: 'A COERI analisou seu envio e identificou ajustes necessários.',
+      greeting: 'Olá, ' + firstName + '!',
+      introduction: 'Durante a conferência do <strong>' + reportType + '</strong>, identificamos informações que precisam ser corrigidas antes da validação.',
+      highlight: '<div style="font-size:13px;color:#8a5a00;font-weight:bold;text-transform:uppercase">Orientações da COERI</div><div style="margin-top:8px;font-size:16px;line-height:25px;color:#65490f;text-align:left">' + correctionNote + '</div>',
+      steps: [
+        ['1', 'Corrija o documento', 'Faça os ajustes indicados acima e confira novamente todos os campos e assinaturas.'],
+        ['2', 'Gere um novo PDF', 'Salve a versão corrigida em formato PDF.'],
+        ['3', 'Reenvie pelo Portal da COERI', 'Acesse <a href="https://coeri.tl.ifms.edu.br/relatorios" style="color:#0d633c;font-weight:bold">a página de relatórios</a> e envie o documento corrigido.']
+      ],
+      warning: 'O documento somente será considerado conferido após o reenvio e uma nova análise da COERI.',
+      closing: 'Em caso de dúvida sobre a correção solicitada, responda a este e-mail.'
+    };
   } else if (type === 'relatorio_parcial') {
     var partialDate = escapeHtml_(data.partialReportDateFormatted || data.partialReportDate || '');
     content = {

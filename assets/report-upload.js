@@ -69,7 +69,10 @@ form.addEventListener('submit', async event => {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.');
     message.className = 'form-message success';
-    message.textContent = `${result.message} Comprovante do envio: ${result.receipt}.`;
+    const emailNotice = result.email_sent
+      ? 'Uma confirmação foi enviada ao e-mail institucional informado.'
+      : 'O envio foi registrado, mas a confirmação por e-mail pode demorar. Monitore sua caixa de entrada.';
+    message.textContent = `${result.message} Comprovante do envio: ${result.receipt}. ${emailNotice}`;
     form.reset();
   } catch (error) {
     const connectionFailed = error instanceof TypeError || error.message === 'Failed to fetch';

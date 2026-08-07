@@ -8,6 +8,11 @@ const headers = {
   "Content-Type": "application/json; charset=utf-8",
 };
 const json = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers });
+const reportTypeLabels: Record<string, string> = {
+  parcial: "Relatório parcial",
+  final: "Relatório final",
+  avaliacao_supervisor: "Avaliação do estagiário pelo supervisor"
+};
 
 async function dispatch(service: any, notification: any) {
   const url = Deno.env.get("GOOGLE_APPS_SCRIPT_URL") || "";
@@ -96,6 +101,43 @@ Deno.serve(async request => {
       return json(200, await dispatch(service, notification));
     }
 
+    if (input.action === "request_report_correction") {
+      const reportId = String(input.report_id || "");
+      const correctionNote = String(input.correction_note || "").trim().slice(0, 2000);
+      if (!reportId || correctionNote.length < 5) return json(400, { error: "Descreva o que deve ser corrigido." });
+      const { data: report, error } = await service.from("internship_report_submissions")
+        .select("id,document_type,contact_email,internship_id,internships(student_name,student_email,internship_number,course)")
+        .eq("id", reportId).single();
+      if (error) return json(404, { error: "Documento não encontrado." });
+      const student = report.internships;
+      const recipientEmail = String(report.contact_email || student?.student_email || "").trim().toLowerCase();
+      if (!recipientEmail) return json(422, { error: "O documento não possui e-mail de contato." });
+      const { data: notification, error: notificationError } = await service.from("email_notifications").insert({
+        event_type: "relatorio_correcao",
+        reference_key: `${report.id}:${crypto.randomUUID()}`,
+        recipient_email: recipientEmail,
+        student_name: student?.student_name || "Estudante",
+        subject: "Correção necessária na documentação de estágio",
+        template_data: {
+          reportType: reportTypeLabels[report.document_type] || "Documento de estágio",
+          correctionNote,
+          internshipNumber: student?.internship_number || "",
+          course: student?.course || ""
+        }
+      }).select("*").single();
+      if (notificationError) return json(500, { error: "Não foi possível preparar a notificação de correção." });
+      const { error: updateError } = await service.from("internship_report_submissions").update({
+        status: "correcao_solicitada",
+        admin_note: correctionNote,
+        reviewed_at: new Date().toISOString()
+      }).eq("id", report.id);
+      if (updateError) {
+        await service.from("email_notifications").delete().eq("id", notification.id);
+        return json(500, { error: "Não foi possível registrar a solicitação de correção." });
+      }
+      return json(200, { updated: true, ...(await dispatch(service, notification)) });
+    }
+
     if (input.action === "complete_internship") {
       if (input.internship_id && !input.report_id) {
         const internshipId = String(input.internship_id);
@@ -125,7 +167,7 @@ Deno.serve(async request => {
       }
 
       const { data: report, error } = await service.from("internship_report_submissions")
-        .select("id,document_type,internship_id,internships(student_name,student_email,internship_number,course)")
+        .select("id,document_type,contact_email,internship_id,internships(student_name,student_email,internship_number,course)")
         .eq("id", input.report_id).single();
       if (error || report.document_type !== "avaliacao_supervisor") return json(404, { error: "Avaliação do supervisor não encontrada." });
       const student = report.internships;
@@ -142,11 +184,12 @@ Deno.serve(async request => {
       }
 
       let emailResult = { sent: false, error: "O estudante não possui e-mail cadastrado." };
-      if (student.student_email) {
+      const completionEmail = String(report.contact_email || student.student_email || "").trim().toLowerCase();
+      if (completionEmail) {
         try {
           const notification = await createOrGet(service, {
             event_type: "estagio_concluido", reference_key: report.internship_id,
-            recipient_email: student.student_email, student_name: student.student_name,
+            recipient_email: completionEmail, student_name: student.student_name,
             subject: "Confirmação de finalização do estágio",
             template_data: { internshipNumber: student.internship_number || "", course: student.course || "" },
           });

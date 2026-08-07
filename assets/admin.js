@@ -22,6 +22,8 @@ const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
 const reportList = $('#report-admin-list');
 const notificationList = $('#notification-admin-list');
+const reportCorrectionDialog = $('#report-correction-dialog');
+const reportCorrectionForm = $('#report-correction-form');
 const tceDialog = $('#tce-dialog');
 const tceProcessForm = $('#tce-process-form');
 const arrivedFromInvite = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
@@ -167,7 +169,9 @@ const notificationTypeLabels = {
   tce_gerado: 'TCE enviado para assinaturas',
   estagio_concluido: 'Estágio concluído',
   previsao_termino: 'Previsão de término atingida',
-  relatorio_parcial: 'Entrega do relatório parcial'
+  relatorio_parcial: 'Entrega do relatório parcial',
+  relatorios_recebidos: 'Documentação recebida',
+  relatorio_correcao: 'Correção de documento solicitada'
 };
 
 function renderOverview() {
@@ -327,9 +331,10 @@ function renderReportSubmissions() {
       ['Período do estágio', report.internship_period],
       ['Carga horária', `${report.total_workload} horas`],
       ['Arquivo', `${report.original_filename} · ${formatFileSize(report.file_size)}`],
-      ['E-mail', student.student_email],
+      ['E-mail', report.contact_email || student.student_email],
       ['CPF', student.student_cpf]
     ].forEach(([label, value]) => details.append(detailItem(label, value)));
+    if (report.admin_note) details.append(detailItem('Orientação enviada', report.admin_note));
     const actions = document.createElement('div');
     actions.className = 'report-admin-actions';
     const download = document.createElement('button');
@@ -341,11 +346,16 @@ function renderReportSubmissions() {
     accepted.className = 'admin-button ghost report-accept';
     accepted.textContent = report.status === 'aceito' ? 'Conferido' : 'Marcar como conferido';
     accepted.disabled = report.status === 'aceito';
+    const correction = document.createElement('button');
+    correction.type = 'button';
+    correction.className = 'admin-button reminder report-correction';
+    correction.textContent = report.status === 'correcao_solicitada' ? 'Solicitar nova alteração' : 'Solicitar alteração';
+    correction.disabled = report.status === 'aceito';
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'admin-button danger-outline report-delete';
     remove.textContent = 'Apagar documento';
-    actions.append(download, accepted, remove);
+    actions.append(download, accepted, correction, remove);
     card.append(heading, details, actions);
     reportList.append(card);
   });
@@ -683,6 +693,14 @@ reportList.addEventListener('click', async event => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     return;
   }
+  if (button.classList.contains('report-correction')) {
+    $('#report-correction-id').value = report.id;
+    $('#report-correction-note').value = report.admin_note || '';
+    $('#report-correction-message').textContent = '';
+    reportCorrectionDialog.showModal();
+    $('#report-correction-note').focus();
+    return;
+  }
   if (button.classList.contains('report-accept')) {
     button.disabled = true;
     if (report.document_type === 'avaliacao_supervisor') {
@@ -724,6 +742,38 @@ reportList.addEventListener('click', async event => {
     if (error) alert('O arquivo foi apagado, mas o registro não pôde ser removido. Atualize a página e tente novamente.');
     await loadRecords();
   }
+});
+
+reportCorrectionForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = reportCorrectionForm.querySelector('[type="submit"]');
+  const message = $('#report-correction-message');
+  const correctionNote = $('#report-correction-note').value.trim();
+  if (correctionNote.length < 5) {
+    message.textContent = 'Descreva o que o estudante deve corrigir.';
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Enviando…';
+  message.textContent = '';
+  const { data, error } = await supabase.functions.invoke('manage-email-notification', {
+    body: {
+      action: 'request_report_correction',
+      report_id: $('#report-correction-id').value,
+      correction_note: correctionNote
+    }
+  });
+  button.disabled = false;
+  button.textContent = 'Registrar e enviar e-mail';
+  if (error || !data?.updated) {
+    message.textContent = data?.error || 'Não foi possível solicitar a alteração. Tente novamente.';
+    return;
+  }
+  reportCorrectionDialog.close();
+  await loadRecords();
+  alert(data.sent
+    ? 'A solicitação de alteração foi registrada e enviada ao estudante.'
+    : 'A solicitação foi registrada, mas o e-mail ficou com falha na Central de notificações.');
 });
 
 $('#clear-sent-notifications').addEventListener('click', async () => {
@@ -1204,6 +1254,7 @@ document.querySelectorAll('[data-close-import]').forEach(button => button.addEve
 document.querySelectorAll('[data-close-student-import]').forEach(button => button.addEventListener('click', () => studentImportDialog.close()));
 document.querySelectorAll('[data-close-agreement-import]').forEach(button=>button.addEventListener('click',()=>agreementImportDialog.close()));
 document.querySelectorAll('[data-close-advisor]').forEach(button=>button.addEventListener('click',()=>advisorDialog.close()));
+document.querySelectorAll('[data-close-report-correction]').forEach(button=>button.addEventListener('click',()=>reportCorrectionDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
 
 
