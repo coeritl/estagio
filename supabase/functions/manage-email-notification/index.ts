@@ -69,6 +69,12 @@ Deno.serve(async request => {
     if (!isAdmin) return json(403, { error: "Acesso não autorizado." });
 
     const input = await request.json();
+    if (input.action === "clear_sent") {
+      const { error, count } = await service.from("email_notifications")
+        .delete({ count: "exact" }).eq("status", "enviado");
+      if (error) return json(500, { error: "Não foi possível limpar as notificações enviadas." });
+      return json(200, { cleared: true, count: count || 0 });
+    }
     if (input.action === "retry") {
       const { data: notification, error } = await service.from("email_notifications").select("*").eq("id", input.notification_id).single();
       if (error) return json(404, { error: "Notificação não encontrada." });

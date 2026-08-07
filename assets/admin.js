@@ -696,6 +696,23 @@ reportList.addEventListener('click', async event => {
   }
 });
 
+$('#clear-sent-notifications').addEventListener('click', async () => {
+  const sentCount = emailNotifications.filter(item => item.status === 'enviado').length;
+  if (!sentCount) {
+    alert('Não há notificações enviadas para limpar. As pendentes e as que falharam são preservadas.');
+    return;
+  }
+  if (!confirm(`Apagar ${sentCount} notificação${sentCount === 1 ? '' : 'ões'} já enviada${sentCount === 1 ? '' : 's'}?\n\nNotificações pendentes ou com falha não serão apagadas.`)) return;
+  const button = $('#clear-sent-notifications');
+  button.disabled = true;
+  button.textContent = 'Limpando…';
+  const { data, error } = await supabase.functions.invoke('manage-email-notification', { body: { action: 'clear_sent' } });
+  if (error || !data?.cleared) alert(data?.error || 'Não foi possível limpar as notificações enviadas. Tente novamente.');
+  button.disabled = false;
+  button.textContent = 'Limpar notificações enviadas';
+  await loadRecords();
+});
+
 notificationList.addEventListener('click', async event => {
   const button = event.target.closest('.notification-retry');
   const card = event.target.closest('.notification-card');

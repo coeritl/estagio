@@ -4,6 +4,7 @@ const config = window.SUPABASE_CONFIG || {};
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 let captchaToken = '';
 let widgetId;
+let captchaAvailable = false;
 let syncCompanyFields = () => {};
 let syncGuardianFields = () => {};
 let syncScholarshipField = () => {};
@@ -205,16 +206,27 @@ function initializeForm() {
     $('#schedule-message').textContent = '';
   }));
 
+  let captchaAttempts = 0;
   const waitForTurnstile = setInterval(() => {
+    captchaAttempts++;
+    if (captchaAttempts > 150) {
+      clearInterval(waitForTurnstile);
+      $('#tce-form-message').textContent = 'O módulo de segurança não carregou. Atualize a página, desative bloqueadores para este site e tente novamente.';
+      return;
+    }
     if (!window.turnstile) return;
     clearInterval(waitForTurnstile);
     widgetId = window.turnstile.render('#turnstile-widget', {
       sitekey: config.turnstileSiteKey || '1x00000000000000000000AA',
       size: 'flexible',
       theme: 'light',
-      callback: token => { captchaToken = token; },
-      'expired-callback': () => { captchaToken = ''; },
-      'error-callback': () => { captchaToken = ''; }
+      callback: token => { captchaToken = token; captchaAvailable = true; $('#tce-form-message').textContent = ''; },
+      'expired-callback': () => { captchaToken = ''; captchaAvailable = false; },
+      'error-callback': () => {
+        captchaToken = '';
+        captchaAvailable = false;
+        $('#tce-form-message').textContent = 'Não foi possível ativar a verificação de segurança. Atualize a página e tente novamente.';
+      }
     });
   }, 100);
 }
@@ -240,7 +252,7 @@ form.addEventListener('submit', async event => {
     return;
   }
   form.elements.weekly_schedule.value = weeklySchedule;
-  if (!captchaToken) { message.textContent = 'Confirme o CAPTCHA antes de enviar.'; return; }
+  if (!captchaToken || !captchaAvailable) { message.textContent = 'A verificação de segurança ainda não foi concluída. Aguarde o CAPTCHA aparecer e confirme-o antes de enviar.'; return; }
 
   const submit = form.querySelector('[type="submit"]');
   submit.disabled = true;
@@ -272,7 +284,19 @@ form.addEventListener('submit', async event => {
     const { data, error } = await supabase.functions.invoke('submit-tce', {
       body: { token: captchaToken, protocol: requestedProtocol, payload }
     });
-    if (error) throw new Error(data?.error || error.message);
+    if (error) {
+      let serverMessage = data?.error || '';
+      try {
+        const details = await error.context?.json();
+        serverMessage = details?.error || serverMessage;
+      } catch {}
+      if (serverMessage) throw new Error(serverMessage);
+      const technicalMessage = String(error.message || '');
+      if (/non-2xx|edge function|fetch/i.test(technicalMessage)) {
+        throw new Error('Não foi possível validar a verificação de segurança. Atualize a página, confirme novamente o CAPTCHA e reenvie. Se o problema continuar, escreva para coeri.tl@ifms.edu.br.');
+      }
+      throw new Error(data?.error || technicalMessage || 'Não foi possível enviar a solicitação.');
+    }
     let responseData = data;
     if (typeof responseData === 'string') {
       try { responseData = JSON.parse(responseData); } catch { responseData = {}; }
@@ -291,6 +315,7 @@ form.addEventListener('submit', async event => {
     form.elements.start_date.min = addBusinessDays(new Date(), 5);
     window.turnstile.reset(widgetId);
     captchaToken = '';
+    captchaAvailable = false;
     message.classList.add('success');
     const confirmationTitle = document.createElement('strong');
     confirmationTitle.textContent = 'Solicitação enviada à COERI.';
@@ -310,6 +335,7 @@ form.addEventListener('submit', async event => {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
     window.turnstile?.reset(widgetId);
     captchaToken = '';
+    captchaAvailable = false;
   } finally {
     submit.disabled = false;
   }
