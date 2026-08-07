@@ -64,13 +64,13 @@ Deno.serve(async request => {
     const totalWorkload = Number(String(form.get("total_workload") || "").replace(/\D/g, ""));
     if (
       cpf.length !== 11 ||
-      !email.endsWith("@estudante.ifms.edu.br") ||
+      !/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(email) ||
       !studentClass ||
       !internshipPeriod ||
       !Number.isInteger(totalWorkload) ||
       totalWorkload < 1 ||
       totalWorkload > 10000
-    ) return failure(origin, 400, `Confira o CPF, o e-mail institucional, a turma, o período e a carga horária informados. Se precisar de ajuda, escreva para ${coeriEmail}.`);
+    ) return failure(origin, 400, `Confira o CPF, o e-mail institucional (@estudante.ifms.edu.br ou @ifms.edu.br), a turma, o período e a carga horária informados. Se precisar de ajuda, escreva para ${coeriEmail}.`);
 
     const files = Object.entries(types)
       .map(([field, documentType]) => ({ file: form.get(field), documentType }))
