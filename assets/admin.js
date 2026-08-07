@@ -3,6 +3,7 @@ const loginScreen = $('#login-screen');
 const dashboard = $('#dashboard');
 const loginForm = $('#login-form');
 const loginMessage = $('#login-message');
+const dashboardMessage = $('#dashboard-message');
 const setupNotice = $('#setup-notice');
 const list = $('#internship-list');
 const sentList = $('#sent-internship-list');
@@ -117,6 +118,20 @@ function setView(authenticated, email = '') {
   loginScreen.hidden = authenticated;
   dashboard.hidden = !authenticated;
   $('#admin-email').textContent = email;
+}
+
+async function showAuthenticatedSession(session) {
+  setView(Boolean(session), session?.user?.email || '');
+  if (!session) return;
+  dashboardMessage.hidden = true;
+  dashboardMessage.textContent = '';
+  try {
+    await loadRecords();
+  } catch (error) {
+    console.error('Falha ao carregar o painel:', error);
+    dashboardMessage.textContent = 'A sessão foi iniciada, mas os dados não puderam ser carregados agora. Atualize a página; se persistir, verifique a conexão com o Supabase.';
+    dashboardMessage.hidden = false;
+  }
 }
 
 async function loadRecords() {
@@ -1221,16 +1236,15 @@ async function initialize() {
   if (!isConfigured) { setupNotice.hidden = false; loginForm.querySelector('button').disabled = true; return; }
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
   supabase = createClient(config.url, config.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
-  supabase.auth.onAuthStateChange(async (_event, session) => {
-    setView(Boolean(session), session?.user?.email || '');
-    if (session) { try { await loadRecords(); } catch { setView(false); loginMessage.textContent = 'Esta conta não possui autorização para acessar o painel.'; await supabase.auth.signOut(); } }
-  });
   const { data } = await supabase.auth.getSession();
-  setView(Boolean(data.session), data.session?.user?.email || '');
+  await showAuthenticatedSession(data.session);
   if (data.session) {
-    await loadRecords();
     if (arrivedFromInvite) passwordDialog.showModal();
   }
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'INITIAL_SESSION') return;
+    window.setTimeout(() => showAuthenticatedSession(session), 0);
+  });
 }
 
 initialize();
