@@ -71,9 +71,10 @@ Deno.serve(async request => {
     const input = await request.json();
     if (input.action === "clear_sent") {
       const { error, count } = await service.from("email_notifications")
-        .delete({ count: "exact" }).eq("status", "enviado");
+        .update({ archived_at: new Date().toISOString() }, { count: "exact" })
+        .eq("status", "enviado").is("archived_at", null);
       if (error) return json(500, { error: "Não foi possível limpar as notificações enviadas." });
-      return json(200, { cleared: true, count: count || 0 });
+      return json(200, { cleared: true, archived: true, count: count || 0 });
     }
     if (input.action === "retry") {
       const { data: notification, error } = await service.from("email_notifications").select("*").eq("id", input.notification_id).single();
@@ -103,19 +104,23 @@ Deno.serve(async request => {
           .eq("id", internshipId).single();
         if (error) return json(404, { error: "Estágio não encontrado." });
 
+        const { error: completionError } = await caller.rpc("complete_internship", { p_internship_id: internshipId });
+        if (completionError) return json(500, { error: "Não foi possível concluir o estágio. Nenhum e-mail de conclusão foi enviado." });
+
         let emailResult = { sent: false, error: "O estudante não possui e-mail cadastrado." };
         if (internship.student_email) {
-          const notification = await createOrGet(service, {
-            event_type: "estagio_concluido", reference_key: internshipId,
-            recipient_email: internship.student_email, student_name: internship.student_name,
-            subject: "Confirmação de finalização do estágio",
-            template_data: { internshipNumber: internship.internship_number || "", course: internship.course || "" },
-          });
-          emailResult = await dispatch(service, notification);
+          try {
+            const notification = await createOrGet(service, {
+              event_type: "estagio_concluido", reference_key: internshipId,
+              recipient_email: internship.student_email, student_name: internship.student_name,
+              subject: "Confirmação de finalização do estágio",
+              template_data: { internshipNumber: internship.internship_number || "", course: internship.course || "" },
+            });
+            emailResult = await dispatch(service, notification);
+          } catch (notificationError) {
+            emailResult = { sent: false, error: notificationError instanceof Error ? notificationError.message : String(notificationError) };
+          }
         }
-
-        const { error: completionError } = await caller.rpc("complete_internship", { p_internship_id: internshipId });
-        if (completionError) return json(500, { error: "O e-mail foi processado, mas não foi possível concluir o estágio." });
         return json(200, { completed: true, ...emailResult });
       }
 
@@ -124,17 +129,33 @@ Deno.serve(async request => {
         .eq("id", input.report_id).single();
       if (error || report.document_type !== "avaliacao_supervisor") return json(404, { error: "Avaliação do supervisor não encontrada." });
       const student = report.internships;
-      const notification = await createOrGet(service, {
-        event_type: "estagio_concluido", reference_key: report.internship_id,
-        recipient_email: student.student_email, student_name: student.student_name,
-        subject: "Confirmação de finalização do estágio",
-        template_data: { internshipNumber: student.internship_number || "", course: student.course || "" },
-      });
-      const emailResult = await dispatch(service, notification);
       const { data: storagePaths, error: completionError } = await caller.rpc("accept_supervisor_evaluation_and_complete", { p_report_id: report.id });
-      if (completionError) return json(500, { error: "O e-mail foi processado, mas não foi possível concluir o estágio." });
-      if (storagePaths?.length) await service.storage.from("internship-reports").remove(storagePaths);
-      return json(200, { completed: true, ...emailResult });
+      if (completionError) return json(500, { error: "Não foi possível concluir o estágio. Nenhum e-mail de conclusão foi enviado." });
+
+      let cleanupError = "";
+      if (storagePaths?.length) {
+        const { error: removalError } = await service.storage.from("internship-reports").remove(storagePaths);
+        if (removalError) {
+          cleanupError = removalError.message || "Não foi possível remover os arquivos do armazenamento.";
+          console.error("report-storage-cleanup-failed", { internshipId: report.internship_id, storagePaths, error: cleanupError });
+        }
+      }
+
+      let emailResult = { sent: false, error: "O estudante não possui e-mail cadastrado." };
+      if (student.student_email) {
+        try {
+          const notification = await createOrGet(service, {
+            event_type: "estagio_concluido", reference_key: report.internship_id,
+            recipient_email: student.student_email, student_name: student.student_name,
+            subject: "Confirmação de finalização do estágio",
+            template_data: { internshipNumber: student.internship_number || "", course: student.course || "" },
+          });
+          emailResult = await dispatch(service, notification);
+        } catch (notificationError) {
+          emailResult = { sent: false, error: notificationError instanceof Error ? notificationError.message : String(notificationError) };
+        }
+      }
+      return json(200, { completed: true, cleanup_pending: Boolean(cleanupError), cleanup_error: cleanupError || null, ...emailResult });
     }
     return json(400, { error: "Ação inválida." });
   } catch (error) {

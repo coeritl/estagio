@@ -128,7 +128,7 @@ async function loadRecords() {
     supabase.from('internship_agreements').select('*').order('external_institution'),
     supabase.from('internship_advisors').select('*').order('display_order').order('name'),
     supabase.rpc('get_advisor_availability', { p_start_date: new Date().toISOString().slice(0,10) }),
-    supabase.from('email_notifications').select('*').order('created_at', { ascending: false }).limit(500)
+    supabase.from('email_notifications').select('*').is('archived_at', null).order('created_at', { ascending: false }).limit(500)
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
@@ -673,9 +673,12 @@ reportList.addEventListener('click', async event => {
         return;
       }
       await loadRecords();
-      alert(result.sent
+      const completionNotice = result.sent
         ? `A avaliação foi conferida, o estágio de ${studentName} foi concluído e a notificação foi enviada.`
-        : `A avaliação foi conferida e o estágio de ${studentName} foi concluído. O e-mail ficou pendente na Central de notificações.`);
+        : `A avaliação foi conferida e o estágio de ${studentName} foi concluído. O e-mail ficou pendente na Central de notificações.`;
+      alert(result.cleanup_pending
+        ? `${completionNotice}\n\nAtenção: os registros foram concluídos, mas alguns PDFs não puderam ser removidos do armazenamento. Consulte os logs da função manage-email-notification antes de encerrar a conferência.`
+        : completionNotice);
       return;
     }
     const { error } = await supabase.from('internship_report_submissions').update({ status: 'aceito', reviewed_at: new Date().toISOString() }).eq('id', report.id);
@@ -702,7 +705,7 @@ $('#clear-sent-notifications').addEventListener('click', async () => {
     alert('Não há notificações enviadas para limpar. As pendentes e as que falharam são preservadas.');
     return;
   }
-  if (!confirm(`Apagar ${sentCount} notificação${sentCount === 1 ? '' : 'ões'} já enviada${sentCount === 1 ? '' : 's'}?\n\nNotificações pendentes ou com falha não serão apagadas.`)) return;
+  if (!confirm(`Retirar da Central ${sentCount} notificação${sentCount === 1 ? '' : 'ões'} já enviada${sentCount === 1 ? '' : 's'}?\n\nElas serão arquivadas para preservar o controle dos envios automáticos. Notificações pendentes ou com falha permanecerão visíveis.`)) return;
   const button = $('#clear-sent-notifications');
   button.disabled = true;
   button.textContent = 'Limpando…';
