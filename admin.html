@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260806-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260807-5">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -37,18 +37,28 @@
       </header>
 
       <div class="admin-container">
-        <div class="dashboard-heading"><div><span class="admin-kicker">Visão geral</span><h1>Acompanhamento dos estagiários</h1><p id="today-label"></p></div><div class="heading-actions"><div class="action-menus"><details class="action-menu"><summary>Comunicação</summary><div class="action-menu-panel"><span class="action-menu-label">Cobrança de relatórios</span><button id="copy-partial-emails" type="button">Copiar e-mails · parcial</button><button id="copy-final-emails" type="button">Copiar e-mails · final</button><button class="bulk-sent" id="mark-copied-emails-sent" type="button" disabled>Marcar última lista como enviada</button></div></details><details class="action-menu"><summary>Importar dados</summary><div class="action-menu-panel"><span class="action-menu-label">Atualização em lote</span><button id="import-academic-button" type="button">Estágios do Sistema Acadêmico</button><button id="import-students-button" type="button">Dados dos estudantes</button><button id="import-agreements-button" type="button">Convênios</button></div></details><details class="action-menu"><summary>Exportar</summary><div class="action-menu-panel"><span class="action-menu-label">Listas administrativas</span><button id="export-ifms-button" type="button">Seguro dos estagiários IFMS</button></div></details></div><button class="admin-button primary new-internship-action" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
+        <div class="dashboard-heading"><div><span class="admin-kicker">Central de trabalho</span><h1>Painel da COERI</h1><p id="today-label"></p></div><div class="heading-actions"><button class="admin-button primary new-internship-action" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
 
         <nav class="admin-tabs" aria-label="Áreas do painel">
-          <button class="admin-tab active" type="button" data-admin-view="tracking">Acompanhamento</button>
-          <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="reports">Relatórios recebidos <span id="report-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="notifications">Notificações <span id="notification-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="advisors">Orientadores <span id="advisor-count">0</span></button>
+          <button class="admin-tab active" type="button" data-admin-view="overview">Visão geral</button>
+          <button class="admin-tab" type="button" data-admin-view="inbox">Caixa de entrada <span id="inbox-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="tracking">Estágios ativos</button>
+          <button class="admin-tab" type="button" data-admin-view="automation">Automações <span id="notification-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="records">Cadastros <span id="advisor-count">0</span></button>
           <button class="admin-tab" type="button" data-admin-view="maintenance">Manutenção</button>
         </nav>
 
-        <div id="tracking-view">
+        <section id="overview-view">
+          <div class="overview-grid" aria-label="Tarefas que exigem atenção">
+            <button class="overview-card attention" type="button" data-open-view="inbox"><span>Caixa de entrada</span><strong id="overview-inbox">0</strong><small>TCEs e documentos aguardando análise</small></button>
+            <button class="overview-card danger" type="button" data-open-view="tracking"><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Estágios que exigem providência</small></button>
+            <button class="overview-card warning" type="button" data-open-view="automation"><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small></button>
+            <button class="overview-card" type="button" data-open-view="tracking"><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small></button>
+          </div>
+          <section class="overview-automation"><div><span class="admin-kicker">Rotinas automáticas</span><h2>O sistema cuida dos avisos previsíveis</h2><p>Solicitações de TCE, TCEs gerados, relatório parcial, previsão de término e conclusão do estágio possuem comunicação integrada.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Ver automações</button></section>
+        </section>
+
+        <div id="tracking-view" hidden>
 
         <section class="stat-grid" aria-label="Resumo dos estágios">
           <article class="stat-card"><span>Em andamento</span><strong id="stat-active">0</strong><small>estágios ativos</small></article>
@@ -62,11 +72,11 @@
         </section>
 
         <section class="list-group" aria-labelledby="pending-list-title">
-          <div class="list-heading"><div><span class="admin-kicker">Acompanhamento</span><h2 id="pending-list-title">Pendências de aviso</h2></div><span class="list-count" id="pending-list-count">0</span></div>
+          <div class="list-heading"><div><span class="admin-kicker">Acompanhamento</span><h2 id="pending-list-title">Em acompanhamento</h2></div><span class="list-count" id="pending-list-count">0</span></div>
           <section class="internship-list" id="internship-list" aria-live="polite"></section>
         </section>
         <section class="list-group sent-group" id="sent-group" aria-labelledby="sent-list-title">
-          <div class="list-heading"><div><span class="admin-kicker">Organizados</span><h2 id="sent-list-title">Avisos enviados</h2></div><span class="list-count" id="sent-list-count">0</span></div>
+          <div class="list-heading"><div><span class="admin-kicker">Sem ação imediata</span><h2 id="sent-list-title">Acompanhamentos organizados</h2></div><span class="list-count" id="sent-list-count">0</span></div>
           <section class="internship-list" id="sent-internship-list" aria-live="polite"></section>
         </section>
         <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
@@ -86,10 +96,16 @@
 
         <section id="notifications-view" hidden>
           <div class="requests-intro notification-toolbar"><div><span class="admin-kicker">Comunicação automática</span><h2>Central de notificações</h2><p>Acompanhe mensagens pendentes, enviadas pelo Gmail ou com falha. “Enviado” não confirma leitura nem chegada à caixa de entrada.</p></div><button class="admin-button danger-outline" id="clear-sent-notifications" type="button">Limpar notificações enviadas</button></div>
+          <section class="automation-summary"><article><span>Relatório parcial</span><strong>Automático</strong><small>Na data cadastrada, salvo quando o documento já foi recebido.</small></article><article><span>Previsão de término</span><strong>Automático</strong><small>Orienta sobre documentos finais ou prorrogação.</small></article><article><span>Contingência manual</span><strong>Disponível</strong><small>Use somente se uma cobrança precisar ser repetida.</small></article></section>
+          <details class="fallback-tools"><summary>Abrir ferramentas manuais de contingência</summary><div class="fallback-actions"><button class="admin-button ghost" id="copy-partial-emails" type="button">Copiar e-mails · parcial</button><button class="admin-button ghost" id="copy-final-emails" type="button">Copiar e-mails · documentos finais</button><button class="admin-button bulk-sent" id="mark-copied-emails-sent" type="button" disabled>Marcar última lista como enviada</button></div></details>
           <section class="notification-admin-list" id="notification-admin-list" aria-live="polite"></section>
           <div class="empty-state" id="notification-empty-state"><div>✉️</div><h2>Nenhuma notificação registrada</h2><p>As mensagens automáticas aparecerão aqui.</p></div>
         </section>
 
+        <section id="records-tools-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Dados administrativos</span><h2>Importar, exportar e atualizar</h2><p>Ferramentas usadas periodicamente para manter o painel e as listas públicas atualizados.</p></div></div>
+          <div class="records-tools"><button class="admin-button ghost" id="import-academic-button" type="button">Importar estágios</button><button class="admin-button ghost" id="import-students-button" type="button">Complementar estudantes</button><button class="admin-button ghost" id="import-agreements-button" type="button">Importar convênios</button><button class="admin-button ghost" id="export-ifms-button" type="button">Exportar seguro IFMS</button></div>
+        </section>
         <section id="advisors-view" hidden>
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
           <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
@@ -226,6 +242,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260807-4"></script>
+  <script type="module" src="assets/admin.js?v=20260807-6"></script>
 </body>
 </html>

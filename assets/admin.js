@@ -144,14 +144,26 @@ async function loadRecords() {
   renderReportSubmissions();
   renderAdvisors();
   renderEmailNotifications();
+  renderOverview();
 }
 
 const notificationTypeLabels = {
   tce_recebido: 'Solicitação de TCE recebida',
   tce_gerado: 'TCE enviado para assinaturas',
   estagio_concluido: 'Estágio concluído',
-  previsao_termino: 'Previsão de término atingida'
+  previsao_termino: 'Previsão de término atingida',
+  relatorio_parcial: 'Entrega do relatório parcial'
 };
+
+function renderOverview() {
+  const inbox = tceRequests.length + reportSubmissions.filter(report => report.status !== 'aceito').length;
+  const failures = emailNotifications.filter(item => item.status !== 'enviado').length;
+  $('#inbox-count').textContent = inbox;
+  $('#overview-inbox').textContent = inbox;
+  $('#overview-due').textContent = records.filter(record => recordState(record) === 'due').length;
+  $('#overview-notification-failures').textContent = failures;
+  $('#overview-active').textContent = records.filter(record => record.status === 'em_andamento').length;
+}
 
 function renderEmailNotifications() {
   notificationList.replaceChildren();
@@ -729,16 +741,22 @@ notificationList.addEventListener('click', async event => {
   await loadRecords();
 });
 
-document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => {
-  document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab === button));
-  $('#tracking-view').hidden = button.dataset.adminView !== 'tracking';
-  $('#requests-view').hidden = button.dataset.adminView !== 'requests';
-  $('#reports-view').hidden = button.dataset.adminView !== 'reports';
-  $('#notifications-view').hidden = button.dataset.adminView !== 'notifications';
-  $('#advisors-view').hidden = button.dataset.adminView !== 'advisors';
-  $('#maintenance-view').hidden = button.dataset.adminView !== 'maintenance';
-  if (button.dataset.adminView === 'maintenance') loadMaintenanceMetrics();
-}));
+function activateAdminView(view) {
+  document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.adminView === view));
+  $('#overview-view').hidden = view !== 'overview';
+  $('#tracking-view').hidden = view !== 'tracking';
+  $('#requests-view').hidden = view !== 'inbox';
+  $('#reports-view').hidden = view !== 'inbox';
+  $('#notifications-view').hidden = view !== 'automation';
+  $('#records-tools-view').hidden = view !== 'records';
+  $('#advisors-view').hidden = view !== 'records';
+  $('#maintenance-view').hidden = view !== 'maintenance';
+  if (view === 'maintenance') loadMaintenanceMetrics();
+  document.querySelector('.admin-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => activateAdminView(button.dataset.adminView)));
+document.querySelectorAll('[data-open-view]').forEach(button => button.addEventListener('click', () => activateAdminView(button.dataset.openView)));
 
 tceProcessForm.addEventListener('submit', async event => {
   event.preventDefault();

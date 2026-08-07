@@ -136,6 +136,12 @@ Deno.serve(async request => {
     }
     const { error: insertError } = await supabase.from("internship_report_submissions").insert(rows);
     if (insertError) throw insertError;
+    if (rows.some(row => row.document_type === "parcial")) {
+      const { error: receivedError } = await supabase.from("internships")
+        .update({ partial_report_received_at: new Date().toISOString() })
+        .eq("id", identified[0].id);
+      if (receivedError) console.error("report-upload: partial-received-marker-failed", receivedError.message);
+    }
     return answer(origin, 200, {
       success: true,
       message: "Documentos enviados para a COERI com sucesso.",

@@ -112,6 +112,24 @@ function emailModel_(type, studentName, data) {
       steps: [], warning: '',
       closing: 'Recomendamos que você mantenha uma cópia dos relatórios e documentos assinados para seus registros pessoais.'
     };
+  } else if (type === 'relatorio_parcial') {
+    var partialDate = escapeHtml_(data.partialReportDateFormatted || data.partialReportDate || '');
+    content = {
+      subject: 'Chegou o momento de entregar seu relatório parcial',
+      kicker: 'ACOMPANHAMENTO DE ESTÁGIO · COERI',
+      title: 'Relatório parcial',
+      subtitle: 'A data prevista para a entrega do seu relatório parcial foi atingida.',
+      greeting: 'Olá, ' + firstName + '!',
+      introduction: 'Conforme o cronograma do seu estágio, chegou o momento de entregar o <strong>Relatório Parcial de Estágio</strong>.' + (partialDate ? ' A data prevista é <strong>' + partialDate + '</strong>.' : ''),
+      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">Baixe, preencha e assine o modelo oficial</div><div style="margin-top:7px;color:#3d5c4b">Depois, envie o arquivo em PDF pelo Portal da COERI.</div>',
+      steps: [
+        ['1', 'Baixe o modelo', 'Acesse <a href="https://coeri.tl.ifms.edu.br/relatorios" style="color:#0d633c;font-weight:bold">a página de relatórios no Portal da COERI</a>.'],
+        ['2', 'Preencha e providencie as assinaturas', 'Confira todos os campos antes de gerar o PDF.'],
+        ['3', 'Envie o documento', 'Use a opção <strong>Enviar relatórios à COERI</strong> no portal.']
+      ],
+      warning: 'Após o envio, monitore seu e-mail institucional para acompanhar a conferência do documento.',
+      closing: 'Modelos e envio disponíveis em https://coeri.tl.ifms.edu.br/relatorios'
+    };
   } else if (type === 'previsao_termino') {
     var endingDate = escapeHtml_(data.expectedEndDateFormatted || data.expectedEndDate || '');
     return {
