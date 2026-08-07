@@ -146,8 +146,20 @@ Deno.serve(async request => {
           .eq("id", internshipId).single();
         if (error) return json(404, { error: "Estágio não encontrado." });
 
-        const { error: completionError } = await caller.rpc("complete_internship", { p_internship_id: internshipId });
-        if (completionError) return json(500, { error: "Não foi possível concluir o estágio. Nenhum e-mail de conclusão foi enviado." });
+        const { data: storagePaths, error: completionError } = await caller.rpc("complete_internship_with_reports", { p_internship_id: internshipId });
+        if (completionError) {
+          console.error("manual-internship-completion-failed", { internshipId, error: completionError });
+          return json(500, { error: `Não foi possível concluir o estágio: ${completionError.message || "erro no banco de dados"}. Nenhum e-mail de conclusão foi enviado.` });
+        }
+
+        let cleanupError = "";
+        if (storagePaths?.length) {
+          const { error: removalError } = await service.storage.from("internship-reports").remove(storagePaths);
+          if (removalError) {
+            cleanupError = removalError.message || "Não foi possível remover os arquivos do armazenamento.";
+            console.error("manual-report-storage-cleanup-failed", { internshipId, storagePaths, error: cleanupError });
+          }
+        }
 
         let emailResult = { sent: false, error: "O estudante não possui e-mail cadastrado." };
         if (internship.student_email) {
@@ -163,7 +175,7 @@ Deno.serve(async request => {
             emailResult = { sent: false, error: notificationError instanceof Error ? notificationError.message : String(notificationError) };
           }
         }
-        return json(200, { completed: true, ...emailResult });
+        return json(200, { completed: true, cleanup_pending: Boolean(cleanupError), cleanup_error: cleanupError || null, ...emailResult });
       }
 
       const { data: report, error } = await service.from("internship_report_submissions")

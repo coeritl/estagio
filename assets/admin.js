@@ -654,7 +654,11 @@ async function handleCardAction(event) {
     const { data: result, error } = await supabase.functions.invoke('manage-email-notification', {
       body: { action: 'complete_internship', internship_id: record.id }
     });
-    if (error || !result?.completed) { alert('Não foi possível concluir e excluir o cadastro. Tente novamente.'); return; }
+    if (error || !result?.completed) {
+      const detail = result?.error || error?.context?.error || error?.message || 'Tente novamente.';
+      alert(`Não foi possível concluir e excluir o cadastro. ${detail}`);
+      return;
+    }
     await loadRecords();
     alert(result.sent
       ? `O estágio de ${record.student_name} foi concluído e a notificação foi enviada.`
