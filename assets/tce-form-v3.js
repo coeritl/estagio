@@ -220,12 +220,20 @@ function initializeForm() {
       sitekey: config.turnstileSiteKey || '1x00000000000000000000AA',
       size: 'flexible',
       theme: 'light',
-      callback: token => { captchaToken = token; captchaAvailable = true; $('#tce-form-message').textContent = ''; },
+      callback: token => {
+        captchaToken = token;
+        captchaAvailable = true;
+        const formMessage = $('#tce-form-message');
+        if (!formMessage.classList.contains('success')) formMessage.textContent = '';
+      },
       'expired-callback': () => { captchaToken = ''; captchaAvailable = false; },
       'error-callback': () => {
         captchaToken = '';
         captchaAvailable = false;
-        $('#tce-form-message').textContent = 'Não foi possível ativar a verificação de segurança. Atualize a página e tente novamente.';
+        const formMessage = $('#tce-form-message');
+        if (!formMessage.classList.contains('success')) {
+          formMessage.textContent = 'Não foi possível ativar a verificação de segurança. Atualize a página e tente novamente.';
+        }
       }
     });
   }, 100);
@@ -313,9 +321,6 @@ form.addEventListener('submit', async event => {
     syncInsuranceCompanyFields();
     document.querySelectorAll('.weekday-row input[type="time"]').forEach(field => { field.disabled = true; field.required = false; });
     form.elements.start_date.min = addBusinessDays(new Date(), 5);
-    window.turnstile.reset(widgetId);
-    captchaToken = '';
-    captchaAvailable = false;
     message.classList.add('success');
     const confirmationTitle = document.createElement('strong');
     confirmationTitle.textContent = 'Solicitação enviada à COERI.';
@@ -330,6 +335,9 @@ form.addEventListener('submit', async event => {
     consultationLink.href = 'consultar-protocolo';
     consultationLink.textContent = 'Consultar protocolo';
     message.replaceChildren(confirmationTitle, protocolLine, saveInstruction, consultationInstruction, consultationLink);
+    window.turnstile.reset(widgetId);
+    captchaToken = '';
+    captchaAvailable = false;
     message.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
