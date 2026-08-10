@@ -69,6 +69,7 @@ p, li, a, strong, span { overflow-wrap: break-word; }
 .hero h1 { max-width:790px; margin:.7rem 0 1rem; font-size:clamp(2.5rem,5.3vw,5.1rem); line-height:.99; letter-spacing:-.055em; }
 .hero p { max-width:690px; margin:0; color:#e4f1e8; font-size:clamp(1rem,1.5vw,1.22rem); }
 .actions { display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1.7rem; }
+.hero-actions { align-items:flex-start; flex-direction:column; }
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:48px; max-width:100%; padding:.72rem 1.1rem; border:1px solid transparent; border-radius:12px; text-align:center; white-space:normal; text-decoration:none; font-weight:800; cursor:pointer; }
 .btn-primary { background:var(--amber); color:#2e260f; }
 .btn-primary:hover { background:#ffc95c; }
