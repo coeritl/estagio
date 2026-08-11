@@ -101,6 +101,27 @@ Deno.serve(async request => {
       return json(200, await dispatch(service, notification));
     }
 
+    if (input.action === "request_tce_correction") {
+      const protocol = String(input.protocol || "").trim().toUpperCase();
+      const correctionNote = String(input.correction_note || "").trim().slice(0, 2000);
+      if (!protocol || correctionNote.length < 5) return json(400, { error: "Descreva o que deve ser corrigido." });
+      const { data: tceRequest, error } = await service.from("tce_requests")
+        .select("student_name,student_email,public_protocol")
+        .eq("public_protocol", protocol).single();
+      if (error) return json(404, { error: "Solicitação de TCE não encontrada." });
+      const recipientEmail = String(tceRequest.student_email || "").trim().toLowerCase();
+      if (!recipientEmail) return json(422, { error: "A solicitação não possui e-mail do estudante." });
+      const { data: notification, error: notificationError } = await service.from("email_notifications").insert({
+        event_type: "tce_correcao",
+        reference_key: `${protocol}:${crypto.randomUUID()}`,
+        recipient_email: recipientEmail,
+        student_name: tceRequest.student_name || "Estudante",
+        subject: "Correção necessária na solicitação do TCE",
+        template_data: { protocol, correctionNote }
+      }).select("*").single();
+      if (notificationError) return json(500, { error: "Não foi possível preparar a notificação de correção do TCE." });
+      return json(200, await dispatch(service, notification));
+    }
     if (input.action === "request_report_correction") {
       const reportId = String(input.report_id || "");
       const correctionNote = String(input.correction_note || "").trim().slice(0, 2000);

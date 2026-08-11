@@ -167,6 +167,7 @@ async function loadRecords() {
 const notificationTypeLabels = {
   tce_recebido: 'Solicitação de TCE recebida',
   tce_gerado: 'TCE enviado para assinaturas',
+  tce_correcao: 'Correção da solicitação de TCE',
   estagio_concluido: 'Estágio concluído',
   previsao_termino: 'Previsão de término atingida',
   relatorio_parcial: 'Entrega do relatório parcial',
@@ -966,7 +967,21 @@ $('#save-tce-status').addEventListener('click', async () => {
   button.disabled = false;
   if (error) { message.textContent = 'Não foi possível atualizar o status.'; return; }
   if (status === 'tce_negado') await supabase.rpc('release_advisor_slot', { p_protocol: request.public_protocol });
-  message.textContent = 'Status público atualizado.';
+  if (status === 'pendente_correcao') {
+    message.textContent = 'Status atualizado. Enviando a orientação ao estudante…';
+    const { data: notificationResult, error: notificationError } = await supabase.functions.invoke('manage-email-notification', {
+      body: { action: 'request_tce_correction', protocol: request.public_protocol, correction_note: publicNote }
+    });
+    if (notificationError) {
+      message.textContent = 'Status público atualizado, mas não foi possível preparar o e-mail. Tente salvar novamente ou consulte a Central de notificações.';
+    } else if (!notificationResult?.sent) {
+      message.textContent = 'Status público atualizado. O e-mail ficou pendente na Central de notificações.';
+    } else {
+      message.textContent = 'Status público atualizado e orientação enviada ao e-mail do estudante.';
+    }
+  } else {
+    message.textContent = 'Status público atualizado.';
+  }
   await loadRecords();
 });
 

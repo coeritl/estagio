@@ -100,7 +100,24 @@ function emailModel_(type, studentName, data) {
       warning: 'O estágio somente poderá ser iniciado após a assinatura do TCE por todas as partes envolvidas.',
       closing: 'Caso não localize a mensagem, confira os contatos informados e entre em contato com a COERI.'
     };
-  } else if (type === 'estagio_concluido') {
+  } else if (type === 'tce_correcao') {
+    var tceCorrectionNote = escapeHtml_(data.correctionNote || '').replace(/\n/g, '<br>');
+    content = {
+      subject: 'Correção necessária na solicitação do TCE',
+      kicker: 'TERMO DE COMPROMISSO DE ESTÁGIO · COERI',
+      title: 'Sua solicitação precisa de correção',
+      subtitle: 'A COERI conferiu os dados enviados e identificou um ajuste necessário.',
+      greeting: 'Olá, ' + firstName + '!',
+      introduction: 'Durante a análise da sua solicitação do <strong>Termo de Compromisso de Estágio — TCE</strong>, identificamos informações que precisam ser corrigidas antes da emissão do documento.',
+      highlight: '<div style="font-size:13px;color:#8a5a00;font-weight:bold;text-transform:uppercase">Orientações da COERI</div><div style="margin-top:8px;font-size:16px;line-height:25px;color:#65490f;text-align:left">' + tceCorrectionNote + '</div>' + (protocol ? '<div style="margin-top:12px;font-size:13px;color:#6b6350">Protocolo: <strong>' + protocol + '</strong></div>' : ''),
+      steps: [
+        ['1', 'Confira a orientação', 'Verifique exatamente quais informações precisam ser ajustadas.'],
+        ['2', 'Responda à COERI', 'Envie as informações corrigidas respondendo a este e-mail ou conforme a orientação apresentada acima.'],
+        ['3', 'Acompanhe o protocolo', 'Consulte novamente o andamento no Portal da COERI após encaminhar a correção.']
+      ],
+      warning: 'O TCE somente poderá ser emitido depois que a pendência for corrigida e conferida pela COERI.',
+      closing: 'Em caso de dúvida, responda a este e-mail ou entre em contato com a COERI.'
+    };  } else if (type === 'estagio_concluido') {
     content = {
       subject: 'Confirmação de finalização do estágio',
       kicker: 'CONFIRMAÇÃO DE ESTÁGIO · COERI',
