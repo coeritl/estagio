@@ -1,6 +1,7 @@
 const form = document.querySelector('#report-upload-form');
 const message = document.querySelector('#report-upload-message');
 const cpfInput = document.querySelector('#report-cpf');
+const whatsappInput = document.querySelector('#report-whatsapp');
 const config = window.SUPABASE_CONFIG || {};
 const maxFileSize = 10 * 1024 * 1024;
 const maxRequestSize = 15 * 1024 * 1024;
@@ -12,6 +13,14 @@ function maskCpf(value) {
   return digits.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
 }
 cpfInput.addEventListener('input', () => { cpfInput.value = maskCpf(cpfInput.value); });
+
+function maskWhatsapp(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits ? '(' + digits : '';
+  if (digits.length <= 7) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+  return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+}
+whatsappInput.addEventListener('input', () => { whatsappInput.value = maskWhatsapp(whatsappInput.value); });
 
 function renderCaptcha() {
   if (!window.turnstile || !config.turnstileSiteKey) return;
@@ -33,6 +42,11 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   message.className = 'form-message';
   const files = [...form.querySelectorAll('input[type=file]')].map(input => input.files[0]).filter(Boolean);
+  if (!/^\(\d{2}\) \d{5}-\d{4}$/.test(whatsappInput.value)) {
+    message.textContent = 'Informe o WhatsApp no padrão (XX) XXXXX-XXXX.';
+    whatsappInput.focus();
+    return;
+  }
   if (!files.length) {
     message.textContent = 'Selecione pelo menos um documento para enviar. Em caso de dúvida, escreva para coeri.tl@ifms.edu.br.';
     return;

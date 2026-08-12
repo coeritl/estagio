@@ -103,18 +103,23 @@ Deno.serve(async request => {
 
     const cpf = String(form.get("cpf") || "").replace(/\D/g, "");
     const email = String(form.get("email") || "").trim().toLowerCase();
+    const whatsappDigits = String(form.get("whatsapp") || "").replace(/\D/g, "").slice(0, 11);
+    const whatsapp = whatsappDigits.length === 11
+      ? `(${whatsappDigits.slice(0, 2)}) ${whatsappDigits.slice(2, 7)}-${whatsappDigits.slice(7)}`
+      : "";
     const studentClass = String(form.get("student_class") || "").trim().slice(0, 120);
     const internshipPeriod = String(form.get("internship_period") || "").trim().slice(0, 160);
     const totalWorkload = Number(String(form.get("total_workload") || "").replace(/\D/g, ""));
     if (
       cpf.length !== 11 ||
       !/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(email) ||
+      whatsappDigits.length !== 11 ||
       !studentClass ||
       !internshipPeriod ||
       !Number.isInteger(totalWorkload) ||
       totalWorkload < 1 ||
       totalWorkload > 10000
-    ) return failure(origin, 400, `Confira o CPF, o e-mail institucional (@estudante.ifms.edu.br ou @ifms.edu.br), a turma, o período e a carga horária informados. Se precisar de ajuda, escreva para ${coeriEmail}.`);
+    ) return failure(origin, 400, `Confira o CPF, o e-mail institucional (@estudante.ifms.edu.br ou @ifms.edu.br), o WhatsApp, a turma, o período e a carga horária informados. Se precisar de ajuda, escreva para ${coeriEmail}.`);
 
     const files = Object.entries(types)
       .map(([field, documentType]) => ({ file: form.get(field), documentType }))
@@ -176,7 +181,8 @@ Deno.serve(async request => {
         student_class: studentClass,
         internship_period: internshipPeriod,
         total_workload: totalWorkload,
-        contact_email: email
+        contact_email: email,
+        contact_whatsapp: whatsapp
       });
     }
     const { error: insertError } = await supabase.from("internship_report_submissions").insert(rows);

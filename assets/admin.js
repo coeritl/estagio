@@ -333,6 +333,7 @@ function renderReportSubmissions() {
       ['Carga horária', `${report.total_workload} horas`],
       ['Arquivo', `${report.original_filename} · ${formatFileSize(report.file_size)}`],
       ['E-mail', report.contact_email || student.student_email],
+      ['WhatsApp', report.contact_whatsapp || 'Não informado'],
       ['CPF', student.student_cpf]
     ].forEach(([label, value]) => details.append(detailItem(label, value)));
     if (report.admin_note) details.append(detailItem('Orientação enviada', report.admin_note));
