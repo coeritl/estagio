@@ -7,6 +7,29 @@ const maxFileSize = 10 * 1024 * 1024;
 const maxRequestSize = 15 * 1024 * 1024;
 let captchaToken = '';
 let widgetId;
+let storageClient;
+
+async function getStorageClient() {
+  if (storageClient) return storageClient;
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  storageClient = createClient(config.url, config.anonKey, { auth: { persistSession: false } });
+  return storageClient;
+}
+
+async function callUploadFunction(payload) {
+  const response = await fetch(`${config.url}/functions/v1/submit-internship-reports`, {
+    method: 'POST',
+    headers: {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${config.anonKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.');
+  return result;
+}
 
 function maskCpf(value) {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -72,16 +95,39 @@ form.addEventListener('submit', async event => {
   button.disabled = true;
   button.textContent = 'Enviando…';
   message.textContent = 'Aguarde enquanto os documentos são enviados.';
+  let uploadSession = '';
+  let finalizing = false;
   try {
-    const data = new FormData(form);
-    data.set('token', captchaToken);
-    const response = await fetch(`${config.url}/functions/v1/submit-internship-reports`, {
-      method: 'POST',
-      headers: { apikey: config.anonKey, Authorization: `Bearer ${config.anonKey}` },
-      body: data
+    const values = new FormData(form);
+    const selected = [...form.querySelectorAll('input[type=file]')]
+      .filter(input => input.files[0])
+      .map(input => ({ input, file: input.files[0] }));
+    const authorization = await callUploadFunction({
+      action: 'init',
+      token: captchaToken,
+      cpf: values.get('cpf'),
+      email: values.get('email'),
+      whatsapp: values.get('whatsapp'),
+      student_class: values.get('student_class'),
+      internship_period: values.get('internship_period'),
+      total_workload: values.get('total_workload'),
+      documents: selected.map(({ input, file }) => ({ field: input.name, name: file.name, size: file.size }))
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.');
+    uploadSession = authorization.session;
+    const client = await getStorageClient();
+    for (let index = 0; index < authorization.uploads.length; index += 1) {
+      const upload = authorization.uploads[index];
+      const selectedFile = selected.find(item => item.input.name === upload.field)?.file;
+      if (!selectedFile) throw new Error('Um dos arquivos selecionados não está mais disponível. Selecione-o novamente.');
+      message.textContent = `Enviando arquivo ${index + 1} de ${authorization.uploads.length}: ${selectedFile.name}`;
+      const { error } = await client.storage
+        .from('internship-reports')
+        .uploadToSignedUrl(upload.path, upload.token, selectedFile, { contentType: 'application/pdf' });
+      if (error) throw error;
+    }
+    message.textContent = 'Arquivos transferidos. Registrando a entrega na COERI…';
+    finalizing = true;
+    const result = await callUploadFunction({ action: 'finalize', session: uploadSession });
     message.className = 'form-message success';
     const emailNotice = result.email_sent
       ? 'Uma confirmação foi enviada ao e-mail institucional informado.'
@@ -89,9 +135,12 @@ form.addEventListener('submit', async event => {
     message.textContent = `${result.message} Comprovante do envio: ${result.receipt}. ${emailNotice}`;
     form.reset();
   } catch (error) {
+    if (uploadSession && !finalizing) {
+      callUploadFunction({ action: 'cancel', session: uploadSession }).catch(() => {});
+    }
     const connectionFailed = error instanceof TypeError || error.message === 'Failed to fetch';
     message.textContent = connectionFailed
-      ? 'A transferência dos arquivos foi interrompida. Confira sua conexão e tente novamente. Se selecionou mais de um PDF, envie um documento por vez. Se o problema persistir, escreva para coeri.tl@ifms.edu.br.'
+      ? 'A conexão foi interrompida durante a transferência. Os documentos não foram registrados. Mantenha esta página aberta, confira sua conexão e tente novamente. Se o problema persistir, escreva para coeri.tl@ifms.edu.br.'
       : error.message || 'Não foi possível concluir o envio. Tente novamente ou escreva para coeri.tl@ifms.edu.br.';
   } finally {
     button.disabled = false;
