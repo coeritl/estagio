@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260807-5">
+  <link rel="stylesheet" href="assets/admin.css?v=20260820-1">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -138,6 +138,7 @@
         <label class="full">Nome completo<input id="advisor-name" required maxlength="180" autocomplete="off"></label>
         <label class="full">Cursos ou áreas que pode orientar<textarea id="advisor-areas" required maxlength="500" rows="3" placeholder="Ex.: Informática · TADS · Engenharia da Computação"></textarea></label>
         <label>Ordem de exibição<input id="advisor-order" type="number" min="0" step="1" value="0"></label>
+        <label>Limite de orientações por semestre<input id="advisor-limit" type="number" min="1" max="100" step="1" value="5" required><small>Ao atingir esse total, o docente ficará indisponível no formulário.</small></label>
         <label class="advisor-active-field"><input id="advisor-active" type="checkbox" checked> <span><strong>Exibir publicamente</strong><small>Desmarque para ocultar sem excluir o cadastro.</small></span></label>
       </div>
       <p class="form-message" id="advisor-message" role="alert"></p>
@@ -255,6 +256,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260812-1"></script>
+  <script type="module" src="assets/admin.js?v=20260820-1"></script>
 </body>
 </html>

@@ -506,7 +506,9 @@ function renderAdvisors() {
     const order = document.createElement('small');
     const availability = advisorAvailability.find(item => item.id === advisor.id);
     const occupied = Number(availability?.current_selections || 0);
-    order.textContent = `Ordem de exibição: ${advisor.display_order} · ${occupied} de ${advisor.max_selections || 5} orientações no semestre atual`;
+    const limit = Number(advisor.max_selections || 5);
+    const remaining = Math.max(limit - occupied, 0);
+    order.textContent = `Ordem de exibição: ${advisor.display_order} · ${occupied} de ${limit} orientações no semestre atual · ${remaining} vaga${remaining === 1 ? '' : 's'} ${remaining === 1 ? 'disponível' : 'disponíveis'}`;
     content.append(heading, areas, order);
     const actions = document.createElement('div');
     actions.className = 'advisor-admin-actions';
@@ -532,6 +534,7 @@ function openAdvisorDialog(advisor = null) {
   $('#advisor-name').value = advisor?.name || '';
   $('#advisor-areas').value = advisor?.areas || '';
   $('#advisor-order').value = advisor?.display_order ?? (advisors.length + 1) * 10;
+  $('#advisor-limit').value = advisor?.max_selections ?? 5;
   $('#advisor-active').checked = advisor?.is_active ?? true;
   $('#delete-advisor-button').hidden = !advisor;
   advisorDialog.showModal();
@@ -1239,7 +1242,12 @@ advisorForm.addEventListener('submit', async event => {
   const button = advisorForm.querySelector('[type="submit"]');
   const message = $('#advisor-message');
   const id = $('#advisor-id').value;
-  const payload = { name: $('#advisor-name').value.trim(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), is_active: $('#advisor-active').checked };
+  const limit = Number($('#advisor-limit').value);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    message.textContent = 'Informe um limite entre 1 e 100 orientações por semestre.';
+    return;
+  }
+  const payload = { name: $('#advisor-name').value.trim(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), max_selections: limit, is_active: $('#advisor-active').checked };
   button.disabled = true;
   message.textContent = 'Salvando…';
   const query = id ? supabase.from('internship_advisors').update(payload).eq('id', id) : supabase.from('internship_advisors').insert(payload);
