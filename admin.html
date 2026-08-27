@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260820-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260827-1">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -56,6 +56,7 @@
             <button class="overview-card danger" type="button" data-open-view="tracking"><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Estágios que exigem providência</small></button>
             <button class="overview-card warning" type="button" data-open-view="automation"><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small></button>
             <button class="overview-card" type="button" data-open-view="tracking"><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small></button>
+            <button class="overview-card warning" type="button" data-open-view="tracking"><span>Cadastros incompletos</span><strong id="overview-incomplete">0</strong><small>Sem CPF ou e-mail — revise para garantir a identificação e a comunicação corretas</small></button>
           </div>
           <section class="overview-automation"><div><span class="admin-kicker">Rotinas automáticas</span><h2>O sistema cuida dos avisos previsíveis</h2><p>Solicitações de TCE, TCEs gerados, relatório parcial, previsão de término e conclusão do estágio possuem comunicação integrada.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Ver automações</button></section>
         </section>
@@ -70,7 +71,7 @@
 
         <section class="admin-panel filters-panel">
           <div class="search-field"><label for="search-input">Pesquisar</label><input id="search-input" type="search" placeholder="Nome, curso ou empresa"></div>
-          <label>Prazos<select id="deadline-filter"><option value="all">Todos</option><option value="due">Atingidos</option><option value="soon">Próximos 7 dias</option><option value="ok">No prazo</option></select></label>
+          <label>Prazos<select id="deadline-filter"><option value="all">Todos</option><option value="due">Atingidos</option><option value="soon">Próximos 7 dias</option><option value="ok">No prazo</option><option value="incomplete">Cadastro incompleto</option></select></label>
         </section>
 
         <section class="list-group" aria-labelledby="pending-list-title">
@@ -151,7 +152,7 @@
       <div class="admin-form-grid">
         <label class="full">Número do estágio<input id="internship-number" placeholder="Pode ser preenchido depois. Ex.: 001/2026"></label>
         <label class="full">Nome completo do estudante<input id="student-name" required autocapitalize="characters" style="text-transform:uppercase"></label>
-        <label>CPF do estudante<input id="student-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></label>
+        <label>CPF do estudante<input id="student-cpf" inputmode="numeric" maxlength="14" minlength="11" placeholder="000.000.000-00" required></label>
         <label>Sexo<select id="student-sex"><option value="">Preencher depois</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option><option value="Outro">Outro</option></select></label>
         <label>Data de nascimento<input id="student-birth-date" type="date"></label>
         <label>E-mail institucional<input id="student-email" type="email" placeholder="Pode ser preenchido depois"></label>
@@ -253,9 +254,9 @@
     </form>
   </dialog>
 
-  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260820-1"></script>
+  <script type="module" src="assets/admin.js?v=20260827-1"></script>
 </body>
 </html>

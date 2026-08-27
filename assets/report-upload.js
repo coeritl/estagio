@@ -31,6 +31,33 @@ async function callUploadFunction(payload) {
   return result;
 }
 
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Redes de campus/dados móveis derrubam upload de PDF grande com alguma
+// frequência. Antes de desistir e cancelar a sessão inteira (o que obrigava o
+// estudante a reselecionar tudo e refazer o CAPTCHA), tenta de novo só o
+// arquivo que falhou algumas vezes.
+async function uploadFileWithRetry(client, upload, file, onProgress, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const { error } = await client.storage
+      .from('internship-reports')
+      .uploadToSignedUrl(upload.path, upload.token, file, { contentType: 'application/pdf' });
+    if (!error) return;
+    // Se a resposta se perdeu depois de o Storage concluir o upload, uma nova
+    // tentativa recebe 409 porque o caminho único já existe. Nesse caso o
+    // arquivo chegou e a etapa de finalização fará a conferência de tamanho.
+    const errorText = `${error.statusCode || ''} ${error.message || ''}`;
+    if (/\b409\b|already exists|resource already exists|duplicate/i.test(errorText)) return;
+    lastError = error;
+    if (attempt < attempts) {
+      onProgress(`Falha ao transferir ${file.name}. Tentando novamente (${attempt + 1}/${attempts})…`);
+      await wait(1500 * attempt);
+    }
+  }
+  throw lastError;
+}
+
 function maskCpf(value) {
   const digits = value.replace(/\D/g, '').slice(0, 11);
   return digits.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
@@ -38,7 +65,12 @@ function maskCpf(value) {
 cpfInput.addEventListener('input', () => { cpfInput.value = maskCpf(cpfInput.value); });
 
 function maskWhatsapp(value) {
-  const digits = value.replace(/\D/g, '').slice(0, 11);
+  let digits = value.replace(/\D/g, '');
+  // Quem cola o número a partir dos contatos do celular costuma trazer o DDI
+  // (ex.: "+55 67 99999-9999"). Sem isso, os 2 dígitos do "55" empurram o
+  // número para fora do limite e o campo fica com um valor sem sentido.
+  if (digits.length > 11 && digits.startsWith('55')) digits = digits.slice(2);
+  digits = digits.slice(0, 11);
   if (digits.length <= 2) return digits ? '(' + digits : '';
   if (digits.length <= 7) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
   return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
@@ -55,10 +87,21 @@ function renderCaptcha() {
     'error-callback': () => { captchaToken = ''; }
   });
 }
+let captchaWaited = 0;
 const captchaTimer = setInterval(() => {
-  if (!window.turnstile) return;
-  clearInterval(captchaTimer);
-  renderCaptcha();
+  if (window.turnstile) {
+    clearInterval(captchaTimer);
+    renderCaptcha();
+    return;
+  }
+  captchaWaited += 150;
+  // Se o script do Turnstile não carregar (bloqueador de anúncios, rede da
+  // escola/empresa restringindo o domínio da Cloudflare etc.), o formulário
+  // ficava esperando para sempre sem avisar o estudante do motivo.
+  if (captchaWaited >= 12000) {
+    clearInterval(captchaTimer);
+    message.textContent = 'Não foi possível carregar a verificação de segurança (CAPTCHA). Tente em outra rede, desative bloqueadores de anúncio/rastreamento ou escreva para coeri.tl@ifms.edu.br.';
+  }
 }, 150);
 
 form.addEventListener('submit', async event => {
@@ -120,10 +163,7 @@ form.addEventListener('submit', async event => {
       const selectedFile = selected.find(item => item.input.name === upload.field)?.file;
       if (!selectedFile) throw new Error('Um dos arquivos selecionados não está mais disponível. Selecione-o novamente.');
       message.textContent = `Enviando arquivo ${index + 1} de ${authorization.uploads.length}: ${selectedFile.name}`;
-      const { error } = await client.storage
-        .from('internship-reports')
-        .uploadToSignedUrl(upload.path, upload.token, selectedFile, { contentType: 'application/pdf' });
-      if (error) throw error;
+      await uploadFileWithRetry(client, upload, selectedFile, text => { message.textContent = text; });
     }
     message.textContent = 'Arquivos transferidos. Registrando a entrega na COERI…';
     finalizing = true;

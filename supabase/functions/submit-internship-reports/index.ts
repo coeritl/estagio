@@ -176,14 +176,34 @@ async function dispatchEmail(service: any, notification: any) {
   }
 }
 
-async function findInternship(service: any, cpf: string) {
+async function findInternship(service: any, cpf: string, email: string) {
   const { data: matches, error } = await service
     .from("internships")
-    .select("id,student_cpf,student_name")
+    .select("id,student_cpf,student_name,student_email")
     .eq("status", "em_andamento")
     .limit(2000);
   if (error) throw new Error(`internship-query:${error.message}`);
-  return (matches || []).filter((item: any) => String(item.student_cpf || "").replace(/\D/g, "") === cpf);
+  const normalizedEmail = email.trim().toLowerCase();
+  const byCpf = (matches || []).filter((item: any) => String(item.student_cpf || "").replace(/\D/g, "") === cpf);
+
+  // Se o estágio já tem e-mail cadastrado, ele precisa bater com o e-mail
+  // informado (evita que alguém que só conheça o CPF de outra pessoa desvie a
+  // comunicação daquele envio para um e-mail próprio).
+  const verified = byCpf.filter((item: any) =>
+    String(item.student_email || "").trim() &&
+    String(item.student_email).trim().toLowerCase() === normalizedEmail
+  );
+  if (verified.length) return { matches: verified, verified: true };
+
+  // Estágios importados do sistema acadêmico só recebem CPF/e-mail quando a
+  // COERI roda uma segunda importação de complementação — até lá ficam sem
+  // e-mail cadastrado. Nesses casos, em vez de bloquear o estudante, aceitamos
+  // o e-mail informado (o CPF já identificou o estágio) e completamos o
+  // cadastro. Não usamos esses registros como alternativa quando já existe um
+  // e-mail diferente cadastrado para o mesmo CPF — isso protegeria um desvio.
+  const withEmailOnFile = byCpf.some((item: any) => String(item.student_email || "").trim());
+  if (withEmailOnFile) return { matches: [], verified: false };
+  return { matches: byCpf, verified: false };
 }
 
 async function registerSubmission(service: any, session: UploadSession) {
@@ -277,15 +297,22 @@ async function handleDirectUpload(request: Request, origin: string, body: Record
     if (documents.reduce((sum: number, document: any) => sum + document.size, 0) > maxRequestSize) {
       return failure(origin, 413, "Os arquivos somam mais de 15 MB. Envie os documentos em etapas separadas.");
     }
-    let matches;
+    let lookup;
     try {
-      matches = await findInternship(service, student.cpf);
+      lookup = await findInternship(service, student.cpf, student.email);
     } catch (error) {
       console.error("report-upload: internship-query-failed", error instanceof Error ? error.message : String(error));
       return failure(origin, 500, `Não foi possível consultar o cadastro agora. Tente novamente em alguns minutos ou escreva para ${coeriEmail}.`);
     }
-    if (!matches.length) return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF. Confira o número informado ou escreva para ${coeriEmail}.`);
+    const matches = lookup.matches;
+    if (!matches.length) return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF e este e-mail institucional. Confira os dados informados ou escreva para ${coeriEmail} para conferir ou complementar seu cadastro.`);
     if (matches.length > 1) return failure(origin, 409, `Há mais de um estágio em andamento vinculado a este CPF. Entre em contato com a COERI pelo e-mail ${coeriEmail} para identificar o cadastro correto.`);
+    if (!lookup.verified) {
+      const { error: backfillError } = await service.from("internships")
+        .update({ student_email: student.email })
+        .eq("id", matches[0].id);
+      if (backfillError) console.error("report-upload: email-backfill-failed", backfillError.message);
+    }
 
     const submissionCode = crypto.randomUUID();
     const sessionDocuments: UploadDocument[] = documents.map((document: any) => ({
@@ -404,25 +431,27 @@ Deno.serve(async request => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } }
     );
-    const { data: matches, error: matchError } = await supabase
-      .from("internships")
-      .select("id,student_cpf,student_name")
-      .eq("status", "em_andamento")
-      .limit(2000);
-    const identified = (matches || []).filter(item =>
-      String(item.student_cpf || "").replace(/\D/g, "") === cpf
-    );
-    if (matchError) {
-      console.error("report-upload: internship-query-failed", matchError.message);
+    let lookup;
+    try {
+      lookup = await findInternship(supabase, cpf, email);
+    } catch (error) {
+      console.error("report-upload: internship-query-failed", error instanceof Error ? error.message : String(error));
       return failure(origin, 500, `Não foi possível consultar o cadastro agora. Tente novamente em alguns minutos ou escreva para ${coeriEmail}.`);
     }
+    const identified = lookup.matches;
     if (!identified.length) {
       console.warn("report-upload: no-matching-active-internship");
-      return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF. Confira o número informado ou escreva para ${coeriEmail}.`);
+      return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF e este e-mail institucional. Confira os dados informados ou escreva para ${coeriEmail} para conferir ou complementar seu cadastro.`);
     }
     if (identified.length > 1) {
       console.warn("report-upload: duplicate-matching-active-internship");
       return failure(origin, 409, `Há mais de um estágio em andamento vinculado a este CPF. Entre em contato com a COERI pelo e-mail ${coeriEmail} para identificar o cadastro correto.`);
+    }
+    if (!lookup.verified) {
+      const { error: backfillError } = await supabase.from("internships")
+        .update({ student_email: email })
+        .eq("id", identified[0].id);
+      if (backfillError) console.error("report-upload: email-backfill-failed", backfillError.message);
     }
 
     const submissionCode = crypto.randomUUID();

@@ -175,6 +175,10 @@ const notificationTypeLabels = {
   relatorio_correcao: 'Correção de documento solicitada'
 };
 
+function hasIncompleteContact(record) {
+  return !record.student_cpf || !record.student_email;
+}
+
 function renderOverview() {
   const inbox = tceRequests.length + reportSubmissions.filter(report => report.status !== 'aceito').length;
   const failures = emailNotifications.filter(item => item.status !== 'enviado').length;
@@ -183,6 +187,7 @@ function renderOverview() {
   $('#overview-due').textContent = records.filter(record => recordState(record) === 'due').length;
   $('#overview-notification-failures').textContent = failures;
   $('#overview-active').textContent = records.filter(record => record.status === 'em_andamento').length;
+  $('#overview-incomplete').textContent = records.filter(record => record.status === 'em_andamento' && hasIncompleteContact(record)).length;
 }
 
 function renderEmailNotifications() {
@@ -415,6 +420,14 @@ function renderCard(record, target) {
   card.dataset.id = record.id;
   card.classList.add(`status-${state}`);
   $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+  const incompleteBadge = $('.incomplete-badge', card);
+  if (record.status === 'em_andamento' && hasIncompleteContact(record)) {
+    const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail'].filter(Boolean).join(' e ');
+    incompleteBadge.hidden = false;
+    incompleteBadge.textContent = `⚠ ${missing} pendente — complemente o cadastro`;
+  } else {
+    incompleteBadge.hidden = true;
+  }
   $('.internship-number', card).textContent = record.internship_number ? `Estágio nº ${record.internship_number}` : 'Número pendente';
   $('.student-name', card).textContent = record.student_name;
   $('.course-company', card).textContent = `${record.course} · ${record.company_name}`;
@@ -464,7 +477,7 @@ function render() {
   const filtered = records.filter(record => {
     const haystack = `${record.internship_number} ${record.student_name} ${record.course} ${record.company_name}`.toLocaleLowerCase('pt-BR');
     const state = recordState(record);
-    return (!query || haystack.includes(query)) && (deadline === 'all' || (deadline === 'due' && state === 'due') || (deadline === 'soon' && state === 'soon') || (deadline === 'ok' && state === 'active'));
+    return (!query || haystack.includes(query)) && (deadline === 'all' || (deadline === 'due' && state === 'due') || (deadline === 'soon' && state === 'soon') || (deadline === 'ok' && state === 'active') || (deadline === 'incomplete' && hasIncompleteContact(record)));
   });
 
   $('#stat-active').textContent = records.filter(record => record.status === 'em_andamento').length;
@@ -622,11 +635,17 @@ loginForm.addEventListener('submit', async event => {
 internshipForm.addEventListener('submit', async event => {
   event.preventDefault();
   const button = internshipForm.querySelector('[type="submit"]');
+  const cpf = formattedCpf($('#student-cpf').value);
+  if (!cpf) {
+    internshipMessage.textContent = 'Informe um CPF com 11 dígitos.';
+    $('#student-cpf').focus();
+    return;
+  }
   button.disabled = true;
   internshipMessage.textContent = 'Salvando…';
   const id = $('#internship-id').value;
   const payload = {
-    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim().toLocaleUpperCase('pt-BR'), student_cpf: $('#student-cpf').value.trim() || null, student_sex: $('#student-sex').value || null, student_birth_date: $('#student-birth-date').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
+    internship_number: $('#internship-number').value.trim() || null, student_name: $('#student-name').value.trim().toLocaleUpperCase('pt-BR'), student_cpf: cpf, student_sex: $('#student-sex').value || null, student_birth_date: $('#student-birth-date').value || null, student_email: $('#student-email').value.trim() || null, student_whatsapp: $('#student-whatsapp').value.trim() || null, course: $('#student-course').value,
     company_name: $('#company-name').value.trim(), expected_end_date: $('#end-date').value || null, partial_report_date: $('#partial-date').value || null, final_report_date: $('#final-date').value || null,
     insurance_provider: $('#insurance-provider').value || null, notes: $('#internship-notes').value.trim()
   };
