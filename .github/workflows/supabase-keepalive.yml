@@ -1,0 +1,39 @@
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: "31 10 * * 1,4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Consultar o Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fazer uma consulta mínima
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Os segredos SUPABASE_URL e SUPABASE_ANON_KEY não estão configurados."
+            exit 1
+          fi
+
+          curl \
+            --silent \
+            --show-error \
+            --fail \
+            --retry 3 \
+            --retry-all-errors \
+            --max-time 30 \
+            --output /dev/null \
+            "$SUPABASE_URL/rest/v1/internship_agreements?select=academic_agreement_id&limit=1" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY"
+
+          echo "Supabase consultado com sucesso."
