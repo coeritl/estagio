@@ -1,0 +1,2 @@
+-- A função autentique-webhook usa somente os campos já existentes em
+-- tce_protocol_statuses e não altera o modelo de dados.
