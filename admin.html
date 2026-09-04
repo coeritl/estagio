@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260827-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260904-1">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -214,6 +214,28 @@
     <form id="tce-process-form" class="dialog-content">
       <div class="dialog-header"><div><span class="admin-kicker">Solicitação recebida</span><h2 id="tce-dialog-title">Novo TCE</h2></div><button class="icon-button" type="button" data-close-tce aria-label="Fechar">×</button></div>
       <div id="tce-request-details" class="tce-request-details"></div>
+      <section class="process-box autentique-box">
+        <h3>Enviar para assinatura pelo Autentique</h3>
+        <p>Anexe o PDF gerado pelo sistema acadêmico. As posições abaixo correspondem à página 7 do modelo atual do TCE.</p>
+        <div class="admin-form-grid">
+          <label class="full">TCE em PDF (até 10 MB)<input id="tce-pdf" type="file" accept="application/pdf,.pdf"></label>
+          <label>Representante da concedente<input id="signer-company-name" autocomplete="name"></label>
+          <label>E-mail do representante<input id="signer-company-email" type="email" autocomplete="email"></label>
+          <label>Responsável da COERI<input id="signer-coeri-name" value="Muriel Vieira Teixeira" autocomplete="name"></label>
+          <label>E-mail da COERI<input id="signer-coeri-email" type="email" value="coeri.tl@ifms.edu.br" autocomplete="email"></label>
+          <label>Professor orientador<input id="signer-advisor-name" readonly></label>
+          <label>E-mail do orientador<input id="signer-advisor-email" type="email" autocomplete="email"></label>
+          <label>Supervisor<input id="signer-supervisor-name" readonly></label>
+          <label>E-mail do supervisor<input id="signer-supervisor-email" type="email" autocomplete="email"></label>
+          <label class="full sandbox-check"><input id="autentique-sandbox" type="checkbox" checked> <span><strong>Modo de teste (Sandbox)</strong><small>Não gera cobrança, auditoria ou documento juridicamente utilizável. O arquivo será excluído pelo Autentique após alguns dias.</small></span></label>
+        </div>
+        <div id="guardian-signer-fields" class="admin-form-grid" hidden>
+          <label>Responsável legal<input id="signer-guardian-name" readonly></label>
+          <label>E-mail do responsável legal<input id="signer-guardian-email" type="email" autocomplete="email"></label>
+        </div>
+        <p class="form-message" id="autentique-message" role="alert"></p>
+        <div class="status-actions"><button class="admin-button primary" id="send-to-autentique" type="button">Enviar teste ao Autentique</button></div>
+      </section>
       <section class="process-box status-box">
         <h3>Status público da solicitação</h3>
         <p>O estudante verá somente o status, a observação e a data da atualização ao consultar o protocolo.</p>
@@ -257,6 +279,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260827-1"></script>
+  <script type="module" src="assets/admin.js?v=20260904-1"></script>
 </body>
 </html>

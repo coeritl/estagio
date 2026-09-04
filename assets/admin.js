@@ -377,6 +377,19 @@ function openTceDialog(request) {
   $('#tce-insurance-provider').value = request.insurance_provider || '';
   $('#tce-process-message').textContent = '';
   $('#tce-status-message').textContent = '';
+  $('#autentique-message').textContent = '';
+  $('#tce-pdf').value = '';
+  $('#signer-company-name').value = '';
+  $('#signer-company-email').value = request.company_email || '';
+  $('#signer-advisor-name').value = request.advisor_name || '';
+  $('#signer-advisor-email').value = '';
+  $('#signer-supervisor-name').value = request.supervisor_name || '';
+  $('#signer-supervisor-email').value = request.supervisor_email || '';
+  $('#signer-guardian-name').value = request.guardian_name || '';
+  $('#signer-guardian-email').value = request.guardian_email || '';
+  $('#guardian-signer-fields').hidden = !request.is_minor;
+  $('#autentique-sandbox').checked = true;
+  $('#send-to-autentique').textContent = 'Enviar teste ao Autentique';
   const currentStatus = protocolStatus(request);
   $('#tce-public-status').value = currentStatus?.status || 'recebido';
   $('#tce-public-note').value = currentStatus?.public_note || '';
@@ -405,6 +418,53 @@ function openTceDialog(request) {
   fields.filter(([, value]) => value !== null && value !== '').forEach(([label, value]) => details.append(detailItem(label, value)));
   tceDialog.showModal();
 }
+
+$('#autentique-sandbox').addEventListener('change', event => {
+  $('#send-to-autentique').textContent = event.target.checked ? 'Enviar teste ao Autentique' : 'Enviar documento real ao Autentique';
+});
+
+$('#send-to-autentique').addEventListener('click', async () => {
+  const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
+  const file = $('#tce-pdf').files?.[0];
+  const message = $('#autentique-message');
+  const button = $('#send-to-autentique');
+  if (!request?.public_protocol) { message.textContent = 'A solicitação não possui protocolo público.'; return; }
+  if (!file || file.type !== 'application/pdf' || file.size > 10 * 1024 * 1024) { message.textContent = 'Selecione o TCE em PDF, com no máximo 10 MB.'; return; }
+  const signers = [
+    { role: 'concedente', name: $('#signer-company-name').value.trim(), email: $('#signer-company-email').value.trim() },
+    { role: 'coeri', name: $('#signer-coeri-name').value.trim(), email: $('#signer-coeri-email').value.trim() },
+    { role: 'estudante', name: request.student_name, email: request.student_email },
+    { role: 'orientador', name: request.advisor_name, email: $('#signer-advisor-email').value.trim() },
+    { role: 'supervisor', name: request.supervisor_name, email: $('#signer-supervisor-email').value.trim() },
+  ];
+  if (request.is_minor) signers.push({ role: 'responsavel', name: request.guardian_name, email: $('#signer-guardian-email').value.trim() });
+  if (signers.some(signer => !signer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signer.email))) { message.textContent = 'Preencha o nome e um e-mail válido para todos os signatários.'; return; }
+  if (!$('#autentique-sandbox').checked && !confirm('Este envio é REAL: os signatários receberão solicitações e poderá haver cobrança da API. Deseja continuar?')) return;
+  const body = new FormData();
+  body.append('file', file); body.append('request_id', request.id); body.append('protocol', request.public_protocol);
+  body.append('sandbox', String($('#autentique-sandbox').checked)); body.append('signers', JSON.stringify(signers));
+  button.disabled = true; message.textContent = 'Enviando o documento ao Autentique…';
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch(`${config.url}/functions/v1/create-autentique-document`, { method: 'POST', headers: { Authorization: `Bearer ${sessionData.session?.access_token || ''}`, apikey: config.anonKey }, body });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) throw new Error(result.error || 'Não foi possível criar o documento.');
+    $('#tce-public-status').value = 'tce_gerado';
+    $('#tce-public-note').value = result.sandbox ? 'TCE criado no ambiente de testes do Autentique.' : generatedTceNote;
+    $('#tce-document-url').value = result.student_link || '';
+    syncTceStatusFields();
+    const currentStatus = protocolStatus(request);
+    if (currentStatus) Object.assign(currentStatus, {
+      status: 'tce_gerado',
+      public_note: result.sandbox ? 'TCE criado no ambiente de testes do Autentique.' : generatedTceNote,
+      document_url: result.student_link || null
+    });
+    $('#generate-tce-button').textContent = 'Registrar no acompanhamento';
+    message.textContent = result.sandbox ? 'Teste criado com sucesso no Autentique. Confira os e-mails informados.' : 'TCE criado e encaminhado aos signatários.';
+    button.textContent = 'Documento enviado';
+  } catch (error) { message.textContent = error.message || 'Não foi possível enviar o TCE ao Autentique.'; }
+  finally { button.disabled = false; }
+});
 
 function renderDeadline(container, value) {
   const state = deadlineState(value);
