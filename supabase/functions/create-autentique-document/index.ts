@@ -50,7 +50,15 @@ Deno.serve(async request => {
     if (!token) return answer(503, { error: "Token do Autentique não configurado." });
     const query = `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) { createDocument(sandbox: ${sandbox ? "true" : "false"}, document: $document, signers: $signers, file: $file) { id name sandbox signatures { public_id name email link { short_link } } } }`;
     const apiForm = new FormData();
-    apiForm.append("operations", JSON.stringify({ query, variables: { document: { name: `${protocol} - Termo de Compromisso de Estágio` }, signers: Array.from(merged.values()), file: null } }));
+    apiForm.append("operations", JSON.stringify({ query, variables: { document: {
+      name: `${protocol} - Termo de Compromisso de Estágio`,
+      new_signature_style: true,
+      configs: {
+        signature_appearance: "ELETRONIC",
+        notification_finished: true,
+        notification_signed: true,
+      },
+    }, signers: Array.from(merged.values()), file: null } }));
     apiForm.append("map", JSON.stringify({ file: ["variables.file"] })); apiForm.append("file", file, `${protocol}.pdf`);
     const response = await fetch("https://api.autentique.com.br/v2/graphql", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: apiForm });
     const result = await response.json().catch(() => ({})); const document = result?.data?.createDocument;
