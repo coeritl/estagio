@@ -5,11 +5,7 @@ const cors = { "Access-Control-Allow-Origin": "https://coeri.tl.ifms.edu.br", "A
 const answer = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers: cors });
 const protocolPattern = /^TCE-[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const positions = {
-  concedente: [{ x: "12.0", y: "24.0", z: 7, element: "SIGNATURE" }], coeri: [{ x: "53.0", y: "24.0", z: 7, element: "SIGNATURE" }],
-  estudante: [{ x: "12.0", y: "44.0", z: 7, element: "SIGNATURE" }], responsavel: [{ x: "53.0", y: "44.0", z: 7, element: "SIGNATURE" }],
-  orientador: [{ x: "12.0", y: "66.0", z: 7, element: "SIGNATURE" }], supervisor: [{ x: "53.0", y: "66.0", z: 7, element: "SIGNATURE" }],
-};
+const signerRoles = new Set(["concedente", "coeri", "estudante", "responsavel", "orientador", "supervisor"]);
 
 Deno.serve(async request => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -39,11 +35,11 @@ Deno.serve(async request => {
     const merged = new Map<string, any>();
     for (const item of rawSigners) {
       const role = String(item.role || "").toLowerCase(); const name = String(item.name || "").trim(); const email = String(item.email || "").trim().toLowerCase();
-      if (!positions[role]) continue;
+      if (!signerRoles.has(role)) continue;
       if (!name || !emailPattern.test(email)) return answer(400, { error: `Confira nome e e-mail do signatário: ${role}.` });
       requiredRoles.delete(role);
-      const current = merged.get(email) || { email, action: "SIGN", positions: [], name };
-      current.positions.push(...positions[role]); merged.set(email, current);
+      const current = merged.get(email) || { email, action: "SIGN", name };
+      merged.set(email, current);
     }
     if (requiredRoles.size) return answer(400, { error: `Faltam signatários: ${Array.from(requiredRoles).join(", ")}.` });
     const token = Deno.env.get("AUTENTIQUE_API_TOKEN") || "";

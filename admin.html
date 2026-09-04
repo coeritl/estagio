@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260904-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260904-2">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -113,6 +113,17 @@
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
           <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
           <div class="empty-state" id="advisor-empty-state" hidden><div>👩‍🏫</div><h2>Nenhum orientador cadastrado</h2><p>Use “Novo orientador” para iniciar a lista.</p></div>
+          <form id="signature-settings-form" class="process-box signature-settings-box">
+            <span class="admin-kicker">Estágio interno</span>
+            <h2>Representante institucional</h2>
+            <p>Estes dados serão usados automaticamente como concedente quando a solicitação for de estágio interno.</p>
+            <div class="admin-form-grid">
+              <label>Nome completo do diretor-geral<input id="director-name" required maxlength="180" autocomplete="name"></label>
+              <label>E-mail institucional do diretor-geral<input id="director-email" required type="email" maxlength="254" autocomplete="email"></label>
+            </div>
+            <p class="form-message" id="signature-settings-message" role="alert"></p>
+            <div class="status-actions"><button class="admin-button primary" type="submit">Salvar representante</button></div>
+          </form>
         </section>
         <section id="maintenance-view" hidden>
           <div class="requests-intro maintenance-heading"><div><span class="admin-kicker">Saúde do sistema</span><h2>Manutenção e consumo</h2><p>Indicadores internos do projeto e atalhos para a medição oficial do Supabase.</p></div><button class="admin-button primary" id="refresh-maintenance" type="button">Atualizar indicadores</button></div>
@@ -137,6 +148,7 @@
       <input id="advisor-id" type="hidden">
       <div class="admin-form-grid">
         <label class="full">Nome completo<input id="advisor-name" required maxlength="180" autocomplete="off"></label>
+        <label class="full">E-mail institucional<input id="advisor-email" required type="email" maxlength="254" autocomplete="email"><small>Usado automaticamente no envio do TCE para assinatura.</small></label>
         <label class="full">Cursos ou áreas que pode orientar<textarea id="advisor-areas" required maxlength="500" rows="3" placeholder="Ex.: Informática · TADS · Engenharia da Computação"></textarea></label>
         <label>Ordem de exibição<input id="advisor-order" type="number" min="0" step="1" value="0"></label>
         <label>Limite de orientações por semestre<input id="advisor-limit" type="number" min="1" max="100" step="1" value="5" required><small>Ao atingir esse total, o docente ficará indisponível no formulário.</small></label>
@@ -216,7 +228,7 @@
       <div id="tce-request-details" class="tce-request-details"></div>
       <section class="process-box autentique-box">
         <h3>Enviar para assinatura pelo Autentique</h3>
-        <p>Anexe o PDF gerado pelo sistema acadêmico. As posições abaixo correspondem à página 7 do modelo atual do TCE.</p>
+        <p>Anexe o PDF gerado pelo sistema acadêmico. O Autentique registrará as assinaturas e a trilha de auditoria sem inserir campos em posições fixas do documento.</p>
         <div class="admin-form-grid">
           <label class="full">TCE em PDF (até 10 MB)<input id="tce-pdf" type="file" accept="application/pdf,.pdf"></label>
           <label>Representante da concedente<input id="signer-company-name" autocomplete="name"></label>
@@ -279,6 +291,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260904-1"></script>
+  <script type="module" src="assets/admin.js?v=20260904-2"></script>
 </body>
 </html>

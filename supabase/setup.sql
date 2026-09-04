@@ -312,7 +312,7 @@ create table if not exists public.internship_advisors (
 );
 
 alter table public.internship_advisors enable row level security;
-grant select on table public.internship_advisors to anon, authenticated;
+grant select on table public.internship_advisors to authenticated;
 grant insert, update, delete on table public.internship_advisors to authenticated;
 
 drop policy if exists "Consulta pública de orientadores ativos" on public.internship_advisors;
@@ -353,6 +353,7 @@ where not exists (select 1 from public.internship_advisors);
 
 -- Limite semestral de cinco orientações por docente.
 alter table public.internship_advisors add column if not exists max_selections integer not null default 5 check (max_selections > 0);
+alter table public.internship_advisors add column if not exists email text;
 update public.internship_advisors set max_selections=5;
 create table if not exists public.advisor_assignments(id uuid primary key default gen_random_uuid(),advisor_id uuid not null references public.internship_advisors(id) on delete cascade,protocol text unique,semester_year integer not null,semester_half smallint not null check(semester_half in(1,2)),created_at timestamptz not null default now());
 create index if not exists advisor_assignments_semester_idx on public.advisor_assignments(advisor_id,semester_year,semester_half);
@@ -467,3 +468,22 @@ begin
 end;$$;
 revoke all on function public.get_maintenance_metrics() from public;
 grant execute on function public.get_maintenance_metrics() to authenticated;
+
+-- Dados institucionais usados na assinatura de estágios internos.
+create table if not exists public.coeri_signature_settings (
+  id text primary key default 'default' check (id = 'default'),
+  director_name text not null default '',
+  director_email text not null default '',
+  updated_at timestamptz not null default now()
+);
+insert into public.coeri_signature_settings (id) values ('default') on conflict (id) do nothing;
+alter table public.coeri_signature_settings enable row level security;
+grant select, insert, update on table public.coeri_signature_settings to authenticated;
+drop policy if exists "Administradores consultam configuracoes de assinatura" on public.coeri_signature_settings;
+create policy "Administradores consultam configuracoes de assinatura" on public.coeri_signature_settings for select to authenticated using (public.is_coeri_admin());
+drop policy if exists "Administradores cadastram configuracoes de assinatura" on public.coeri_signature_settings;
+create policy "Administradores cadastram configuracoes de assinatura" on public.coeri_signature_settings for insert to authenticated with check (public.is_coeri_admin());
+drop policy if exists "Administradores atualizam configuracoes de assinatura" on public.coeri_signature_settings;
+create policy "Administradores atualizam configuracoes de assinatura" on public.coeri_signature_settings for update to authenticated using (public.is_coeri_admin()) with check (public.is_coeri_admin());
+drop trigger if exists coeri_signature_settings_updated_at on public.coeri_signature_settings;
+create trigger coeri_signature_settings_updated_at before update on public.coeri_signature_settings for each row execute function public.set_updated_at();

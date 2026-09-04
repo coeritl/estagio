@@ -43,6 +43,7 @@ let agreements = [];
 let pendingAgreementImport = [];
 let advisors = [];
 let advisorAvailability = [];
+let signatureSettings = { director_name: '', director_email: '' };
 
 const config = window.SUPABASE_CONFIG || {};
 const isConfigured = /^https:\/\/.+\.supabase\.co$/.test(config.url || '') && Boolean(config.anonKey);
@@ -137,7 +138,7 @@ async function showAuthenticatedSession(session) {
 }
 
 async function loadRecords() {
-  const [internshipsResult, requestsResult, reportsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult, notificationsResult] = await Promise.all([
+  const [internshipsResult, requestsResult, reportsResult, statusesResult, agreementsResult, advisorsResult, availabilityResult, notificationsResult, signatureSettingsResult] = await Promise.all([
     supabase.from('internships').select('*').order('created_at', { ascending: false }),
     supabase.from('tce_requests').select('*').order('created_at', { ascending: true }),
     supabase.from('internship_report_submissions').select('*,internships(student_name,student_email,student_cpf,course,internship_number)').order('submitted_at', { ascending: false }),
@@ -145,7 +146,8 @@ async function loadRecords() {
     supabase.from('internship_agreements').select('*').order('external_institution'),
     supabase.from('internship_advisors').select('*').order('display_order').order('name'),
     supabase.rpc('get_advisor_availability', { p_start_date: new Date().toISOString().slice(0,10) }),
-    supabase.from('email_notifications').select('*').is('archived_at', null).order('created_at', { ascending: false }).limit(500)
+    supabase.from('email_notifications').select('*').is('archived_at', null).order('created_at', { ascending: false }).limit(500),
+    supabase.from('coeri_signature_settings').select('*').eq('id', 'default').maybeSingle()
   ]);
   if (internshipsResult.error) throw internshipsResult.error;
   records = internshipsResult.data || [];
@@ -156,6 +158,9 @@ async function loadRecords() {
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
   emailNotifications = notificationsResult.error ? [] : (notificationsResult.data || []);
+  signatureSettings = signatureSettingsResult.error || !signatureSettingsResult.data ? { director_name: '', director_email: '' } : signatureSettingsResult.data;
+  $('#director-name').value = signatureSettings.director_name || '';
+  $('#director-email').value = signatureSettings.director_email || '';
   render();
   renderTceRequests();
   renderReportSubmissions();
@@ -379,10 +384,12 @@ function openTceDialog(request) {
   $('#tce-status-message').textContent = '';
   $('#autentique-message').textContent = '';
   $('#tce-pdf').value = '';
-  $('#signer-company-name').value = '';
-  $('#signer-company-email').value = request.company_email || '';
+  const internal = request.request_type === 'interno';
+  const selectedAdvisor = advisors.find(advisor => advisor.name.trim().toLocaleLowerCase('pt-BR') === String(request.advisor_name || '').trim().toLocaleLowerCase('pt-BR'));
+  $('#signer-company-name').value = internal ? (signatureSettings.director_name || '') : '';
+  $('#signer-company-email').value = internal ? (signatureSettings.director_email || '') : (request.company_email || '');
   $('#signer-advisor-name').value = request.advisor_name || '';
-  $('#signer-advisor-email').value = '';
+  $('#signer-advisor-email').value = selectedAdvisor?.email || '';
   $('#signer-supervisor-name').value = request.supervisor_name || '';
   $('#signer-supervisor-email').value = request.supervisor_email || '';
   $('#signer-guardian-name').value = request.guardian_name || '';
@@ -576,13 +583,15 @@ function renderAdvisors() {
     heading.append(name, status);
     const areas = document.createElement('p');
     areas.textContent = advisor.areas;
+    const email = document.createElement('p');
+    email.textContent = advisor.email || 'E-mail de assinatura ainda não cadastrado';
     const order = document.createElement('small');
     const availability = advisorAvailability.find(item => item.id === advisor.id);
     const occupied = Number(availability?.current_selections || 0);
     const limit = Number(advisor.max_selections || 5);
     const remaining = Math.max(limit - occupied, 0);
     order.textContent = `Ordem de exibição: ${advisor.display_order} · ${occupied} de ${limit} orientações no semestre atual · ${remaining} vaga${remaining === 1 ? '' : 's'} ${remaining === 1 ? 'disponível' : 'disponíveis'}`;
-    content.append(heading, areas, order);
+    content.append(heading, areas, email, order);
     const actions = document.createElement('div');
     actions.className = 'advisor-admin-actions';
     const toggle = document.createElement('button');
@@ -605,6 +614,7 @@ function openAdvisorDialog(advisor = null) {
   $('#advisor-id').value = advisor?.id || '';
   $('#advisor-dialog-title').textContent = advisor ? 'Editar orientador' : 'Novo orientador';
   $('#advisor-name').value = advisor?.name || '';
+  $('#advisor-email').value = advisor?.email || '';
   $('#advisor-areas').value = advisor?.areas || '';
   $('#advisor-order').value = advisor?.display_order ?? (advisors.length + 1) * 10;
   $('#advisor-limit').value = advisor?.max_selections ?? 5;
@@ -1326,7 +1336,7 @@ advisorForm.addEventListener('submit', async event => {
     message.textContent = 'Informe um limite entre 1 e 100 orientações por semestre.';
     return;
   }
-  const payload = { name: $('#advisor-name').value.trim(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), max_selections: limit, is_active: $('#advisor-active').checked };
+  const payload = { name: $('#advisor-name').value.trim(), email: $('#advisor-email').value.trim().toLowerCase(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), max_selections: limit, is_active: $('#advisor-active').checked };
   button.disabled = true;
   message.textContent = 'Salvando…';
   const query = id ? supabase.from('internship_advisors').update(payload).eq('id', id) : supabase.from('internship_advisors').insert(payload);
@@ -1335,6 +1345,32 @@ advisorForm.addEventListener('submit', async event => {
   if (error) { message.textContent = 'Não foi possível salvar o orientador. Verifique os dados e tente novamente.'; return; }
   advisorDialog.close();
   await loadRecords();
+});
+
+$('#signature-settings-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const message = $('#signature-settings-message');
+  const button = event.currentTarget.querySelector('[type="submit"]');
+  const directorName = $('#director-name').value.trim();
+  const directorEmail = $('#director-email').value.trim().toLowerCase();
+  if (!directorName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(directorEmail)) {
+    message.textContent = 'Informe o nome completo e um e-mail institucional válido.';
+    return;
+  }
+  button.disabled = true;
+  message.textContent = 'Salvando…';
+  const { data, error } = await supabase.from('coeri_signature_settings').upsert({
+    id: 'default',
+    director_name: directorName,
+    director_email: directorEmail
+  }).select().single();
+  button.disabled = false;
+  if (error) {
+    message.textContent = 'Não foi possível salvar o representante institucional.';
+    return;
+  }
+  signatureSettings = data;
+  message.textContent = 'Representante institucional atualizado.';
 });
 $('#delete-advisor-button').addEventListener('click', async () => {
   const id = $('#advisor-id').value;
