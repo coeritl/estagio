@@ -64,6 +64,39 @@ function formatDate(value) {
   return localDate(value)?.toLocaleDateString('pt-BR') || 'Não informada';
 }
 
+function formatPhone(value) {
+  let digits = String(value || '').replace(/\D/g, '');
+  if (digits.startsWith('55') && digits.length > 11) digits = digits.slice(2);
+  digits = digits.slice(0, 11);
+  if (digits.length <= 2) return digits ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function validBrazilianPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+  return /^\d{10,11}$/.test(digits);
+}
+
+function syncSignerDelivery(select) {
+  const card = select.closest('.signer-card');
+  if (!card) return;
+  card.querySelectorAll('[data-contact]').forEach(field => { field.hidden = field.dataset.contact !== select.value; });
+}
+
+function resetSignerDelivery() {
+  document.querySelectorAll('.signer-delivery').forEach(select => {
+    select.value = 'email';
+    syncSignerDelivery(select);
+  });
+}
+
+function signerFromFields(prefix, role) {
+  const delivery = $(`#signer-${prefix}-delivery`).value;
+  return { role, name: $(`#signer-${prefix}-name`).value.trim(), delivery, email: $(`#signer-${prefix}-email`).value.trim(), phone: $(`#signer-${prefix}-phone`).value.trim() };
+}
+
 function daysFromToday(value) {
   const date = localDate(value);
   return date ? Math.round((date - today()) / 86400000) : null;
@@ -260,7 +293,7 @@ const publicStatusLabels = {
   tce_negado: 'TCE negado — consulte a COERI'
 };
 
-const generatedTceNote = 'TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais de assinatura aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve conferir o próprio e-mail, inclusive as pastas de spam e lixo eletrônico.';
+const generatedTceNote = 'TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais pelos canais escolhidos pela COERI (e-mail ou WhatsApp). Confira suas mensagens e, no caso do e-mail, também as pastas de spam e lixo eletrônico.';
 
 function protocolStatus(request) {
   return protocolStatuses.find(item => item.protocol === request.public_protocol) || null;
@@ -388,13 +421,21 @@ function openTceDialog(request) {
   const selectedAdvisor = advisors.find(advisor => advisor.name.trim().toLocaleLowerCase('pt-BR') === String(request.advisor_name || '').trim().toLocaleLowerCase('pt-BR'));
   $('#signer-company-name').value = internal ? (signatureSettings.director_name || '') : '';
   $('#signer-company-email').value = internal ? (signatureSettings.director_email || '') : (request.company_email || '');
+  $('#signer-company-phone').value = formatPhone(request.company_phone || '');
+  $('#signer-student-name').value = request.student_name || '';
+  $('#signer-student-email').value = request.student_email || '';
+  $('#signer-student-phone').value = formatPhone(request.student_phone || '');
   $('#signer-advisor-name').value = request.advisor_name || '';
   $('#signer-advisor-email').value = selectedAdvisor?.email || '';
+  $('#signer-advisor-phone').value = formatPhone(selectedAdvisor?.phone || '');
   $('#signer-supervisor-name').value = request.supervisor_name || '';
   $('#signer-supervisor-email').value = request.supervisor_email || '';
+  $('#signer-supervisor-phone').value = formatPhone(request.supervisor_phone || '');
   $('#signer-guardian-name').value = request.guardian_name || '';
   $('#signer-guardian-email').value = request.guardian_email || '';
+  $('#signer-guardian-phone').value = formatPhone(request.guardian_phone || '');
   $('#guardian-signer-fields').hidden = !request.is_minor;
+  resetSignerDelivery();
   $('#autentique-sandbox').checked = false;
   $('#send-to-autentique').textContent = 'Gerar e enviar pelo Autentique';
   const currentStatus = protocolStatus(request);
@@ -430,6 +471,9 @@ $('#autentique-sandbox').addEventListener('change', event => {
   $('#send-to-autentique').textContent = event.target.checked ? 'Criar teste no Autentique' : 'Gerar e enviar pelo Autentique';
 });
 
+document.querySelectorAll('.signer-delivery').forEach(select => select.addEventListener('change', () => syncSignerDelivery(select)));
+document.querySelectorAll('.mask-phone').forEach(input => input.addEventListener('input', () => { input.value = formatPhone(input.value); }));
+
 $('#send-to-autentique').addEventListener('click', async () => {
   const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
   const file = $('#tce-pdf').files?.[0];
@@ -437,16 +481,13 @@ $('#send-to-autentique').addEventListener('click', async () => {
   const button = $('#send-to-autentique');
   if (!request?.public_protocol) { message.textContent = 'A solicitação não possui protocolo público.'; return; }
   if (!file || file.type !== 'application/pdf' || file.size > 10 * 1024 * 1024) { message.textContent = 'Selecione o TCE em PDF, com no máximo 10 MB.'; return; }
-  const signers = [
-    { role: 'concedente', name: $('#signer-company-name').value.trim(), email: $('#signer-company-email').value.trim() },
-    { role: 'coeri', name: $('#signer-coeri-name').value.trim(), email: $('#signer-coeri-email').value.trim() },
-    { role: 'estudante', name: request.student_name, email: request.student_email },
-    { role: 'orientador', name: request.advisor_name, email: $('#signer-advisor-email').value.trim() },
-    { role: 'supervisor', name: request.supervisor_name, email: $('#signer-supervisor-email').value.trim() },
-  ];
-  if (request.is_minor) signers.push({ role: 'responsavel', name: request.guardian_name, email: $('#signer-guardian-email').value.trim() });
-  if (signers.some(signer => !signer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signer.email))) { message.textContent = 'Preencha o nome e um e-mail válido para todos os signatários.'; return; }
-  if (!$('#autentique-sandbox').checked && !confirm('Confirmar o envio REAL deste TCE? Os signatários receberão os convites do Autentique e o documento passará a integrar o fluxo oficial de assinaturas.')) return;
+  const signers = [signerFromFields('company', 'concedente'), signerFromFields('coeri', 'coeri'), signerFromFields('student', 'estudante'), signerFromFields('advisor', 'orientador'), signerFromFields('supervisor', 'supervisor')];
+  if (request.is_minor) signers.push(signerFromFields('guardian', 'responsavel'));
+  const invalidSigner = signers.find(signer => !signer.name || (signer.delivery === 'email' ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signer.email) : !validBrazilianPhone(signer.phone)));
+  if (invalidSigner) { message.textContent = `Confira o nome e o ${invalidSigner.delivery === 'whatsapp' ? 'WhatsApp com DDD' : 'e-mail'} do signatário “${invalidSigner.name || invalidSigner.role}”.`; return; }
+  const whatsappCount = signers.filter(signer => signer.delivery === 'whatsapp').length;
+  const channelSummary = whatsappCount ? `${whatsappCount} convite${whatsappCount === 1 ? '' : 's'} por WhatsApp e ${signers.length - whatsappCount} por e-mail` : 'todos os convites por e-mail';
+  if (!$('#autentique-sandbox').checked && !confirm(`Confirmar o envio REAL deste TCE (${channelSummary})? Os signatários receberão os convites do Autentique e o documento passará a integrar o fluxo oficial de assinaturas.`)) return;
   const body = new FormData();
   body.append('file', file); body.append('request_id', request.id); body.append('protocol', request.public_protocol);
   body.append('sandbox', String($('#autentique-sandbox').checked)); body.append('signers', JSON.stringify(signers));
@@ -467,7 +508,7 @@ $('#send-to-autentique').addEventListener('click', async () => {
       document_url: result.student_link || null
     });
     $('#generate-tce-button').textContent = 'Registrar no acompanhamento';
-    message.textContent = result.sandbox ? 'Teste criado com sucesso no Autentique. Confira os e-mails informados.' : 'TCE criado e encaminhado aos signatários.';
+    message.textContent = result.sandbox ? 'Teste criado com sucesso no Autentique. Confira os canais escolhidos.' : 'TCE criado e encaminhado aos signatários pelos canais escolhidos.';
     button.textContent = 'Documento enviado';
   } catch (error) { message.textContent = error.message || 'Não foi possível enviar o TCE ao Autentique.'; }
   finally { button.disabled = false; }
@@ -584,7 +625,7 @@ function renderAdvisors() {
     const areas = document.createElement('p');
     areas.textContent = advisor.areas;
     const email = document.createElement('p');
-    email.textContent = advisor.email || 'E-mail de assinatura ainda não cadastrado';
+    email.textContent = [advisor.email, advisor.phone ? `WhatsApp: ${formatPhone(advisor.phone)}` : ''].filter(Boolean).join(' · ') || 'Contatos de assinatura ainda não cadastrados';
     const order = document.createElement('small');
     const availability = advisorAvailability.find(item => item.id === advisor.id);
     const occupied = Number(availability?.current_selections || 0);
@@ -615,6 +656,7 @@ function openAdvisorDialog(advisor = null) {
   $('#advisor-dialog-title').textContent = advisor ? 'Editar orientador' : 'Novo orientador';
   $('#advisor-name').value = advisor?.name || '';
   $('#advisor-email').value = advisor?.email || '';
+  $('#advisor-phone').value = formatPhone(advisor?.phone || '');
   $('#advisor-areas').value = advisor?.areas || '';
   $('#advisor-order').value = advisor?.display_order ?? (advisors.length + 1) * 10;
   $('#advisor-limit').value = advisor?.max_selections ?? 5;
@@ -1336,7 +1378,9 @@ advisorForm.addEventListener('submit', async event => {
     message.textContent = 'Informe um limite entre 1 e 100 orientações por semestre.';
     return;
   }
-  const payload = { name: $('#advisor-name').value.trim(), email: $('#advisor-email').value.trim().toLowerCase(), areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), max_selections: limit, is_active: $('#advisor-active').checked };
+  const advisorPhone = $('#advisor-phone').value.trim();
+  if (advisorPhone && !validBrazilianPhone(advisorPhone)) { message.textContent = 'Informe um WhatsApp válido com DDD ou deixe o campo vazio.'; return; }
+  const payload = { name: $('#advisor-name').value.trim(), email: $('#advisor-email').value.trim().toLowerCase(), phone: advisorPhone || null, areas: $('#advisor-areas').value.trim(), display_order: Number($('#advisor-order').value || 0), max_selections: limit, is_active: $('#advisor-active').checked };
   button.disabled = true;
   message.textContent = 'Salvando…';
   const query = id ? supabase.from('internship_advisors').update(payload).eq('id', id) : supabase.from('internship_advisors').insert(payload);

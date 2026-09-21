@@ -99,7 +99,7 @@ Deno.serve(async request => {
         template_data: {
           protocol,
           documentUrl: String(input.document_url || ""),
-          deliveryNotice: "Os links individuais de assinatura serão encaminhados pelo Autentique aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve acessar o próprio e-mail."
+          deliveryNotice: "Os links individuais de assinatura serão encaminhados pelo Autentique pelos canais escolhidos pela COERI (e-mail ou WhatsApp). Cada signatário deve conferir suas mensagens."
         },
       });
       return json(200, await dispatch(service, notification));

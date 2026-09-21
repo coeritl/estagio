@@ -6,6 +6,11 @@ const answer = (status: number, body: Record<string, unknown>) => new Response(J
 const protocolPattern = /^TCE-[A-F0-9]{4}(?:-[A-F0-9]{4}){3}$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const signerRoles = new Set(["concedente", "coeri", "estudante", "responsavel", "orientador", "supervisor"]);
+const normalizePhone = (value: unknown) => {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (!digits.startsWith("55")) digits = `55${digits}`;
+  return /^55\d{10,11}$/.test(digits) ? `+${digits}` : "";
+};
 
 Deno.serve(async request => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -26,7 +31,7 @@ Deno.serve(async request => {
     const sandboxValue = String(form.get("sandbox") || "");
     if (!new Set(["true", "false"]).has(sandboxValue)) return answer(400, { error: "Informe explicitamente se o envio é de teste ou de produção." });
     const sandbox = sandboxValue === "true";
-    let rawSigners: Array<{ role: string; name: string; email: string }> = [];
+    let rawSigners: Array<{ role: string; name: string; delivery?: string; email?: string; phone?: string }> = [];
     try { rawSigners = JSON.parse(String(form.get("signers") || "[]")); } catch { return answer(400, { error: "Lista de signatários inválida." }); }
     if (!(file instanceof File) || file.type !== "application/pdf" || file.size < 5 || file.size > 10 * 1024 * 1024) return answer(400, { error: "Selecione um PDF válido de até 10 MB." });
     if (!protocolPattern.test(protocol)) return answer(400, { error: "Protocolo inválido." });
@@ -36,12 +41,17 @@ Deno.serve(async request => {
     const requiredRoles = new Set(["concedente", "coeri", "estudante", "orientador", "supervisor"]);
     const merged = new Map<string, any>();
     for (const item of rawSigners) {
-      const role = String(item.role || "").toLowerCase(); const name = String(item.name || "").trim(); const email = String(item.email || "").trim().toLowerCase();
+      const role = String(item.role || "").toLowerCase(); const name = String(item.name || "").trim(); const delivery = String(item.delivery || "email").toLowerCase();
       if (!signerRoles.has(role)) continue;
-      if (!name || !emailPattern.test(email)) return answer(400, { error: `Confira nome e e-mail do signatário: ${role}.` });
+      if (!name || !new Set(["email", "whatsapp"]).has(delivery)) return answer(400, { error: `Confira os dados do signatário: ${role}.` });
+      const email = String(item.email || "").trim().toLowerCase();
+      const phone = normalizePhone(item.phone);
+      if (delivery === "email" && !emailPattern.test(email)) return answer(400, { error: `Confira o e-mail do signatário: ${role}.` });
+      if (delivery === "whatsapp" && !phone) return answer(400, { error: `Confira o WhatsApp com DDD do signatário: ${role}.` });
       requiredRoles.delete(role);
-      const current = merged.get(email) || { email, action: "SIGN", name };
-      merged.set(email, current);
+      const key = delivery === "whatsapp" ? `phone:${phone}` : `email:${email}`;
+      const signer = delivery === "whatsapp" ? { phone, delivery_method: "DELIVERY_METHOD_WHATSAPP", action: "SIGN", name } : { email, action: "SIGN", name };
+      if (!merged.has(key)) merged.set(key, signer);
     }
     if (requiredRoles.size) return answer(400, { error: `Faltam signatários: ${Array.from(requiredRoles).join(", ")}.` });
     const token = Deno.env.get("AUTENTIQUE_API_TOKEN") || "";
@@ -61,9 +71,10 @@ Deno.serve(async request => {
     const response = await fetch("https://api.autentique.com.br/v2/graphql", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: apiForm });
     const result = await response.json().catch(() => ({})); const document = result?.data?.createDocument;
     if (!response.ok || result?.errors?.length || !document?.id) { console.error("Autentique", response.status, result?.errors || result); return answer(502, { error: result?.errors?.[0]?.message || "O Autentique não conseguiu criar o documento." }); }
-    const studentSignature = document.signatures?.find((signature: any) => String(signature.email || "").toLowerCase() === String(tce.student_email || "").toLowerCase());
+    const studentInput = rawSigners.find(item => String(item.role || "").toLowerCase() === "estudante");
+    const studentSignature = document.signatures?.find((signature: any) => String(signature.email || "").toLowerCase() === String(studentInput?.email || tce.student_email || "").toLowerCase()) || document.signatures?.find((signature: any) => String(signature.name || "").trim().toLowerCase() === String(studentInput?.name || "").trim().toLowerCase());
     const studentLink = studentSignature?.link?.short_link || null;
-    const { error: statusError } = await service.from("tce_protocol_statuses").update({ status: "tce_gerado", public_note: sandbox ? "TCE criado no ambiente de testes do Autentique." : "TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve conferir o próprio e-mail, inclusive spam e lixo eletrônico.", document_url: studentLink }).eq("protocol", protocol);
+    const { error: statusError } = await service.from("tce_protocol_statuses").update({ status: "tce_gerado", public_note: sandbox ? "TCE criado no ambiente de testes do Autentique." : "TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais pelos canais escolhidos pela COERI (e-mail ou WhatsApp). Confira suas mensagens e, no caso do e-mail, também a caixa de spam e o lixo eletrônico.", document_url: studentLink }).eq("protocol", protocol);
     if (statusError) throw statusError;
     return answer(200, { success: true, sandbox, document_id: document.id, student_link: studentLink, signatures: document.signatures?.map((signature: any) => ({ name: signature.name, email: signature.email, link: signature.link?.short_link || null })) || [] });
   } catch (error) { console.error(error); return answer(500, { error: "Não foi possível enviar o TCE ao Autentique." }); }
