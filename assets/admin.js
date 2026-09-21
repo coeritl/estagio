@@ -97,6 +97,32 @@ function signerFromFields(prefix, role) {
   return { role, name: $(`#signer-${prefix}-name`).value.trim(), delivery, email: $(`#signer-${prefix}-email`).value.trim(), phone: $(`#signer-${prefix}-phone`).value.trim() };
 }
 
+function comparablePersonName(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function syncSupervisorWithAdvisor() {
+  const checkbox = $('#supervisor-is-advisor');
+  const card = $('#supervisor-signer-card');
+  const delivery = $('#signer-supervisor-delivery');
+  if (checkbox.checked) {
+    $('#signer-supervisor-name').value = $('#signer-advisor-name').value;
+    $('#signer-supervisor-email').value = $('#signer-advisor-email').value;
+    $('#signer-supervisor-phone').value = $('#signer-advisor-phone').value;
+    delivery.value = $('#signer-advisor-delivery').value;
+  } else {
+    $('#signer-supervisor-name').value = card.dataset.originalName || '';
+    $('#signer-supervisor-email').value = card.dataset.originalEmail || '';
+    $('#signer-supervisor-phone').value = card.dataset.originalPhone || '';
+    delivery.value = card.dataset.originalDelivery || 'email';
+  }
+  delivery.disabled = checkbox.checked;
+  $('#signer-supervisor-email').disabled = checkbox.checked;
+  $('#signer-supervisor-phone').disabled = checkbox.checked;
+  card.classList.toggle('linked-signer', checkbox.checked);
+  syncSignerDelivery(delivery);
+}
+
 function daysFromToday(value) {
   const date = localDate(value);
   return date ? Math.round((date - today()) / 86400000) : null;
@@ -431,11 +457,18 @@ function openTceDialog(request) {
   $('#signer-supervisor-name').value = request.supervisor_name || '';
   $('#signer-supervisor-email').value = request.supervisor_email || '';
   $('#signer-supervisor-phone').value = formatPhone(request.supervisor_phone || '');
+  const supervisorCard = $('#supervisor-signer-card');
+  supervisorCard.dataset.originalName = request.supervisor_name || '';
+  supervisorCard.dataset.originalEmail = request.supervisor_email || '';
+  supervisorCard.dataset.originalPhone = formatPhone(request.supervisor_phone || '');
+  supervisorCard.dataset.originalDelivery = 'email';
   $('#signer-guardian-name').value = request.guardian_name || '';
   $('#signer-guardian-email').value = request.guardian_email || '';
   $('#signer-guardian-phone').value = formatPhone(request.guardian_phone || '');
   $('#guardian-signer-fields').hidden = !request.is_minor;
   resetSignerDelivery();
+  $('#supervisor-is-advisor').checked = Boolean(comparablePersonName(request.supervisor_name) && comparablePersonName(request.supervisor_name) === comparablePersonName(request.advisor_name));
+  syncSupervisorWithAdvisor();
   $('#autentique-sandbox').checked = false;
   $('#send-to-autentique').textContent = 'Gerar e enviar pelo Autentique';
   const currentStatus = protocolStatus(request);
@@ -471,8 +504,16 @@ $('#autentique-sandbox').addEventListener('change', event => {
   $('#send-to-autentique').textContent = event.target.checked ? 'Criar teste no Autentique' : 'Gerar e enviar pelo Autentique';
 });
 
-document.querySelectorAll('.signer-delivery').forEach(select => select.addEventListener('change', () => syncSignerDelivery(select)));
-document.querySelectorAll('.mask-phone').forEach(input => input.addEventListener('input', () => { input.value = formatPhone(input.value); }));
+document.querySelectorAll('.signer-delivery').forEach(select => select.addEventListener('change', () => {
+  syncSignerDelivery(select);
+  if (select.id === 'signer-advisor-delivery' && $('#supervisor-is-advisor').checked) syncSupervisorWithAdvisor();
+}));
+document.querySelectorAll('.mask-phone').forEach(input => input.addEventListener('input', () => {
+  input.value = formatPhone(input.value);
+  if (input.id === 'signer-advisor-phone' && $('#supervisor-is-advisor').checked) syncSupervisorWithAdvisor();
+}));
+$('#signer-advisor-email').addEventListener('input', () => { if ($('#supervisor-is-advisor').checked) syncSupervisorWithAdvisor(); });
+$('#supervisor-is-advisor').addEventListener('change', syncSupervisorWithAdvisor);
 
 $('#send-to-autentique').addEventListener('click', async () => {
   const request = tceRequests.find(item => item.id === $('#tce-request-id').value);
