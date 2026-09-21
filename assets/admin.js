@@ -395,8 +395,8 @@ function openTceDialog(request) {
   $('#signer-guardian-name').value = request.guardian_name || '';
   $('#signer-guardian-email').value = request.guardian_email || '';
   $('#guardian-signer-fields').hidden = !request.is_minor;
-  $('#autentique-sandbox').checked = true;
-  $('#send-to-autentique').textContent = 'Enviar teste ao Autentique';
+  $('#autentique-sandbox').checked = false;
+  $('#send-to-autentique').textContent = 'Gerar e enviar pelo Autentique';
   const currentStatus = protocolStatus(request);
   $('#tce-public-status').value = currentStatus?.status || 'recebido';
   $('#tce-public-note').value = currentStatus?.public_note || '';
@@ -427,7 +427,7 @@ function openTceDialog(request) {
 }
 
 $('#autentique-sandbox').addEventListener('change', event => {
-  $('#send-to-autentique').textContent = event.target.checked ? 'Enviar teste ao Autentique' : 'Enviar documento real ao Autentique';
+  $('#send-to-autentique').textContent = event.target.checked ? 'Criar teste no Autentique' : 'Gerar e enviar pelo Autentique';
 });
 
 $('#send-to-autentique').addEventListener('click', async () => {
@@ -446,7 +446,7 @@ $('#send-to-autentique').addEventListener('click', async () => {
   ];
   if (request.is_minor) signers.push({ role: 'responsavel', name: request.guardian_name, email: $('#signer-guardian-email').value.trim() });
   if (signers.some(signer => !signer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signer.email))) { message.textContent = 'Preencha o nome e um e-mail válido para todos os signatários.'; return; }
-  if (!$('#autentique-sandbox').checked && !confirm('Este envio é REAL: os signatários receberão solicitações e poderá haver cobrança da API. Deseja continuar?')) return;
+  if (!$('#autentique-sandbox').checked && !confirm('Confirmar o envio REAL deste TCE? Os signatários receberão os convites do Autentique e o documento passará a integrar o fluxo oficial de assinaturas.')) return;
   const body = new FormData();
   body.append('file', file); body.append('request_id', request.id); body.append('protocol', request.public_protocol);
   body.append('sandbox', String($('#autentique-sandbox').checked)); body.append('signers', JSON.stringify(signers));

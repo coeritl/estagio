@@ -23,7 +23,9 @@ Deno.serve(async request => {
     const file = form.get("file");
     const requestId = String(form.get("request_id") || "");
     const protocol = String(form.get("protocol") || "").trim().toUpperCase();
-    const sandbox = String(form.get("sandbox")) !== "false";
+    const sandboxValue = String(form.get("sandbox") || "");
+    if (!new Set(["true", "false"]).has(sandboxValue)) return answer(400, { error: "Informe explicitamente se o envio é de teste ou de produção." });
+    const sandbox = sandboxValue === "true";
     let rawSigners: Array<{ role: string; name: string; email: string }> = [];
     try { rawSigners = JSON.parse(String(form.get("signers") || "[]")); } catch { return answer(400, { error: "Lista de signatários inválida." }); }
     if (!(file instanceof File) || file.type !== "application/pdf" || file.size < 5 || file.size > 10 * 1024 * 1024) return answer(400, { error: "Selecione um PDF válido de até 10 MB." });
