@@ -63,7 +63,7 @@ Deno.serve(async request => {
     if (!response.ok || result?.errors?.length || !document?.id) { console.error("Autentique", response.status, result?.errors || result); return answer(502, { error: result?.errors?.[0]?.message || "O Autentique não conseguiu criar o documento." }); }
     const studentSignature = document.signatures?.find((signature: any) => String(signature.email || "").toLowerCase() === String(tce.student_email || "").toLowerCase());
     const studentLink = studentSignature?.link?.short_link || null;
-    const { error: statusError } = await service.from("tce_protocol_statuses").update({ status: "tce_gerado", public_note: sandbox ? "TCE criado no ambiente de testes do Autentique." : "TCE gerado e encaminhado para assinaturas. Confira seu e-mail.", document_url: studentLink }).eq("protocol", protocol);
+    const { error: statusError } = await service.from("tce_protocol_statuses").update({ status: "tce_gerado", public_note: sandbox ? "TCE criado no ambiente de testes do Autentique." : "TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve conferir o próprio e-mail, inclusive spam e lixo eletrônico.", document_url: studentLink }).eq("protocol", protocol);
     if (statusError) throw statusError;
     return answer(200, { success: true, sandbox, document_id: document.id, student_link: studentLink, signatures: document.signatures?.map((signature: any) => ({ name: signature.name, email: signature.email, link: signature.link?.short_link || null })) || [] });
   } catch (error) { console.error(error); return answer(500, { error: "Não foi possível enviar o TCE ao Autentique." }); }

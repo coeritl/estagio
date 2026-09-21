@@ -96,7 +96,11 @@ Deno.serve(async request => {
         event_type: "tce_gerado", reference_key: protocol,
         recipient_email: internship.student_email, student_name: internship.student_name,
         subject: "Seu TCE foi gerado e enviado para assinatura",
-        template_data: { protocol, documentUrl: String(input.document_url || "") },
+        template_data: {
+          protocol,
+          documentUrl: String(input.document_url || ""),
+          deliveryNotice: "Os links individuais de assinatura serão encaminhados pelo Autentique aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve acessar o próprio e-mail."
+        },
       });
       return json(200, await dispatch(service, notification));
     }

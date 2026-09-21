@@ -64,6 +64,7 @@ function emailModel_(type, studentName, data) {
   var firstName = escapeHtml_(String(studentName).trim().split(/\s+/)[0] || 'estudante');
   var protocol = escapeHtml_(data.protocol || '');
   var documentUrl = safeUrl_(data.documentUrl || '');
+  var deliveryNotice = escapeHtml_(data.deliveryNotice || 'Os links individuais de assinatura serão encaminhados pelo Autentique aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve acessar o próprio e-mail.');
   var content;
 
   if (type === 'tce_recebido') {
@@ -91,9 +92,9 @@ function emailModel_(type, studentName, data) {
       subtitle: 'O documento já foi encaminhado para assinatura eletrônica.',
       greeting: 'Olá, ' + firstName + '!',
       introduction: 'O seu <strong>Termo de Compromisso de Estágio — TCE</strong> foi gerado e enviado para assinatura eletrônica.',
-      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">Documento enviado para assinatura</div><div style="margin-top:6px;color:#3d5c4b">O convite foi encaminhado aos endereços de e-mail ou números de WhatsApp informados.</div>',
+      highlight: '<div style="font-size:18px;font-weight:bold;color:#145d36">Documento enviado para assinatura</div><div style="margin-top:6px;color:#3d5c4b">' + deliveryNotice + '</div>',
       steps: [
-        ['1', 'Verifique seu e-mail e WhatsApp', 'Confira também as pastas de spam, lixo eletrônico e mensagens arquivadas.'],
+        ['1', 'Cada signatário deve verificar o próprio e-mail', 'Os links são individuais. Confira também as pastas de spam, lixo eletrônico e mensagens arquivadas.'],
         ['2', 'Procure pelo remetente Autentique', 'A mensagem de assinatura será enviada pela plataforma <strong>Autentique</strong>.'],
         ['3', 'Assine o documento', documentUrl ? 'Você também pode <a href="' + documentUrl + '" style="color:#0d633c;font-weight:bold">abrir o documento para assinatura</a>.' : 'Acesse o link recebido, confira as informações e conclua sua assinatura.']
       ],

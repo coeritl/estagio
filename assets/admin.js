@@ -260,7 +260,7 @@ const publicStatusLabels = {
   tce_negado: 'TCE negado — consulte a COERI'
 };
 
-const generatedTceNote = 'TCE gerado e encaminhado para assinaturas. Confira o e-mail e o WhatsApp informados. O remetente será o Autentique.';
+const generatedTceNote = 'TCE gerado e encaminhado para assinaturas. O Autentique enviará os links individuais de assinatura aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve conferir o próprio e-mail, inclusive as pastas de spam e lixo eletrônico.';
 
 function protocolStatus(request) {
   return protocolStatuses.find(item => item.protocol === request.public_protocol) || null;
