@@ -30,9 +30,8 @@ function courseCoordinator(course: unknown) {
   return "";
 }
 
-function fortnightKey(today: string) {
-  const [year, month, day] = today.split("-").map(Number);
-  return `${year}-${String(month).padStart(2, "0")}-${day <= 14 ? "01" : "02"}`;
+function monthlyKey(today: string) {
+  return today.slice(0, 7);
 }
 
 async function dispatch(service: any, notification: any) {
@@ -151,11 +150,14 @@ Deno.serve(async request => {
     }
 
     let advisorSent = 0, advisorFailed = 0, advisorDuplicates = 0;
-    const period = fortnightKey(today);
+    const period = monthlyKey(today);
     for (const group of advisorGroups.values()) {
       const referenceKey = `${group.advisor.id}:${period}`;
       const { data: existing } = await service.from("email_notifications").select("*")
-        .eq("event_type", "orientador_pendencias").eq("reference_key", referenceKey).maybeSingle();
+        .eq("event_type", "orientador_pendencias")
+        .eq("recipient_email", group.advisor.email)
+        .gte("created_at", `${period}-01T00:00:00-04:00`)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
       let notification = existing;
       if (existing?.status === "enviado") { advisorDuplicates++; continue; }
       if (!notification) {

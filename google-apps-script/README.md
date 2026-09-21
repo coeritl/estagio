@@ -9,4 +9,4 @@
 
 O script envia pela conta que criou a implantação. A central registra “Enviado pelo Gmail” quando `GmailApp.sendEmail` termina sem erro; isso não é confirmação de leitura nem garantia de entrega na caixa de entrada.
 
-O acionador diário também consulta as pendências dos orientandos. A função do Supabase agrupa os casos por professor e emite no máximo um resumo por quinzena, incluindo em cópia as coordenações dos cursos envolvidos.
+O acionador diário também consulta as pendências dos orientandos. A função do Supabase agrupa os casos por professor e emite no máximo um resumo por mês, incluindo em cópia as coordenações dos cursos envolvidos.
