@@ -36,7 +36,7 @@ Deno.serve(async request => {
     if (!(file instanceof File) || file.type !== "application/pdf" || file.size < 5 || file.size > 10 * 1024 * 1024) return answer(400, { error: "Selecione um PDF válido de até 10 MB." });
     if (!protocolPattern.test(protocol)) return answer(400, { error: "Protocolo inválido." });
     if (new TextDecoder().decode(new Uint8Array(await file.slice(0, 5).arrayBuffer())) !== "%PDF-") return answer(400, { error: "O arquivo selecionado não é um PDF válido." });
-    const { data: tce } = await service.from("tce_requests").select("id,public_protocol,student_email").eq("id", requestId).maybeSingle();
+    const { data: tce } = await service.from("tce_requests").select("id,public_protocol,student_name,student_email").eq("id", requestId).maybeSingle();
     if (!tce || tce.public_protocol !== protocol) return answer(404, { error: "Solicitação de TCE não encontrada." });
     const requiredRoles = new Set(["concedente", "coeri", "estudante", "orientador", "supervisor"]);
     const merged = new Map<string, any>();
@@ -59,7 +59,7 @@ Deno.serve(async request => {
     const query = `mutation CreateDocumentMutation($document: DocumentInput!, $signers: [SignerInput!]!, $file: Upload!) { createDocument(sandbox: ${sandbox ? "true" : "false"}, document: $document, signers: $signers, file: $file) { id name sandbox signatures { public_id name email link { short_link } } } }`;
     const apiForm = new FormData();
     apiForm.append("operations", JSON.stringify({ query, variables: { document: {
-      name: `${protocol} - Termo de Compromisso de Estágio`,
+      name: `Termo de Compromisso de Estágio - ${String(tce.student_name || "Estudante").replace(/\s+/g, " ").trim()}`,
       new_signature_style: true,
       configs: {
         signature_appearance: "ELETRONIC",
@@ -71,6 +71,8 @@ Deno.serve(async request => {
     const response = await fetch("https://api.autentique.com.br/v2/graphql", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: apiForm });
     const result = await response.json().catch(() => ({})); const document = result?.data?.createDocument;
     if (!response.ok || result?.errors?.length || !document?.id) { console.error("Autentique", response.status, result?.errors || result); return answer(502, { error: result?.errors?.[0]?.message || "O Autentique não conseguiu criar o documento." }); }
+    const { error: mappingError } = await service.from("autentique_documents").upsert({ document_id: document.id, protocol }, { onConflict: "protocol" });
+    if (mappingError) console.error("Autentique document mapping", mappingError);
     const studentInput = rawSigners.find(item => String(item.role || "").toLowerCase() === "estudante");
     const studentSignature = document.signatures?.find((signature: any) => String(signature.email || "").toLowerCase() === String(studentInput?.email || tce.student_email || "").toLowerCase()) || document.signatures?.find((signature: any) => String(signature.name || "").trim().toLowerCase() === String(studentInput?.name || "").trim().toLowerCase());
     const studentLink = studentSignature?.link?.short_link || null;

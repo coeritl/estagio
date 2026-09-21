@@ -26,6 +26,13 @@ function collectStrings(value: unknown, output: string[] = []): string[] {
   return output;
 }
 
+function findDocumentId(payload: any): string | null {
+  const data = payload?.event?.data ?? payload?.data ?? {};
+  const object = data?.object && typeof data.object === "object" ? data.object : {};
+  const candidates = [data?.document, object?.document, data?.id, object?.id, payload?.document?.id];
+  return candidates.find(value => typeof value === "string" && value.trim())?.trim() ?? null;
+}
+
 async function validSignature(rawBody: string, received: string, secret: string): Promise<boolean> {
   if (!/^[a-f0-9]{64}$/i.test(received)) return false;
   const encoder = new TextEncoder();
@@ -59,10 +66,15 @@ Deno.serve(async request => {
     }
     const payload = JSON.parse(rawBody);
     const eventName = String(payload?.event?.type || payload?.type || "").toLowerCase();
-    const protocol = findProtocol(collectStrings(payload).find(value => findProtocol(value)));
-    if (!protocol) return json(202, { received: true, matched: false });
-
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+    let protocol = findProtocol(collectStrings(payload).find(value => findProtocol(value)));
+    const documentId = findDocumentId(payload);
+    if (!protocol && documentId) {
+      const { data: mapping } = await service.from("autentique_documents").select("protocol").eq("document_id", documentId).maybeSingle();
+      protocol = mapping?.protocol ?? null;
+    }
+    if (!protocol) return json(202, { received: true, matched: false, document_id: documentId });
+
     const signedUrl = collectStrings(payload).find(value => /https?:\/\/.*(assinado|signed).*\.pdf/i.test(value)) || null;
     const finished = /finished|completed|complete|document\.finished/.test(eventName);
     const note = finished
