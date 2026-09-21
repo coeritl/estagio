@@ -235,6 +235,7 @@ const notificationTypeLabels = {
   estagio_concluido: 'Estágio concluído',
   previsao_termino: 'Previsão de término atingida',
   relatorio_parcial: 'Entrega do relatório parcial',
+  orientador_pendencias: 'Pendências dos orientandos',
   relatorios_recebidos: 'Documentação recebida',
   relatorio_correcao: 'Correção de documento solicitada'
 };

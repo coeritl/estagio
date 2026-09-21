@@ -20,11 +20,15 @@ function doPost(e) {
 
       var model = emailModel_(input.type, input.studentName || 'estudante', input.data || {});
       model.html = sanitizeEmailHtml_(model.html);
-      GmailApp.sendEmail(input.to, input.subject || model.subject, model.plainText, {
+      var mailOptions = {
         htmlBody: model.html,
         name: 'COERI · IFMS Campus Três Lagoas',
         replyTo: 'coeri.tl@ifms.edu.br'
-      });
+      };
+      if (input.data && Array.isArray(input.data.ccEmails) && input.data.ccEmails.length) {
+        mailOptions.cc = input.data.ccEmails.join(',');
+      }
+      GmailApp.sendEmail(input.to, input.subject || model.subject, model.plainText, mailOptions);
       var sentAt = new Date().toISOString();
       properties.setProperty(key, sentAt);
       return output_({ success: true, sentAt: sentAt });
@@ -67,7 +71,9 @@ function emailModel_(type, studentName, data) {
   var deliveryNotice = escapeHtml_(data.deliveryNotice || 'Os links individuais de assinatura serão encaminhados pelo Autentique aos endereços de e-mail informados no preenchimento da solicitação do TCE. Cada signatário deve acessar o próprio e-mail.');
   var content;
 
-  if (type === 'tce_recebido') {
+  if (type === 'orientador_pendencias') {
+    return renderAdvisorPendenciesEmail_(studentName, data);
+  } else if (type === 'tce_recebido') {
     content = {
       subject: 'Solicitação de TCE recebida pela COERI',
       kicker: 'TERMO DE COMPROMISSO DE ESTÁGIO · COERI',
@@ -195,6 +201,24 @@ function emailModel_(type, studentName, data) {
   } else throw new Error('Tipo de mensagem inválido.');
 
   return { subject: content.subject, plainText: stripHtml_(content.introduction + ' ' + content.closing), html: renderEmail_(content) };
+}
+
+function renderAdvisorPendenciesEmail_(advisorName, data) {
+  var firstName = escapeHtml_(String(advisorName || 'professor(a)').trim().split(/\s+/)[0]);
+  var students = Array.isArray(data.students) ? data.students : [];
+  var rows = students.map(function(student) {
+    var pending = (student.pending || []).map(escapeHtml_).join(', ');
+    var dates = [];
+    if (student.partialReportDate) dates.push('Parcial: ' + escapeHtml_(student.partialReportDate));
+    if (student.expectedEndDate) dates.push('Término: ' + escapeHtml_(student.expectedEndDate));
+    return '<tr><td style="padding:14px 12px;border-bottom:1px solid #dce8e2"><strong>' + escapeHtml_(student.name || '') + '</strong><div style="margin-top:4px;font-size:13px;color:#52615b">' + escapeHtml_(student.course || '') + (student.internshipNumber ? ' · Estágio nº ' + escapeHtml_(student.internshipNumber) : '') + '</div></td><td style="padding:14px 12px;border-bottom:1px solid #dce8e2;color:#8a3d00"><strong>' + pending + '</strong><div style="margin-top:4px;font-size:13px;color:#6b6350">' + dates.join(' · ') + '</div></td></tr>';
+  }).join('');
+  var html = '<!doctype html><html lang="pt-BR"><body style="margin:0;padding:0;background:#eef2f1;font-family:Arial,Helvetica,sans-serif;color:#26332f"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:760px;background:#fff;border-radius:18px;overflow:hidden"><tr><td style="height:8px;background:#16834b">&nbsp;</td></tr><tr><td style="background:#0d633c;padding:32px 36px"><div style="font-size:13px;color:#d7f3e4;font-weight:bold">ACOMPANHAMENTO QUINZENAL · COERI</div><h1 style="margin:8px 0;color:#fff;font-size:28px">Documentos de estágio pendentes</h1><p style="margin:0;color:#edf8f2;line-height:24px">Orientandos que precisam de acompanhamento para regularizar a documentação.</p></td></tr><tr><td style="padding:28px 36px 18px"><p style="margin:0;font-size:16px;line-height:25px">Olá, ' + firstName + '!</p><p style="font-size:16px;line-height:25px">Identificamos <strong>' + students.length + ' estudante(s)</strong> sob sua orientação com documentos de estágio pendentes. A coordenação de curso correspondente está em cópia para acompanhamento.</p></td></tr><tr><td style="padding:0 36px 24px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #dce8e2;border-radius:12px;overflow:hidden"><tr style="background:#eef9f2"><th align="left" style="padding:12px">Estudante</th><th align="left" style="padding:12px">Pendências</th></tr>' + rows + '</table></td></tr><tr><td style="padding:0 36px 24px"><div style="background:#fff7e8;border-left:5px solid #e5a11a;padding:17px 18px;border-radius:8px;line-height:23px"><strong>Orientação ao estudante:</strong> acessar a página de relatórios da COERI, baixar os modelos oficiais, preencher todos os campos, providenciar as assinaturas e enviar os documentos em PDF pelo próprio portal. Após o envio, deve acompanhar o e-mail institucional para confirmação ou pedido de correção.</div></td></tr><tr><td align="center" style="padding:0 36px 30px"><a href="https://coeri.tl.ifms.edu.br/relatorios" style="display:inline-block;background:#16834b;color:#fff;text-decoration:none;font-weight:bold;padding:14px 24px;border-radius:9px">Acessar relatórios e orientações</a></td></tr><tr><td style="border-top:1px solid #e6ece9;padding:24px 36px;font-size:14px;line-height:22px">Este é um aviso automático quinzenal. Caso a documentação já tenha sido enviada, ela pode ainda estar em conferência pela COERI.<br><br>Atenciosamente,<br><strong>Coordenação de Extensão e Relações Institucionais — COERI</strong><br>IFMS Campus Três Lagoas</td></tr></table></td></tr></table></body></html>';
+  return {
+    subject: 'Orientandos com documentos de estágio pendentes',
+    plainText: 'Há ' + students.length + ' estudante(s) sob sua orientação com documentos de estágio pendentes. Consulte a relação enviada e oriente-os a acessar https://coeri.tl.ifms.edu.br/relatorios.',
+    html: html
+  };
 }
 
 function renderEndingEmail_(firstName, endingDate) {
