@@ -23,5 +23,4 @@ O perfil autenticado fica em `browser-profile/`, fora do Git. Quando a sessão e
 
 ## Agendamento no Windows
 
-Depois de validar a primeira sincronização, crie uma tarefa semanal no Agendador de Tarefas apontando para `npm.cmd run sync`, com esta pasta como diretório inicial. O arquivo `logs/latest.json` registra o resultado mais recente.
-
+Neste computador, a tarefa `COERI - Sincronizar Sistema Academico` executa `run-sync.ps1` semanalmente. O arquivo `logs/latest.json` registra o resultado mais recente. Quando a sessão expirar, execute novamente `npm run login` para renová-la.
