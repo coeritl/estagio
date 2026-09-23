@@ -3,7 +3,7 @@
 Agente local, somente leitura no Sistema Acadêmico, para sincronizar com o painel da COERI:
 
 - convênios;
-- estágios com situação **Iniciado**, **Suspenso** ou **Em edição**;
+- estágios com situação **Iniciado**, **Suspenso** ou **Em edição**, exclusivamente de estudantes cuja situação no curso seja **Em curso**;
 - dados pessoais somente dos estudantes vinculados a esses estágios.
 
 O agente não altera nada no Sistema Acadêmico e não conclui nem exclui registros do painel.

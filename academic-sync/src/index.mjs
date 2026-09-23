@@ -133,7 +133,10 @@ async function collectInternships(page) {
     await drawTable(page, '#lista_elemento_curricular_por_campus', status);
     const rows = await tableRows(page, '#lista_elemento_curricular_por_campus');
     for (const row of rows) {
-      if (row.length < 14 || normalize(row[1]) !== 'tl' || !allowedStatuses.has(normalize(row[12]))) continue;
+      if (row.length < 14
+        || normalize(row[1]) !== 'tl'
+        || !allowedStatuses.has(normalize(row[12]))
+        || normalize(row[13]) !== 'em curso') continue;
       byId.set(row[0], {
         academic_system_id: row[0], campus: row[1], course: canonicalCourse(row[2]), student_name: row[3].toLocaleUpperCase('pt-BR'),
         advisor_name: row[4], company_name: row[5] || 'NÃO INFORMADA NO SISTEMA ACADÊMICO', internship_type: row[6],
