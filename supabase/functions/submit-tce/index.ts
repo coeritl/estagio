@@ -27,6 +27,30 @@ function response(origin: string | null, status: number, body: Record<string, un
 
 const text = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 const bool = (value: unknown) => value === true;
+const digits = (value: unknown) => String(value ?? "").replace(/\D/g, "");
+
+function formatCnpj(value: unknown) {
+  const number = digits(value).slice(0, 14);
+  return number.length === 14
+    ? number.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")
+    : "";
+}
+
+function extractCnpj(...values: unknown[]) {
+  for (const value of values) {
+    const match = String(value ?? "").match(/(?:\d{2}[.\s]?\d{3}[.\s]?\d{3}\s*\/\s*\d{4}-?\d{2}|\b\d{14}\b)/);
+    const cnpj = match ? formatCnpj(match[0]) : "";
+    if (cnpj) return cnpj;
+  }
+  return "";
+}
+
+function cleanCompanyName(value: unknown) {
+  return text(value, 300)
+    .replace(/^\s*INATIVO\s*[-–—:]?\s*/i, "")
+    .replace(/\bCNPJ\s*[:.-]?\s*(?:\d{2}[.\s]?\d{3}[.\s]?\d{3}\s*\/\s*\d{4}-?\d{2}|\d{14})\s*[-–—:]?\s*/i, "")
+    .trim();
+}
 
 async function notifyTceReceived(supabase: any, payload: any, protocol: string) {
   const { data: notification, error } = await supabase.from("email_notifications").upsert({
@@ -98,6 +122,26 @@ export default { async fetch(request: Request) {
     const insuranceProvider = text(input.insurance_provider, 30);
     if (!["externo", "interno"].includes(requestType)) return response(origin, 400, { error: "Selecione o tipo de estágio." });
     const isInternal = requestType === "interno";
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+    let companyName = "IFMS Campus Três Lagoas";
+    let companyCnpj = "";
+    if (!isInternal) {
+      const agreementId = text(input.agreement_id, 100);
+      if (!agreementId) return response(origin, 400, { error: "Selecione uma unidade concedente na lista de convênios." });
+      const { data: agreement, error: agreementError } = await supabase
+        .from("internship_agreements")
+        .select("academic_agreement_id,description,end_date,external_institution")
+        .eq("academic_agreement_id", agreementId)
+        .maybeSingle();
+      if (agreementError || !agreement) return response(origin, 400, { error: "O convênio selecionado não foi localizado. Atualize a página e selecione novamente." });
+      companyName = cleanCompanyName(agreement.external_institution) || cleanCompanyName(agreement.description);
+      companyCnpj = extractCnpj(agreement.description, agreement.external_institution);
+      if (!companyName || !companyCnpj) return response(origin, 409, { error: "O cadastro deste convênio não possui nome e CNPJ completos. Entre em contato com a COERI para atualização." });
+    }
     const normalizedRequestedProtocol = text(requestedProtocol, 24).toUpperCase();
     const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
     const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, "0")).join("").toUpperCase();
@@ -121,8 +165,8 @@ export default { async fetch(request: Request) {
       guardian_email: isMinor ? text(input.guardian_email, 254) : null,
       guardian_cpf: isMinor ? text(input.guardian_cpf, 14) : null,
       guardian_phone: isMinor ? text(input.guardian_phone, 30) : null,
-      company_name: isInternal ? "IFMS Campus Três Lagoas" : text(input.company_name, 180),
-      company_cnpj: isInternal ? "" : text(input.company_cnpj, 18),
+      company_name: companyName.slice(0, 180),
+      company_cnpj: companyCnpj,
       company_email: isInternal ? "" : text(input.company_email, 254),
       company_phone: isInternal ? "" : text(input.company_phone, 30),
       internship_modality: text(input.internship_modality, 30),
@@ -180,11 +224,6 @@ export default { async fetch(request: Request) {
       return response(origin, 400, { error: "Confirme todas as declarações antes do envio." });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
     const { data, error } = await supabase.from("tce_requests").insert(payload).select("id").single();
     if (error) throw error;
     const { error: reservationError } = await supabase.rpc("reserve_advisor_slot", {

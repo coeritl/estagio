@@ -10,6 +10,17 @@ let syncGuardianFields = () => {};
 let syncScholarshipField = () => {};
 let syncOtherBenefitsField = () => {};
 let syncInsuranceCompanyFields = () => {};
+let supabasePromise;
+let agreementsByLabel = new Map();
+let selectedAgreement = null;
+
+function getSupabase() {
+  if (!supabasePromise) {
+    supabasePromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
+      .then(({ createClient }) => createClient(config.url, config.anonKey, { auth: { persistSession: false } }));
+  }
+  return supabasePromise;
+}
 
 function addBusinessDays(date, count) {
   const result = new Date(date);
@@ -105,6 +116,90 @@ function formatCnpj(value) {
   return number.replace(/(\d{2})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
 }
 
+function extractCnpj(...values) {
+  for (const value of values) {
+    const match = String(value || '').match(/(?:\d{2}[.\s]?\d{3}[.\s]?\d{3}\s*\/\s*\d{4}-?\d{2}|\b\d{14}\b)/);
+    if (!match) continue;
+    const formatted = formatCnpj(match[0]);
+    if (digits(formatted).length === 14 && validCnpj(formatted)) return formatted;
+  }
+  return '';
+}
+
+function cleanCompanyName(value) {
+  return String(value || '')
+    .replace(/^\s*INATIVO\s*[-–—:]?\s*/i, '')
+    .replace(/\bCNPJ\s*[:.-]?\s*(?:\d{2}[.\s]?\d{3}[.\s]?\d{3}\s*\/\s*\d{4}-?\d{2}|\d{14})\s*[-–—:]?\s*/i, '')
+    .trim();
+}
+
+function clearAgreementSelection(clearSearch = false) {
+  selectedAgreement = null;
+  form.elements.agreement_id.value = '';
+  form.elements.company_name.value = '';
+  form.elements.company_cnpj.value = '';
+  if (clearSearch) form.elements.agreement_search.value = '';
+}
+
+function selectAgreementFromSearch() {
+  const search = form.elements.agreement_search;
+  const agreement = agreementsByLabel.get(search.value.trim());
+  if (!agreement) {
+    clearAgreementSelection(false);
+    search.setCustomValidity(search.value.trim() ? 'Selecione uma opção válida da lista de convênios.' : 'Selecione a unidade concedente conveniada.');
+    return;
+  }
+  selectedAgreement = agreement;
+  form.elements.agreement_id.value = agreement.academic_agreement_id;
+  form.elements.company_name.value = agreement.companyName;
+  form.elements.company_cnpj.value = agreement.cnpj;
+  search.setCustomValidity('');
+  $('.agreement-picker').classList.remove('is-error');
+  $('#agreement-help').textContent = 'Nome e CNPJ preenchidos automaticamente a partir do convênio selecionado.';
+}
+
+async function loadAgreements() {
+  const help = $('#agreement-help');
+  const search = form.elements.agreement_search;
+  const datalist = $('#agreement-options');
+  try {
+    search.disabled = true;
+    const supabase = await getSupabase();
+    const { data, error } = await supabase.from('internship_agreements').select('academic_agreement_id,description,end_date,agreement_number,external_institution').order('external_institution');
+    if (error) throw error;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    agreementsByLabel = new Map();
+    datalist.replaceChildren();
+    for (const item of data || []) {
+      const cnpj = extractCnpj(item.description, item.external_institution);
+      if (!cnpj) continue;
+      const companyName = cleanCompanyName(item.external_institution) || cleanCompanyName(item.description);
+      if (!companyName) continue;
+      const inactive = item.end_date && new Date(`${item.end_date}T00:00:00`) < today;
+      const status = inactive ? ' · Inativo' : ' · Ativo';
+      const suffix = item.agreement_number ? ` · Convênio ${item.agreement_number}` : ` · ID ${item.academic_agreement_id}`;
+      const label = `${companyName} · ${cnpj}${suffix}${status}`;
+      const agreement = { ...item, companyName, cnpj, label };
+      agreementsByLabel.set(label, agreement);
+      const option = document.createElement('option');
+      option.value = label;
+      datalist.append(option);
+    }
+    if (!agreementsByLabel.size) throw new Error('Nenhum convênio com CNPJ cadastrado foi localizado.');
+    search.disabled = form.elements.request_type.value !== 'externo';
+    help.textContent = `${agreementsByLabel.size} convênio${agreementsByLabel.size === 1 ? '' : 's'} disponível${agreementsByLabel.size === 1 ? '' : 'is'}, incluindo ativos e inativos. Digite parte do nome ou do CNPJ e selecione uma opção.`;
+    $('#agreement-missing-notice').hidden = false;
+  } catch (error) {
+    agreementsByLabel.clear();
+    clearAgreementSelection(true);
+    search.disabled = true;
+    $('.agreement-picker').classList.add('is-error');
+    help.textContent = 'A lista de convênios não pôde ser carregada. Atualize a página ou entre em contato com a COERI.';
+    $('#agreement-missing-notice').hidden = false;
+  }
+}
+
 function formatPhone(value) {
   const number = digits(value).slice(0, 11);
   if (number.length <= 2) return number ? `(${number}` : '';
@@ -179,6 +274,23 @@ function initializeForm() {
 
   const guardianFields = $('#guardian-fields');
   syncCompanyFields = setConditional('request_type', 'externo', $('#company-fields'), [...$('#company-fields').querySelectorAll('input')]);
+  const syncAgreementNotice = () => { $('#agreement-missing-notice').hidden = form.elements.request_type.value !== 'externo'; };
+  form.elements.request_type.addEventListener('change', () => {
+    clearAgreementSelection(true);
+    syncAgreementNotice();
+    if (form.elements.request_type.value === 'externo' && agreementsByLabel.size) form.elements.agreement_search.disabled = false;
+  });
+  form.elements.agreement_search.addEventListener('input', () => {
+    clearAgreementSelection(false);
+    form.elements.agreement_search.setCustomValidity('');
+    $('#agreement-help').textContent = 'Selecione uma opção da lista para preencher nome e CNPJ.';
+  });
+  form.elements.agreement_search.addEventListener('change', selectAgreementFromSearch);
+  form.elements.agreement_search.addEventListener('blur', () => {
+    if (form.elements.request_type.value === 'externo') selectAgreementFromSearch();
+  });
+  syncAgreementNotice();
+  loadAgreements();
   syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
   syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
   syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
@@ -243,6 +355,16 @@ form.addEventListener('submit', async event => {
   event.preventDefault();
   const message = $('#tce-form-message');
   const email = form.elements.student_email.value.trim().toLowerCase();
+  if (form.elements.request_type.value === 'externo') {
+    selectAgreementFromSearch();
+    if (!selectedAgreement) {
+      $('.agreement-picker').classList.add('is-error');
+      $('#agreement-help').textContent = 'Selecione uma unidade concedente válida na lista de convênios.';
+      form.elements.agreement_search.reportValidity();
+      form.elements.agreement_search.focus();
+      return;
+    }
+  }
   if (!validateDocuments()) return;
   if (!/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(email)) {
     message.textContent = 'Use seu e-mail institucional @estudante.ifms.edu.br ou @ifms.edu.br.';
@@ -284,8 +406,7 @@ form.addEventListener('submit', async event => {
   };
 
   try {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    const supabase = createClient(config.url, config.anonKey, { auth: { persistSession: false } });
+    const supabase = await getSupabase();
     const protocolBytes = crypto.getRandomValues(new Uint8Array(8));
     const protocolCode = [...protocolBytes].map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
     const requestedProtocol = `TCE-${protocolCode.match(/.{4}/g).join('-')}`;
@@ -315,6 +436,7 @@ form.addEventListener('submit', async event => {
     }
     form.reset();
     syncCompanyFields();
+    clearAgreementSelection(true);
     syncGuardianFields();
     syncScholarshipField();
     syncOtherBenefitsField();
