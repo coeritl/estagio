@@ -1,0 +1,14 @@
+{
+  "name": "coeri-academic-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "login": "node src/index.mjs --login --dry-run",
+    "preview": "node src/index.mjs --dry-run",
+    "sync": "node src/index.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}
+

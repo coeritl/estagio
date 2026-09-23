@@ -241,7 +241,7 @@ const notificationTypeLabels = {
 };
 
 function hasIncompleteContact(record) {
-  return !record.student_cpf || !record.student_email;
+  return !record.student_cpf || !record.student_email || !record.student_sex;
 }
 
 function renderOverview() {
@@ -572,7 +572,7 @@ function renderCard(record, target) {
   $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
   const incompleteBadge = $('.incomplete-badge', card);
   if (record.status === 'em_andamento' && hasIncompleteContact(record)) {
-    const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail'].filter(Boolean).join(' e ');
+    const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail', !record.student_sex && 'sexo'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' e $1');
     incompleteBadge.hidden = false;
     incompleteBadge.textContent = `⚠ ${missing} pendente — complemente o cadastro`;
   } else {
