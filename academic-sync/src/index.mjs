@@ -10,7 +10,9 @@ const args = new Set(process.argv.slice(2));
 const assistedLogin = args.has('--login');
 const dryRun = args.has('--dry-run');
 const fromPreview = args.has('--from-preview');
+const agreementsOnly = args.has('--agreements-only');
 const allowedStatuses = new Set(['iniciado', 'suspenso', 'em edicao']);
+const cnpjPattern = /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/;
 
 async function loadEnv() {
   try {
@@ -28,6 +30,11 @@ const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
 function isoDate(value) {
   const match = clean(value).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   return match ? `${match[3]}-${match[2]}-${match[1]}` : null;
+}
+
+function formatCnpj(value) {
+  const number = String(value || '').replace(/\D/g, '').slice(0, 14);
+  return number.length === 14 ? `${number.slice(0, 2)}.${number.slice(2, 5)}.${number.slice(5, 8)}/${number.slice(8, 12)}-${number.slice(12)}` : '';
 }
 
 function canonicalCourse(value) {
@@ -101,7 +108,22 @@ async function collectAgreements(page) {
     academic_agreement_id: row[0], description: row[1], start_date: isoDate(row[2]), end_date: isoDate(row[3]),
     agreement_number: row[4], external_institution: row[9]
   })).filter(item => item.academic_agreement_id && item.description && item.external_institution);
-  return [...new Map(agreements.map(item => [item.academic_agreement_id, item])).values()];
+  const unique = [...new Map(agreements.map(item => [item.academic_agreement_id, item])).values()];
+  const missingCnpj = unique.filter(item => !cnpjPattern.test(`${item.description} ${item.external_institution}`)
+    && !normalize(item.description).includes('estagio interno'));
+  if (missingCnpj.length) console.log(`Complementando CNPJ de ${missingCnpj.length} convênio(s)…`);
+  for (const item of missingCnpj) {
+    try {
+      await gotoWithRetry(page, `${BASE_URL}/convenio_exts/visualizar/${encodeURIComponent(item.academic_agreement_id)}`);
+      const body = await page.locator('body').innerText();
+      const match = body.match(new RegExp(`CNPJ\\s*\\n?\\s*(${cnpjPattern.source})`, 'i'));
+      const cnpj = formatCnpj(match?.[1]);
+      if (cnpj) item.description = `CNPJ ${cnpj} - ${item.description}`;
+    } catch (error) {
+      console.warn(`CNPJ do convênio ${item.academic_agreement_id} não pôde ser complementado: ${error.message || error}`);
+    }
+  }
+  return unique;
 }
 
 async function collectInternships(page) {
@@ -217,6 +239,15 @@ try {
   await ensureAuthenticated(page);
   console.log('Consultando convênios…');
   const agreements = await collectAgreements(page);
+  if (agreementsOnly) {
+    const payload = { collected_at: new Date().toISOString(), agreements, internships: [] };
+    const result = dryRun ? { dry_run: true } : await sendToSupabase(payload);
+    const log = { started_at: startedAt, finished_at: new Date().toISOString(), dry_run: dryRun, agreements: agreements.length, internships: 0, student_errors: [], result };
+    await fs.writeFile(path.join(ROOT, 'preview', 'agreements-latest.json'), JSON.stringify(payload, null, 2), 'utf8');
+    await fs.writeFile(path.join(ROOT, 'logs', 'latest.json'), JSON.stringify(log, null, 2), 'utf8');
+    console.log(dryRun ? 'Prévia de convênios concluída.' : 'Convênios sincronizados.', result);
+    process.exit(0);
+  }
   console.log('Consultando estágios iniciados, suspensos e em edição…');
   const internships = await collectInternships(page);
   console.log(`Complementando ${internships.length} estudante(s)…`);
