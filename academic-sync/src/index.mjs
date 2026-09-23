@@ -11,6 +11,7 @@ const assistedLogin = args.has('--login');
 const dryRun = args.has('--dry-run');
 const fromPreview = args.has('--from-preview');
 const agreementsOnly = args.has('--agreements-only');
+const cleanupNonEnrolled = args.has('--cleanup-non-enrolled');
 const allowedStatuses = new Set(['iniciado', 'suspenso', 'em edicao']);
 const cnpjPattern = /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/;
 
@@ -219,6 +220,11 @@ async function sendToSupabase(payload) {
 await loadEnv();
 await fs.mkdir(path.join(ROOT, 'logs'), { recursive: true });
 await fs.mkdir(path.join(ROOT, 'preview'), { recursive: true });
+if (cleanupNonEnrolled) {
+  const result = await sendToSupabase({ agreements: [], internships: [], cleanup_non_enrolled: true });
+  console.log('Limpeza concluída.', result);
+  process.exit(0);
+}
 if (fromPreview) {
   const preview = JSON.parse(await fs.readFile(path.join(ROOT, 'preview', 'latest.json'), 'utf8'));
   const agreements = [...new Map(preview.agreements.map(item => [String(item.academic_agreement_id), item])).values()];

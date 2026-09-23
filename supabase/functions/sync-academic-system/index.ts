@@ -55,6 +55,19 @@ Deno.serve(async request => {
     const agreements = Array.isArray(input.agreements) ? input.agreements.slice(0, 1000) : [];
     const internships = Array.isArray(input.internships) ? input.internships.slice(0, 500) : [];
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+    let removed = 0;
+    if (input.cleanup_non_enrolled === true) {
+      const { data: removedRows, error: removeError } = await service
+        .from("internships")
+        .delete()
+        .not("academic_system_id", "is", null)
+        .not("course_status", "is", null)
+        .neq("course_status", "Em curso")
+        .in("academic_status", ["Iniciado", "Suspenso", "Em edição"])
+        .select("id");
+      if (removeError) throw removeError;
+      removed = removedRows?.length || 0;
+    }
     const agreementPayload = [...new Map(agreements.map((item: any) => ({
       academic_agreement_id: text(item.academic_agreement_id, 80),
       description: text(item.description, 1000),
@@ -73,7 +86,7 @@ Deno.serve(async request => {
 
     const { data: current, error: currentError } = await service.from("internships").select("*").eq("status", "em_andamento");
     if (currentError) throw currentError;
-    const summary = { agreements: agreementPayload.length, inserted: 0, updated: 0, unchanged: 0, review: [] as any[] };
+    const summary = { agreements: agreementPayload.length, inserted: 0, updated: 0, unchanged: 0, removed, review: [] as any[] };
     for (const item of internships) {
       const payload = { ...academicFields(item), ...studentFields(item.student) };
       if (!payload.academic_system_id || !payload.student_name || !payload.course) {
