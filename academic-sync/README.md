@@ -7,6 +7,7 @@ Agente local, somente leitura no Sistema Acadêmico, para sincronizar com o pain
 - dados pessoais somente dos estudantes vinculados a esses estágios.
 
 O agente não altera nada no Sistema Acadêmico e não conclui nem exclui registros do painel.
+Quando um acompanhamento existente aparece como **Finalizado** no Sistema Acadêmico, ele é destacado no topo do painel para revisão e encerramento pelo coordenador.
 
 ## Primeira configuração
 

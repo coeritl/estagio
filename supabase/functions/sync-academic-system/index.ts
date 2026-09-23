@@ -54,6 +54,9 @@ Deno.serve(async request => {
     const input = await request.json();
     const agreements = Array.isArray(input.agreements) ? input.agreements.slice(0, 1000) : [];
     const internships = Array.isArray(input.internships) ? input.internships.slice(0, 500) : [];
+    const finalizedAcademicIds = Array.isArray(input.finalized_academic_ids)
+      ? [...new Set(input.finalized_academic_ids.map((value: unknown) => text(value, 80)).filter(Boolean))].slice(0, 1000)
+      : [];
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
     let removed = 0;
     if (input.cleanup_non_enrolled === true) {
@@ -86,7 +89,17 @@ Deno.serve(async request => {
 
     const { data: current, error: currentError } = await service.from("internships").select("*").eq("status", "em_andamento");
     if (currentError) throw currentError;
-    const summary = { agreements: agreementPayload.length, inserted: 0, updated: 0, unchanged: 0, removed, review: [] as any[] };
+    let finalized = 0;
+    for (const academicId of finalizedAcademicIds) {
+      const existing = current?.find(record => String(record.academic_system_id || "") === academicId);
+      if (!existing || existing.academic_status === "Finalizado") continue;
+      const finalizedFields = { academic_status: "Finalizado", academic_imported_at: new Date().toISOString() };
+      const { error } = await service.from("internships").update(finalizedFields).eq("id", existing.id);
+      if (error) throw error;
+      Object.assign(existing, finalizedFields);
+      finalized++;
+    }
+    const summary = { agreements: agreementPayload.length, inserted: 0, updated: 0, unchanged: 0, removed, finalized, review: [] as any[] };
     for (const item of internships) {
       const payload = { ...academicFields(item), ...studentFields(item.student) };
       if (!payload.academic_system_id || !payload.student_name || !payload.course) {

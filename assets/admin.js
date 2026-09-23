@@ -164,6 +164,7 @@ function reportDeadlineReached(record, type) {
 }
 
 function belongsToSentList(record) {
+  if (record.academic_status === 'Finalizado') return false;
   const hasSentReminder = Boolean(record.partial_reminder_sent_at || record.final_reminder_sent_at);
   return hasSentReminder && !reminderDue(record, 'partial') && !reminderDue(record, 'final');
 }
@@ -568,8 +569,9 @@ function renderCard(record, target) {
   const card = $('#internship-card-template').content.firstElementChild.cloneNode(true);
   const state = recordState(record);
   card.dataset.id = record.id;
-  card.classList.add(`status-${state}`);
-  $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+  const academicFinalized = record.status === 'em_andamento' && record.academic_status === 'Finalizado';
+  card.classList.add(academicFinalized ? 'status-academic-finalized' : `status-${state}`);
+  $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : academicFinalized ? 'Finalizado no Sistema Acadêmico — revisar encerramento' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
   const incompleteBadge = $('.incomplete-badge', card);
   if (record.status === 'em_andamento' && hasIncompleteContact(record)) {
     const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail', !record.student_sex && 'sexo'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' e $1');
@@ -633,7 +635,7 @@ function render() {
   $('#stat-active').textContent = records.filter(record => record.status === 'em_andamento').length;
   $('#stat-due').textContent = records.filter(record => recordState(record) === 'due').length;
   $('#stat-soon').textContent = records.filter(record => recordState(record) === 'soon').length;
-  const pending = filtered.filter(record => !belongsToSentList(record));
+  const pending = filtered.filter(record => !belongsToSentList(record)).sort((a, b) => Number(b.academic_status === 'Finalizado') - Number(a.academic_status === 'Finalizado'));
   const sent = filtered.filter(belongsToSentList);
   list.replaceChildren();
   sentList.replaceChildren();

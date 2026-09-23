@@ -12,6 +12,7 @@ const dryRun = args.has('--dry-run');
 const fromPreview = args.has('--from-preview');
 const agreementsOnly = args.has('--agreements-only');
 const cleanupNonEnrolled = args.has('--cleanup-non-enrolled');
+const statusesOnly = args.has('--statuses-only');
 const allowedStatuses = new Set(['iniciado', 'suspenso', 'em edicao']);
 const cnpjPattern = /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/;
 
@@ -149,6 +150,16 @@ async function collectInternships(page) {
   return [...byId.values()];
 }
 
+async function collectFinalizedInternshipIds(page) {
+  await gotoWithRetry(page, `${BASE_URL}/estagios/relatorio`);
+  await drawTable(page, '#lista_elemento_curricular_por_campus', 'Finalizado');
+  const rows = await tableRows(page, '#lista_elemento_curricular_por_campus');
+  return [...new Set(rows
+    .filter(row => row.length >= 14 && normalize(row[1]) === 'tl' && normalize(row[12]) === 'finalizado')
+    .map(row => row[0])
+    .filter(Boolean))];
+}
+
 async function prepareStudentTable(page) {
   await gotoWithRetry(page, `${BASE_URL}/alunos/panorama`);
   await waitForTable(page, '#lista_por_campus');
@@ -246,6 +257,13 @@ const page = context.pages()[0] || await context.newPage();
 const startedAt = new Date().toISOString();
 try {
   await ensureAuthenticated(page);
+  if (statusesOnly) {
+    console.log('Consultando estágios finalizados para revisão…');
+    const finalizedAcademicIds = await collectFinalizedInternshipIds(page);
+    const result = dryRun ? { dry_run: true, finalized: finalizedAcademicIds.length } : await sendToSupabase({ agreements: [], internships: [], finalized_academic_ids: finalizedAcademicIds });
+    console.log(dryRun ? 'Prévia de situações concluída.' : 'Situações acadêmicas atualizadas.', result);
+    process.exit(0);
+  }
   console.log('Consultando convênios…');
   const agreements = await collectAgreements(page);
   if (agreementsOnly) {
@@ -259,6 +277,8 @@ try {
   }
   console.log('Consultando estágios iniciados, suspensos e em edição…');
   const internships = await collectInternships(page);
+  console.log('Consultando estágios finalizados para revisão…');
+  const finalizedAcademicIds = await collectFinalizedInternshipIds(page);
   console.log(`Complementando ${internships.length} estudante(s)…`);
   await prepareStudentTable(page);
   const studentErrors = [];
@@ -273,7 +293,7 @@ try {
       studentErrors.push({ academic_system_id: internship.academic_system_id, student_name: internship.student_name, error: error.message || String(error) });
     }
   }
-  const payload = { collected_at: new Date().toISOString(), agreements, internships };
+  const payload = { collected_at: new Date().toISOString(), agreements, internships, finalized_academic_ids: finalizedAcademicIds };
   const previewPath = path.join(ROOT, 'preview', 'latest.json');
   await fs.writeFile(previewPath, JSON.stringify({ ...payload, student_errors: studentErrors }, null, 2), 'utf8');
   const result = dryRun ? { dry_run: true } : await sendToSupabase(payload);
