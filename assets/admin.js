@@ -185,8 +185,15 @@ function setView(authenticated, email = '') {
 }
 
 async function showAuthenticatedSession(session) {
-  setView(Boolean(session), session?.user?.email || '');
-  if (!session) return;
+  if (!session) { setView(false); return; }
+  const { data: isAdmin, error: roleError } = await supabase.rpc('is_coeri_admin');
+  if (roleError || !isAdmin) {
+    setView(false);
+    await supabase.auth.signOut();
+    loginMessage.textContent = 'Esta conta não possui acesso ao painel da COERI. Entre com o usuário administrativo; o acesso das coordenações deve ser feito na área própria.';
+    return;
+  }
+  setView(true, session.user.email || '');
   dashboardMessage.hidden = true;
   dashboardMessage.textContent = '';
   try {
@@ -1715,7 +1722,7 @@ async function initialize() {
   $('#today-label').textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
   if (!isConfigured) { setupNotice.hidden = false; loginForm.querySelector('button').disabled = true; return; }
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-  supabase = createClient(config.url, config.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+  supabase = createClient(config.url, config.anonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'coeri-admin-auth' } });
   const { data } = await supabase.auth.getSession();
   await showAuthenticatedSession(data.session);
   if (data.session) {
