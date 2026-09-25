@@ -162,25 +162,37 @@ async function loadDashboard(session) {
     $('#coordination-login-message').textContent = 'Esta conta não possui acesso a uma coordenação cadastrada. Solicite a liberação à COERI.';
     return;
   }
+  $('#coordination-name').textContent = profileResult.data[0].coordination_name;
+  showAuthenticated(true, session.user.email);
+  if (profileResult.data[0].must_change_password) $('#coordination-password-dialog').showModal();
   if (dashboardResult.error) {
-    message.textContent = 'Não foi possível carregar os dados agora. Atualize a página ou entre em contato com a COERI.';
+    message.textContent = 'Não foi possível carregar os dados agora. Clique em “Atualizar dados” para tentar novamente ou entre em contato com a COERI.';
     message.hidden = false;
     return;
   }
-  $('#coordination-name').textContent = profileResult.data[0].coordination_name;
   internships = dashboardResult.data || [];
-  showAuthenticated(true, session.user.email);
-  if (profileResult.data[0].must_change_password) $('#coordination-password-dialog').showModal();
   renderDashboard();
 }
 
 $('#coordination-login-form').addEventListener('submit', async event => {
   event.preventDefault();
-  const message = $('#coordination-login-message'); message.textContent = 'Entrando…';
-  const { data, error } = await supabase.auth.signInWithPassword({ email: $('#coordination-email').value.trim().toLowerCase(), password: $('#coordination-password').value });
-  if (error) { message.textContent = 'E-mail ou senha inválidos.'; return; }
-  message.textContent = '';
-  await loadDashboard(data.session);
+  const message = $('#coordination-login-message');
+  const button = event.currentTarget.querySelector('[type="submit"]');
+  message.textContent = 'Entrando…';
+  button.disabled = true;
+  button.textContent = 'Entrando…';
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: $('#coordination-email').value.trim().toLowerCase(), password: $('#coordination-password').value });
+    if (error) { message.textContent = 'E-mail ou senha inválidos.'; return; }
+    message.textContent = '';
+    await loadDashboard(data.session);
+  } catch (error) {
+    console.error('Falha ao abrir o panorama da coordenação:', error);
+    message.textContent = 'A sessão foi iniciada, mas não foi possível abrir o panorama. Atualize a página e tente novamente.';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Entrar';
+  }
 });
 
 $('#coordination-logout').addEventListener('click', () => supabase.auth.signOut());
