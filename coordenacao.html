@@ -43,7 +43,7 @@
 
         <section class="coordination-metrics" aria-label="Indicadores principais">
           <article><span>Estágios em andamento</span><strong id="metric-active">0</strong><small>nos cursos autorizados</small></article>
-          <article class="danger"><span>Estudantes com entrega atrasada</span><strong id="metric-overdue">0</strong><small>relatório parcial ou final</small></article>
+          <article class="danger"><span>Finalização com prazo atingido</span><strong id="metric-overdue">0</strong><small>falta relatório final e/ou avaliação</small></article>
           <article class="warning"><span>Previsão de término próxima</span><strong id="metric-soon">0</strong><small>nos próximos 30 dias</small></article>
           <article class="academic"><span>Finalizados no acadêmico</span><strong id="metric-finalized">0</strong><small>visíveis para conferência</small></article>
         </section>
@@ -54,15 +54,16 @@
         </section>
 
         <section class="coordination-rankings">
-          <div class="section-heading"><div><span class="coordination-kicker">Acompanhamento de entregas</span><h2>Estudantes que precisam de orientação</h2><p>Prazos vencidos sem o respectivo relatório registrado no portal.</p></div><span><strong id="ranking-total">0</strong> estudantes</span></div>
+          <div class="section-heading"><div><span class="coordination-kicker">Prioridade de finalização</span><h2>Estágios com prazo de término atingido</h2><p>Previsão de término vencida e ausência do relatório final e/ou da avaliação do estagiário pelo supervisor.</p></div><span><strong id="ranking-total">0</strong> estudantes</span></div>
           <div class="coordination-ranking-grid">
-            <article class="coordination-panel"><h3>Maiores atrasos</h3><div class="coordination-ranking" id="student-ranking"></div></article>
-            <article class="coordination-panel"><h3>Orientadores vinculados</h3><p class="ranking-explanation">Quantidade de orientandos com entregas em atraso. O indicador serve como apoio ao acompanhamento; a entrega é responsabilidade do estudante.</p><div class="coordination-ranking" id="advisor-ranking"></div></article>
+            <article class="coordination-panel priority-panel"><h3>Finalizações mais antigas</h3><div class="coordination-ranking" id="student-ranking"></div></article>
+            <article class="coordination-panel"><h3>Orientadores vinculados</h3><p class="ranking-explanation">Quantidade de orientandos com prazo de finalização atingido. O indicador serve como apoio; a entrega é responsabilidade do estudante.</p><div class="coordination-ranking" id="advisor-ranking"></div></article>
           </div>
+          <article class="partial-followup"><div><span class="coordination-kicker">Acompanhamento secundário</span><h3>Relatórios parciais a acompanhar</h3><p>Estágios ainda em curso cuja data prevista para o relatório parcial já passou.</p></div><span class="partial-total"><strong id="partial-ranking-total">0</strong> estudantes</span><div class="coordination-ranking compact-ranking" id="partial-ranking"></div></article>
         </section>
 
       <section class="coordination-list-section">
-          <div class="section-heading"><div><span class="coordination-kicker">Estágios vinculados</span><h2>Estudantes em acompanhamento</h2></div><label>Filtrar situação<select id="coordination-filter"><option value="all">Todos</option><option value="overdue">Com entrega atrasada</option><option value="soon">Término nos próximos 30 dias</option><option value="regular">Sem atraso identificado</option></select></label></div>
+          <div class="section-heading"><div><span class="coordination-kicker">Estágios vinculados</span><h2>Estudantes em acompanhamento</h2></div><label>Filtrar situação<select id="coordination-filter"><option value="all">Todos</option><option value="overdue">Finalização com prazo atingido</option><option value="partial">Relatório parcial a acompanhar</option><option value="soon">Término nos próximos 30 dias</option><option value="regular">Sem alerta prioritário</option></select></label></div>
           <div class="coordination-list" id="coordination-list"></div>
           <div class="coordination-empty" id="coordination-empty" hidden>Nenhum estágio encontrado neste filtro.</div>
       </section>
@@ -86,6 +87,6 @@
     </form>
   </dialog>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/coordination.js?v=20260925-5"></script>
+  <script type="module" src="assets/coordination.js?v=20260925-6"></script>
 </body>
 </html>

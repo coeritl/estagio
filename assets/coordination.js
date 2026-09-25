@@ -29,18 +29,26 @@ function compactCourse(value) {
   return String(value || 'Curso não informado').replace(/^\s*\d+\s*-\s*/, '').replace(/^Tecnologia em\s+/i, '').replace(/^Técnico(?: Integrado)? em\s+/i, '').trim();
 }
 
-function overdueReports(record) {
-  const reports = [];
+function finalizationIssue(record) {
+  const end = daysFromToday(record.expected_end_date);
+  if (record.academic_status === 'Finalizado' || end === null || end >= 0) return null;
+  const missing = [];
+  if (!record.final_delivered) missing.push('relatório final');
+  if (!record.supervisor_evaluation_delivered) missing.push('avaliação do supervisor');
+  return missing.length ? { missing, days: Math.abs(end) } : null;
+}
+
+function partialIssue(record) {
   const partial = daysFromToday(record.partial_report_date);
-  const final = daysFromToday(record.final_report_date);
-  if (partial !== null && partial < 0 && !record.partial_delivered) reports.push({ name: 'Relatório parcial', days: Math.abs(partial) });
-  if (final !== null && final < 0 && !record.final_delivered) reports.push({ name: 'Relatório final', days: Math.abs(final) });
-  return reports;
+  return partial !== null && partial < 0 && !record.partial_delivered
+    ? { days: Math.abs(partial) }
+    : null;
 }
 
 function recordState(record) {
   if (record.academic_status === 'Finalizado') return 'academic';
-  if (overdueReports(record).length) return 'overdue';
+  if (finalizationIssue(record)) return 'overdue';
+  if (partialIssue(record)) return 'partial';
   const end = daysFromToday(record.expected_end_date);
   if (end !== null && end >= 0 && end <= 30) return 'soon';
   return 'regular';
@@ -71,8 +79,8 @@ function appendRanking(container, position, title, detail, value) {
   row.append(order, copy, metric); container.append(row);
 }
 
-function emptyRanking(container) {
-  const message = document.createElement('p'); message.className = 'ranking-empty'; message.textContent = 'Nenhum atraso identificado.'; container.append(message);
+function emptyRanking(container, text = 'Nenhum atraso prioritário identificado.') {
+  const message = document.createElement('p'); message.className = 'ranking-empty'; message.textContent = text; container.append(message);
 }
 
 function renderSubmissionHistory() {
@@ -95,23 +103,27 @@ function renderSubmissionHistory() {
 }
 
 function renderDashboard() {
-  const overdue = internships.map(record => ({ record, reports: overdueReports(record) })).filter(item => item.reports.length).map(item => ({ ...item, maxDays: Math.max(...item.reports.map(report => report.days)) })).sort((a, b) => b.maxDays - a.maxDays);
-  const states = { overdue: 0, soon: 0, academic: 0, regular: 0 };
+  const overdue = internships.map(record => ({ record, issue: finalizationIssue(record) })).filter(item => item.issue).sort((a, b) => b.issue.days - a.issue.days);
+  const partials = internships.map(record => ({ record, issue: partialIssue(record) })).filter(item => item.issue && !finalizationIssue(item.record)).sort((a, b) => b.issue.days - a.issue.days);
+  const states = { overdue: 0, partial: 0, soon: 0, academic: 0, regular: 0 };
   internships.forEach(record => states[recordState(record)] += 1);
   $('#metric-active').textContent = internships.length;
   $('#metric-overdue').textContent = overdue.length;
   $('#metric-soon').textContent = internships.filter(record => { const days = daysFromToday(record.expected_end_date); return days !== null && days >= 0 && days <= 30; }).length;
   $('#metric-finalized').textContent = internships.filter(record => record.academic_status === 'Finalizado').length;
   $('#ranking-total').textContent = overdue.length;
+  $('#partial-ranking-total').textContent = partials.length;
   $('#donut-total').textContent = internships.length;
 
   const total = Math.max(internships.length, 1);
   const overdueEnd = states.overdue / total * 100;
-  const soonEnd = overdueEnd + states.soon / total * 100;
+  const partialEnd = overdueEnd + states.partial / total * 100;
+  const soonEnd = partialEnd + states.soon / total * 100;
   const regularEnd = soonEnd + states.regular / total * 100;
-  $('#coordination-donut').style.background = internships.length ? `conic-gradient(#d82935 0 ${overdueEnd}%,#efa91f ${overdueEnd}% ${soonEnd}%,#087b43 ${soonEnd}% ${regularEnd}%,#7357b7 ${regularEnd}% 100%)` : '#e1e9e3';
+  $('#coordination-donut').style.background = internships.length ? `conic-gradient(#d82935 0 ${overdueEnd}%,#d5a02e ${overdueEnd}% ${partialEnd}%,#efa91f ${partialEnd}% ${soonEnd}%,#087b43 ${soonEnd}% ${regularEnd}%,#7357b7 ${regularEnd}% 100%)` : '#e1e9e3';
   const legend = $('#coordination-legend'); legend.replaceChildren();
-  appendLegend(legend, 'Entrega atrasada', states.overdue, 'red');
+  appendLegend(legend, 'Finalização com prazo atingido', states.overdue, 'red');
+  appendLegend(legend, 'Relatório parcial a acompanhar', states.partial, 'partial');
   appendLegend(legend, 'Término próximo', states.soon, 'amber');
   appendLegend(legend, 'Sem atraso identificado', states.regular);
   appendLegend(legend, 'Finalizado no acadêmico', states.academic, 'purple');
@@ -132,18 +144,21 @@ function renderDashboard() {
   });
 
   const studentRanking = $('#student-ranking'); studentRanking.replaceChildren();
-  overdue.slice(0, 6).forEach((item, index) => appendRanking(studentRanking, index + 1, item.record.student_name, `${item.reports.map(report => report.name).join(' e ')} · ${compactCourse(item.record.course)}`, `${item.maxDays} dias`));
+  overdue.slice(0, 6).forEach((item, index) => appendRanking(studentRanking, index + 1, item.record.student_name, `Falta ${item.issue.missing.join(' e ')} · ${compactCourse(item.record.course)}`, `${item.issue.days} dias`));
   if (!overdue.length) emptyRanking(studentRanking);
 
   const advisors = new Map();
   overdue.forEach(item => {
     const name = item.record.advisor_name?.trim() || 'Orientador não informado';
     const current = advisors.get(name) || { count: 0, maxDays: 0 };
-    current.count += 1; current.maxDays = Math.max(current.maxDays, item.maxDays); advisors.set(name, current);
+    current.count += 1; current.maxDays = Math.max(current.maxDays, item.issue.days); advisors.set(name, current);
   });
   const advisorRanking = $('#advisor-ranking'); advisorRanking.replaceChildren();
   [...advisors.entries()].sort((a, b) => b[1].count - a[1].count || b[1].maxDays - a[1].maxDays).slice(0, 6).forEach(([name, data], index) => appendRanking(advisorRanking, index + 1, name, `Maior atraso entre os orientandos: ${data.maxDays} dias`, `${data.count}`));
   if (!overdue.length) emptyRanking(advisorRanking);
+  const partialRanking = $('#partial-ranking'); partialRanking.replaceChildren();
+  partials.slice(0, 4).forEach((item, index) => appendRanking(partialRanking, index + 1, item.record.student_name, compactCourse(item.record.course), `${item.issue.days} dias`));
+  if (!partials.length) emptyRanking(partialRanking, 'Nenhum relatório parcial aguardando acompanhamento.');
   renderList();
 }
 
@@ -153,7 +168,7 @@ function renderList() {
   const container = $('#coordination-list'); container.replaceChildren();
   $('#coordination-empty').hidden = visible.length > 0;
   visible.sort((a, b) => a.student_name.localeCompare(b.student_name, 'pt-BR')).forEach(record => {
-    const state = recordState(record); const late = overdueReports(record);
+    const state = recordState(record); const finalization = finalizationIssue(record);
     const card = document.createElement('article'); card.className = `student-card ${state}`;
     const identity = document.createElement('div');
     const name = document.createElement('h3'); name.textContent = record.student_name;
@@ -164,7 +179,7 @@ function renderList() {
     const end = document.createElement('span'); end.textContent = `Previsão de término: ${formatDate(record.expected_end_date)}`;
     meta.append(advisor, end);
     const status = document.createElement('span'); status.className = 'student-card-status';
-    status.textContent = state === 'academic' ? 'Finalizado no acadêmico' : state === 'overdue' ? `${late.map(item => item.name.replace('Relatório ', '')).join(' e ')} em atraso` : state === 'soon' ? 'Término próximo' : 'Sem atraso identificado';
+    status.textContent = state === 'academic' ? 'Finalizado no acadêmico' : state === 'overdue' ? `Finalização: falta ${finalization.missing.join(' e ')}` : state === 'partial' ? 'Relatório parcial a acompanhar' : state === 'soon' ? 'Término próximo' : 'Sem alerta prioritário';
     card.append(identity, meta, status); container.append(card);
   });
 }
