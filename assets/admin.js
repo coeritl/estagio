@@ -236,7 +236,7 @@ const notificationTypeLabels = {
   estagio_concluido: 'Estágio concluído',
   previsao_termino: 'Previsão de término atingida',
   relatorio_parcial: 'Entrega do relatório parcial',
-  orientador_pendencias: 'Pendências dos orientandos',
+  orientador_pendencias: 'Aviso sobre orientandos com entregas em atraso',
   relatorios_recebidos: 'Documentação recebida',
   relatorio_correcao: 'Correção de documento solicitada'
 };
@@ -380,7 +380,7 @@ function appendRankingRow(container, position, label, detail, value) {
 function renderEmptyRanking(container) {
   const empty = document.createElement('p');
   empty.className = 'ranking-empty';
-  empty.textContent = 'Nenhuma pendência identificada.';
+  empty.textContent = 'Nenhum atraso identificado.';
   container.append(empty);
 }
 

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Panorama de Estágios | Coordenações</title>
+  <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
+  <link rel="stylesheet" href="assets/coordination.css?v=20260925-1">
+</head>
+<body class="coordination-body">
+  <main>
+    <section class="coordination-login" id="coordination-login">
+      <form class="coordination-login-card" id="coordination-login-form">
+        <a href="./" class="coordination-brand"><img src="assets/logo-ifms-tres-lagoas.png" alt="IFMS Campus Três Lagoas"></a>
+        <span class="coordination-kicker">Área das coordenações</span>
+        <h1>Panorama dos estágios</h1>
+        <p>Consulte os estágios vinculados aos cursos da sua coordenação.</p>
+        <label>E-mail institucional<input id="coordination-email" type="email" autocomplete="username" required placeholder="coordenacao.tl@ifms.edu.br"></label>
+        <label>Senha<input id="coordination-password" type="password" autocomplete="current-password" required minlength="6"></label>
+        <button type="submit" class="coordination-button primary">Entrar</button>
+        <p class="coordination-message" id="coordination-login-message" role="alert"></p>
+        <a href="./" class="coordination-back">← Voltar ao portal de estágios</a>
+      </form>
+    </section>
+
+    <section class="coordination-dashboard" id="coordination-dashboard" hidden>
+      <header class="coordination-topbar"><div class="coordination-topbar-inner"><a href="./"><img src="assets/logo-ifms-tres-lagoas.png" alt="IFMS Campus Três Lagoas"></a><div><span>COERI</span><strong>Panorama das coordenações</strong></div><div class="coordination-account"><span id="coordination-account-email"></span><button id="coordination-logout" type="button">Sair</button></div></div></header>
+      <div class="coordination-container">
+        <header class="coordination-heading"><div><span class="coordination-kicker">Acompanhamento acadêmico</span><h1 id="coordination-name">Coordenação de curso</h1><p id="coordination-date"></p></div><button class="coordination-button secondary" id="coordination-refresh" type="button">Atualizar dados</button></header>
+        <div class="coordination-notice"><strong>Visão somente para acompanhamento</strong><span>Os registros são administrados pela COERI. Para solicitar correções, escreva para <a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a>.</span></div>
+        <p class="coordination-message panel-message" id="coordination-panel-message" role="alert" hidden></p>
+
+        <section class="coordination-metrics" aria-label="Indicadores principais">
+          <article><span>Estágios em andamento</span><strong id="metric-active">0</strong><small>nos cursos autorizados</small></article>
+          <article class="danger"><span>Estudantes com entrega atrasada</span><strong id="metric-overdue">0</strong><small>relatório parcial ou final</small></article>
+          <article class="warning"><span>Previsão de término próxima</span><strong id="metric-soon">0</strong><small>nos próximos 30 dias</small></article>
+          <article class="academic"><span>Finalizados no acadêmico</span><strong id="metric-finalized">0</strong><small>visíveis para conferência</small></article>
+        </section>
+
+        <section class="coordination-visuals">
+          <article class="coordination-panel"><div class="panel-heading"><div><span class="coordination-kicker">Panorama</span><h2>Situação das entregas</h2></div></div><div class="coordination-donut-wrap"><div class="coordination-donut" id="coordination-donut"><div><strong id="donut-total">0</strong><span>estudantes</span></div></div><div class="coordination-legend" id="coordination-legend"></div></div></article>
+          <article class="coordination-panel"><div class="panel-heading"><div><span class="coordination-kicker">Planejamento</span><h2>Previsões de término</h2><p>Próximos seis meses</p></div></div><div class="coordination-months" id="coordination-months"></div></article>
+        </section>
+
+        <section class="coordination-rankings">
+          <div class="section-heading"><div><span class="coordination-kicker">Acompanhamento de entregas</span><h2>Estudantes que precisam de orientação</h2><p>Prazos vencidos sem o respectivo relatório registrado no portal.</p></div><span><strong id="ranking-total">0</strong> estudantes</span></div>
+          <div class="coordination-ranking-grid">
+            <article class="coordination-panel"><h3>Maiores atrasos</h3><div class="coordination-ranking" id="student-ranking"></div></article>
+            <article class="coordination-panel"><h3>Orientadores vinculados</h3><p class="ranking-explanation">Quantidade de orientandos com entregas em atraso. O indicador serve como apoio ao acompanhamento; a entrega é responsabilidade do estudante.</p><div class="coordination-ranking" id="advisor-ranking"></div></article>
+          </div>
+        </section>
+
+        <section class="coordination-list-section">
+          <div class="section-heading"><div><span class="coordination-kicker">Estágios vinculados</span><h2>Estudantes em acompanhamento</h2></div><label>Filtrar situação<select id="coordination-filter"><option value="all">Todos</option><option value="overdue">Com entrega atrasada</option><option value="soon">Término nos próximos 30 dias</option><option value="regular">Sem atraso identificado</option></select></label></div>
+          <div class="coordination-list" id="coordination-list"></div>
+          <div class="coordination-empty" id="coordination-empty" hidden>Nenhum estágio encontrado neste filtro.</div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="assets/supabase-config.js?v=20260720-1"></script>
+  <script type="module" src="assets/coordination.js?v=20260925-1"></script>
+</body>
+</html>
