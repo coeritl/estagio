@@ -127,6 +127,7 @@ p, li, a, strong, span { overflow-wrap: break-word; }
 .content p,.content li { color:#3f4e44; }
 .content a:not(.btn) { color:var(--green-800); font-weight:750; }
 .content li + li { margin-top:.45rem; }
+.portal-icon{display:block;flex:0 0 auto;overflow:visible}.card-icon,.download-card-icon{display:grid;place-items:center}.card-icon .portal-icon,.download-card-icon .portal-icon{width:1.35rem;height:1.35rem}.notice-bar b[data-icon]{display:grid;flex:0 0 2rem;place-items:center}.notice-bar b[data-icon] .portal-icon{width:1.35rem;height:1.35rem}
 .side-nav { position:sticky; top:100px; border:1px solid var(--line); border-radius:18px; padding:1rem; }
 .side-nav strong { display:block; padding:.3rem .5rem .65rem; }
 .side-nav a { display:block; padding:.6rem .65rem; border-radius:9px; text-decoration:none; color:var(--muted); font-size:.9rem; }

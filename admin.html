@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260925-4">
+  <link rel="stylesheet" href="assets/admin.css?v=20260925-5">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -41,12 +41,12 @@
         <div class="dashboard-heading"><div><span class="admin-kicker">Central de trabalho</span><h1>Painel da COERI</h1><p id="today-label"></p></div><div class="heading-actions"><button class="admin-button primary new-internship-action" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
 
         <nav class="admin-tabs" aria-label="Áreas do painel">
-          <button class="admin-tab active" type="button" data-admin-view="overview"><span class="admin-tab-icon" aria-hidden="true">⌂</span><span class="admin-tab-copy"><strong>Visão geral</strong><small>Indicadores e prioridades</small></span></button>
-          <button class="admin-tab" type="button" data-admin-view="inbox"><span class="admin-tab-icon" aria-hidden="true">↓</span><span class="admin-tab-copy"><strong>Caixa de entrada</strong><small>TCEs e documentos</small></span><span class="admin-tab-count" id="inbox-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="tracking"><span class="admin-tab-icon" aria-hidden="true">◎</span><span class="admin-tab-copy"><strong>Estágios ativos</strong><small>Prazos e acompanhamento</small></span></button>
-          <button class="admin-tab" type="button" data-admin-view="automation"><span class="admin-tab-icon" aria-hidden="true">↗</span><span class="admin-tab-copy"><strong>Automações</strong><small>E-mails e ocorrências</small></span><span class="admin-tab-count" id="notification-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="records"><span class="admin-tab-icon" aria-hidden="true">＋</span><span class="admin-tab-copy"><strong>Cadastros</strong><small>Dados e orientadores</small></span><span class="admin-tab-count" id="advisor-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="maintenance"><span class="admin-tab-icon" aria-hidden="true">⚙</span><span class="admin-tab-copy"><strong>Manutenção</strong><small>Saúde e consumo</small></span></button>
+          <button class="admin-tab active" type="button" data-admin-view="overview"><span class="admin-tab-icon" data-icon="home" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Visão geral</strong><small>Indicadores e prioridades</small></span></button>
+          <button class="admin-tab" type="button" data-admin-view="inbox"><span class="admin-tab-icon" data-icon="inbox" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Caixa de entrada</strong><small>TCEs e documentos</small></span><span class="admin-tab-count" id="inbox-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="tracking"><span class="admin-tab-icon" data-icon="target" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Estágios ativos</strong><small>Prazos e acompanhamento</small></span></button>
+          <button class="admin-tab" type="button" data-admin-view="automation"><span class="admin-tab-icon" data-icon="send" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Automações</strong><small>E-mails e ocorrências</small></span><span class="admin-tab-count" id="notification-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="records"><span class="admin-tab-icon" data-icon="plus" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Cadastros</strong><small>Dados e orientadores</small></span><span class="admin-tab-count" id="advisor-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="maintenance"><span class="admin-tab-icon" data-icon="settings" aria-hidden="true"></span><span class="admin-tab-copy"><strong>Manutenção</strong><small>Saúde e consumo</small></span></button>
         </nav>
 
         <div class="dashboard-message" id="dashboard-message" role="alert" hidden></div>
@@ -54,12 +54,12 @@
         <section id="overview-view" class="executive-dashboard">
           <header class="overview-intro"><div><span class="admin-kicker">Painel executivo</span><h2>O que precisa da sua atenção</h2><p>Uma leitura rápida dos acompanhamentos, prazos e dados administrativos.</p></div><span class="overview-updated" id="overview-updated">Atualizado agora</span></header>
           <div class="overview-grid" aria-label="Indicadores principais">
-            <button class="overview-card attention" type="button" data-open-view="inbox"><span class="metric-icon" aria-hidden="true">↓</span><span>Caixa de entrada</span><strong id="overview-inbox">0</strong><small>TCEs e documentos para analisar</small><em>Ver solicitações →</em></button>
-            <button class="overview-card danger" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">!</span><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Acompanhamentos que exigem providência</small><em>Revisar prazos →</em></button>
-            <button class="overview-card academic" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">✓</span><span>Finalizados no acadêmico</span><strong id="overview-finalized">0</strong><small>Aguardando conferência ou encerramento</small><em>Conferir registros →</em></button>
-            <button class="overview-card" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">◎</span><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small><em>Abrir acompanhamento →</em></button>
-            <button class="overview-card warning" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">◇</span><span>Cadastros incompletos</span><strong id="overview-incomplete">0</strong><small>Sem CPF, e-mail ou sexo</small><em>Completar cadastros →</em></button>
-            <button class="overview-card warning" type="button" data-open-view="automation"><span class="metric-icon" aria-hidden="true">↗</span><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small><em>Ver automações →</em></button>
+            <button class="overview-card attention" type="button" data-open-view="inbox"><span class="metric-icon" data-icon="inbox" aria-hidden="true"></span><span>Caixa de entrada</span><strong id="overview-inbox">0</strong><small>TCEs e documentos para analisar</small><em>Ver solicitações →</em></button>
+            <button class="overview-card danger" type="button" data-open-view="tracking"><span class="metric-icon" data-icon="alert" aria-hidden="true"></span><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Acompanhamentos que exigem providência</small><em>Revisar prazos →</em></button>
+            <button class="overview-card academic" type="button" data-open-view="tracking"><span class="metric-icon" data-icon="check" aria-hidden="true"></span><span>Finalizados no acadêmico</span><strong id="overview-finalized">0</strong><small>Aguardando conferência ou encerramento</small><em>Conferir registros →</em></button>
+            <button class="overview-card" type="button" data-open-view="tracking"><span class="metric-icon" data-icon="target" aria-hidden="true"></span><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small><em>Abrir acompanhamento →</em></button>
+            <button class="overview-card warning" type="button" data-open-view="tracking"><span class="metric-icon" data-icon="userAlert" aria-hidden="true"></span><span>Cadastros incompletos</span><strong id="overview-incomplete">0</strong><small>Sem CPF, e-mail ou sexo</small><em>Completar cadastros →</em></button>
+            <button class="overview-card warning" type="button" data-open-view="automation"><span class="metric-icon" data-icon="mail" aria-hidden="true"></span><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small><em>Ver automações →</em></button>
           </div>
 
           <div class="overview-charts">
@@ -71,13 +71,13 @@
           <section class="overdue-insights">
             <div class="insights-heading"><div><span class="admin-kicker">Entregas de relatórios</span><h2>Onde estão os maiores atrasos</h2><p>Ranking calculado pelos prazos vencidos sem relatório entregue no portal.</p></div><span class="insights-total"><strong id="overview-overdue-total">0</strong> estudantes</span></div>
             <div class="insight-grid">
-              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">⌛</span><div><h3>Maiores atrasos</h3><p>Estudantes há mais dias sem entrega</p></div></div><div class="ranking-list" id="overview-student-ranking"></div></article>
-              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">▤</span><div><h3>Cursos com mais estudantes em atraso</h3><p>Quantidade de estudantes sem entrega</p></div></div><div class="ranking-list" id="overview-course-ranking"></div></article>
-              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">♙</span><div><h3>Orientadores vinculados</h3><p>Orientandos com entregas em atraso; a responsabilidade da entrega é do estudante</p></div></div><div class="ranking-list" id="overview-advisor-ranking"></div></article>
+              <article class="insight-card"><div class="insight-card-title"><span data-icon="clock" aria-hidden="true"></span><div><h3>Maiores atrasos</h3><p>Estudantes há mais dias sem entrega</p></div></div><div class="ranking-list" id="overview-student-ranking"></div></article>
+              <article class="insight-card"><div class="insight-card-title"><span data-icon="chart" aria-hidden="true"></span><div><h3>Cursos com mais estudantes em atraso</h3><p>Quantidade de estudantes sem entrega</p></div></div><div class="ranking-list" id="overview-course-ranking"></div></article>
+              <article class="insight-card"><div class="insight-card-title"><span data-icon="users" aria-hidden="true"></span><div><h3>Orientadores vinculados</h3><p>Orientandos com entregas em atraso; a responsabilidade da entrega é do estudante</p></div></div><div class="ranking-list" id="overview-advisor-ranking"></div></article>
             </div>
           </section>
 
-          <section class="overview-automation"><div class="automation-symbol" aria-hidden="true">↗</div><div><span class="admin-kicker">Rotinas automáticas</span><h2>Comunicação integrada, acompanhamento centralizado</h2><p>Solicitações de TCE, documentos, relatório parcial, previsão de término e conclusão ficam reunidos no mesmo fluxo.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Acompanhar envios</button></section>
+          <section class="overview-automation"><div class="automation-symbol" data-icon="send" aria-hidden="true"></div><div><span class="admin-kicker">Rotinas automáticas</span><h2>Comunicação integrada, acompanhamento centralizado</h2><p>Solicitações de TCE, documentos, relatório parcial, previsão de término e conclusão ficam reunidos no mesmo fluxo.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Acompanhar envios</button></section>
         </section>
 
         <div id="tracking-view" hidden>
@@ -106,19 +106,19 @@
           <div class="list-heading"><div><span class="admin-kicker">Fora do acompanhamento</span><h2 id="suspended-list-title">Estágios suspensos</h2><p>Não recebem avisos automáticos e não são considerados concluídos.</p></div><span class="list-count" id="suspended-list-count">0</span></div>
           <section class="internship-list" id="suspended-internship-list" aria-live="polite"></section>
         </section>
-        <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
+        <div class="empty-state" id="empty-state" hidden><div data-icon="clipboard" aria-hidden="true"></div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
         </div>
 
         <section id="requests-view" hidden>
           <div class="requests-intro"><div><span class="admin-kicker">Fila de entrada</span><h2>Solicitações de TCE</h2><p>Os dados completos permanecem nesta área restrita até o TCE ser gerado.</p></div><span class="list-count" id="tce-request-count">0</span></div>
           <section class="tce-request-list" id="tce-request-list" aria-live="polite"></section>
-          <div class="empty-state" id="tce-empty-state"><div>✅</div><h2>Nenhuma solicitação nova</h2><p>As próximas solicitações aparecerão aqui.</p></div>
+          <div class="empty-state" id="tce-empty-state"><div data-icon="check" aria-hidden="true"></div><h2>Nenhuma solicitação nova</h2><p>As próximas solicitações aparecerão aqui.</p></div>
         </section>
 
         <section id="reports-view" hidden>
           <div class="requests-intro"><div><span class="admin-kicker">Documentos enviados</span><h2>Relatórios recebidos</h2><p>Baixe os documentos para o computador antes de apagá-los. A exclusão libera espaço e não poderá ser desfeita.</p></div><span class="list-count" id="report-count">0</span></div>
           <section class="report-admin-list" id="report-admin-list" aria-live="polite"></section>
-          <div class="empty-state" id="report-empty-state"><div>📄</div><h2>Nenhum relatório recebido</h2><p>Os documentos enviados pelos estudantes aparecerão aqui.</p></div>
+          <div class="empty-state" id="report-empty-state"><div data-icon="file" aria-hidden="true"></div><h2>Nenhum relatório recebido</h2><p>Os documentos enviados pelos estudantes aparecerão aqui.</p></div>
         </section>
 
         <section id="notifications-view" hidden>
@@ -126,7 +126,7 @@
           <section class="automation-summary"><article><span>Relatório parcial</span><strong>Automático</strong><small>Na data cadastrada, salvo quando o documento já foi recebido.</small></article><article><span>Previsão de término</span><strong>Automático</strong><small>Orienta sobre documentos finais ou prorrogação.</small></article><article><span>Contingência manual</span><strong>Disponível</strong><small>Use somente se uma cobrança precisar ser repetida.</small></article></section>
           <details class="fallback-tools"><summary>Abrir ferramentas manuais de contingência</summary><div class="fallback-actions"><button class="admin-button ghost" id="copy-partial-emails" type="button">Copiar e-mails · parcial</button><button class="admin-button ghost" id="copy-final-emails" type="button">Copiar e-mails · documentos finais</button><button class="admin-button bulk-sent" id="mark-copied-emails-sent" type="button" disabled>Marcar última lista como enviada</button></div></details>
           <section class="notification-admin-list" id="notification-admin-list" aria-live="polite"></section>
-          <div class="empty-state" id="notification-empty-state"><div>✉️</div><h2>Nenhuma notificação registrada</h2><p>As mensagens automáticas aparecerão aqui.</p></div>
+          <div class="empty-state" id="notification-empty-state"><div data-icon="mail" aria-hidden="true"></div><h2>Nenhuma notificação registrada</h2><p>As mensagens automáticas aparecerão aqui.</p></div>
         </section>
 
         <section id="records-tools-view" hidden>
@@ -137,12 +137,12 @@
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Acesso institucional</span><h2>Usuários das coordenações</h2><p>Crie contas com senha temporária e defina quais cursos cada coordenação poderá acompanhar.</p></div><button class="admin-button primary" id="new-coordination-user" type="button">+ Novo usuário</button></div>
           <p class="form-message coordination-users-message" id="coordination-users-message" role="status"></p>
           <section class="coordination-user-list" id="coordination-user-list" aria-live="polite"></section>
-          <div class="empty-state" id="coordination-users-empty" hidden><div>🔐</div><h2>Nenhum acesso cadastrado</h2><p>Use “Novo usuário” para criar o primeiro acesso.</p></div>
+          <div class="empty-state" id="coordination-users-empty" hidden><div data-icon="lock" aria-hidden="true"></div><h2>Nenhum acesso cadastrado</h2><p>Use “Novo usuário” para criar o primeiro acesso.</p></div>
         </section>
         <section id="advisors-view" hidden>
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
           <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
-          <div class="empty-state" id="advisor-empty-state" hidden><div>👩‍🏫</div><h2>Nenhum orientador cadastrado</h2><p>Use “Novo orientador” para iniciar a lista.</p></div>
+          <div class="empty-state" id="advisor-empty-state" hidden><div data-icon="teacher" aria-hidden="true"></div><h2>Nenhum orientador cadastrado</h2><p>Use “Novo orientador” para iniciar a lista.</p></div>
           <form id="signature-settings-form" class="process-box signature-settings-box">
             <span class="admin-kicker">Estágio interno</span>
             <h2>Representante institucional</h2>
@@ -332,6 +332,7 @@
 
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="suspension-note" hidden></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button suspend-button" type="button">Suspender acompanhamento</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
+  <script src="assets/icons.js?v=20260925-1"></script>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
   <script type="module" src="assets/admin.js?v=20260925-10"></script>
 </body>
