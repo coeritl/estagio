@@ -9,7 +9,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Panorama de Estágios | Coordenações</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/coordination.css?v=20260925-4">
+  <link rel="stylesheet" href="assets/coordination.css?v=20260925-5">
 </head>
 <body class="coordination-body">
   <main>
@@ -62,6 +62,24 @@
           <article class="partial-followup"><div><span class="coordination-kicker">Acompanhamento secundário</span><h3>Relatórios parciais a acompanhar</h3><p>Estágios ainda em curso cuja data prevista para o relatório parcial já passou.</p></div><span class="partial-total"><strong id="partial-ranking-total">0</strong> estudantes</span><div class="coordination-ranking compact-ranking" id="partial-ranking"></div></article>
         </section>
 
+        <aside class="student-guidance" aria-labelledby="student-guidance-title">
+          <div class="student-guidance-icon" aria-hidden="true">i</div>
+          <div class="student-guidance-copy">
+            <span class="coordination-kicker">Orientação para repassar ao estudante</span>
+            <h2 id="student-guidance-title">Como regularizar a entrega dos relatórios</h2>
+            <ol>
+              <li>Acesse o portal da COERI e abra o menu <strong>Relatórios</strong>.</li>
+              <li>Baixe o modelo necessário, preencha corretamente e providencie todas as assinaturas.</li>
+              <li>No próprio portal, escolha <strong>Enviar relatórios</strong>, informe o CPF e os demais dados solicitados e anexe o documento em PDF.</li>
+              <li>Depois do envio, acompanhe o e-mail institucional: a COERI confirmará a conclusão ou informará eventuais correções.</li>
+            </ol>
+          </div>
+          <div class="student-guidance-actions">
+            <a href="relatorios" target="_blank" rel="noopener">Abrir modelos de relatórios</a>
+            <a class="primary" href="enviar-relatorios" target="_blank" rel="noopener">Enviar documentos</a>
+          </div>
+        </aside>
+
       <section class="coordination-list-section">
           <div class="section-heading"><div><span class="coordination-kicker">Estágios vinculados</span><h2>Estudantes em acompanhamento</h2></div><label>Filtrar situação<select id="coordination-filter"><option value="all">Todos</option><option value="overdue">Finalização com prazo atingido</option><option value="partial">Relatório parcial a acompanhar</option><option value="soon">Término nos próximos 30 dias</option><option value="regular">Sem alerta prioritário</option></select></label></div>
           <div class="coordination-list" id="coordination-list"></div>
@@ -91,6 +109,6 @@
     </form>
   </dialog>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/coordination.js?v=20260925-8"></script>
+  <script type="module" src="assets/coordination.js?v=20260925-9"></script>
 </body>
 </html>
