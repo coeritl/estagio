@@ -925,7 +925,7 @@ async function loadCoordinationUsers() {
   const message = $('#coordination-users-message');
   message.textContent = 'Carregando usuários…';
   const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'list' } });
-  if (error || data?.error) { message.textContent = data?.error || 'Não foi possível carregar os usuários.'; return; }
+  if (error || data?.error) { message.textContent = await coordinationFunctionError(error, data, 'Não foi possível carregar os usuários.'); return; }
   coordinationUsers = data.users || [];
   message.textContent = '';
   renderCoordinationUsers();
@@ -947,6 +947,18 @@ function showTemporaryPassword(email, password) {
   if (!password) return;
   navigator.clipboard?.writeText(password).catch(() => {});
   prompt(`Senha temporária de ${email}. Ela também foi copiada para a área de transferência. Envie-a por um canal seguro:`, password);
+}
+
+async function coordinationFunctionError(error, data, fallback) {
+  if (data?.error) return data.error;
+  try {
+    const response = error?.context;
+    if (response?.clone) {
+      const body = await response.clone().json();
+      if (body?.error) return body.error;
+    }
+  } catch (_) {}
+  return error?.message || fallback;
 }
 
 function openAdvisorDialog(advisor = null) {
@@ -1772,7 +1784,7 @@ coordinationUserForm.addEventListener('submit', async event => {
   const email = $('#coordination-user-email').value.trim().toLowerCase();
   const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'save', email, coordination_name: $('#coordination-user-name').value.trim(), courses, is_active: $('#coordination-user-active').checked } });
   button.disabled = false;
-  if (error || data?.error) { message.textContent = data?.error || 'Não foi possível salvar o usuário.'; return; }
+  if (error || data?.error) { message.textContent = await coordinationFunctionError(error, data, 'Não foi possível salvar o usuário.'); return; }
   coordinationUserDialog.close();
   await loadCoordinationUsers();
   showTemporaryPassword(email, data.temporary_password);
@@ -1790,13 +1802,13 @@ $('#coordination-user-list').addEventListener('click', async event => {
     const active = !user.is_active;
     if (!confirm(`${active ? 'Reativar' : 'Bloquear'} o acesso de ${user.email}?`)) { button.disabled = false; return; }
     const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'toggle', email: user.email, is_active: active } });
-    if (error || data?.error) alert(data?.error || 'Não foi possível alterar o acesso.');
+    if (error || data?.error) alert(await coordinationFunctionError(error, data, 'Não foi possível alterar o acesso.'));
   }
   if (button.classList.contains('coordination-user-reset')) {
     if (!user.auth_exists) { openCoordinationUserDialog(user); button.disabled = false; return; }
     if (!confirm(`Gerar uma nova senha temporária para ${user.email}? A senha atual deixará de funcionar.`)) { button.disabled = false; return; }
     const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'reset_password', email: user.email } });
-    if (error || data?.error) alert(data?.error || 'Não foi possível redefinir a senha.'); else showTemporaryPassword(user.email, data.temporary_password);
+    if (error || data?.error) alert(await coordinationFunctionError(error, data, 'Não foi possível redefinir a senha.')); else showTemporaryPassword(user.email, data.temporary_password);
   }
   await loadCoordinationUsers();
 });
