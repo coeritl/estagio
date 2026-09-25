@@ -149,18 +149,15 @@ function renderDashboard() {
   });
 
   const studentRanking = $('#student-ranking'); studentRanking.replaceChildren();
-  overdue.slice(0, 6).forEach((item, index) => appendRanking(studentRanking, index + 1, item.record.student_name, `Falta entregar: ${item.issue.missing.join(' e ')}`, `${item.issue.days} dias`, compactCourse(item.record.course)));
+  overdue.slice(0, 6).forEach((item, index) => appendRanking(
+    studentRanking,
+    index + 1,
+    item.record.student_name,
+    `Falta entregar: ${item.issue.missing.join(' e ')}`,
+    `${item.issue.days} dias`,
+    `${compactCourse(item.record.course)} · Orientador: ${item.record.advisor_name || 'não informado'}`
+  ));
   if (!overdue.length) emptyRanking(studentRanking);
-
-  const advisors = new Map();
-  overdue.forEach(item => {
-    const name = item.record.advisor_name?.trim() || 'Orientador não informado';
-    const current = advisors.get(name) || { count: 0, maxDays: 0 };
-    current.count += 1; current.maxDays = Math.max(current.maxDays, item.issue.days); advisors.set(name, current);
-  });
-  const advisorRanking = $('#advisor-ranking'); advisorRanking.replaceChildren();
-  [...advisors.entries()].sort((a, b) => b[1].count - a[1].count || b[1].maxDays - a[1].maxDays).slice(0, 6).forEach(([name, data], index) => appendRanking(advisorRanking, index + 1, name, `Maior atraso entre os orientandos: ${data.maxDays} dias`, `${data.count}`));
-  if (!overdue.length) emptyRanking(advisorRanking);
   const partialRanking = $('#partial-ranking'); partialRanking.replaceChildren();
   partials.slice(0, 4).forEach((item, index) => appendRanking(partialRanking, index + 1, item.record.student_name, compactCourse(item.record.course), `${item.issue.days} dias`));
   if (!partials.length) emptyRanking(partialRanking, 'Nenhum relatório parcial aguardando acompanhamento.');
