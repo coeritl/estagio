@@ -63,6 +63,7 @@ Deno.serve(async request => {
       const { data: removedRows, error: removeError } = await service
         .from("internships")
         .delete()
+        .eq("status", "em_andamento")
         .not("academic_system_id", "is", null)
         .not("course_status", "is", null)
         .neq("course_status", "Em curso")
@@ -87,7 +88,7 @@ Deno.serve(async request => {
       if (error) throw error;
     }
 
-    const { data: current, error: currentError } = await service.from("internships").select("*").eq("status", "em_andamento");
+    const { data: current, error: currentError } = await service.from("internships").select("*").in("status", ["em_andamento", "suspenso"]);
     if (currentError) throw currentError;
     let finalized = 0;
     for (const academicId of finalizedAcademicIds) {

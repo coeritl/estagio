@@ -86,6 +86,7 @@
           <article class="stat-card"><span>Em andamento</span><strong id="stat-active">0</strong><small>estágios ativos</small></article>
           <article class="stat-card warning"><span>Com prazo próximo</span><strong id="stat-soon">0</strong><small>próximos 7 dias</small></article>
           <article class="stat-card danger"><span>Prazos atingidos</span><strong id="stat-due">0</strong><small>aguardando providência</small></article>
+          <article class="stat-card suspended"><span>Suspensos</span><strong id="stat-suspended">0</strong><small>fora do acompanhamento</small></article>
         </section>
 
         <section class="admin-panel filters-panel">
@@ -100,6 +101,10 @@
         <section class="list-group sent-group" id="sent-group" aria-labelledby="sent-list-title">
           <div class="list-heading"><div><span class="admin-kicker">Sem ação imediata</span><h2 id="sent-list-title">Acompanhamentos organizados</h2></div><span class="list-count" id="sent-list-count">0</span></div>
           <section class="internship-list" id="sent-internship-list" aria-live="polite"></section>
+        </section>
+        <section class="list-group suspended-group" id="suspended-group" aria-labelledby="suspended-list-title" hidden>
+          <div class="list-heading"><div><span class="admin-kicker">Fora do acompanhamento</span><h2 id="suspended-list-title">Estágios suspensos</h2><p>Não recebem avisos automáticos e não são considerados concluídos.</p></div><span class="list-count" id="suspended-list-count">0</span></div>
+          <section class="internship-list" id="suspended-internship-list" aria-live="polite"></section>
         </section>
         <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
         </div>
@@ -302,9 +307,9 @@
     </form>
   </dialog>
 
-  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="suspension-note" hidden></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button suspend-button" type="button">Suspender acompanhamento</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260925-3"></script>
+  <script type="module" src="assets/admin.js?v=20260925-4"></script>
 </body>
 </html>

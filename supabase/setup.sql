@@ -21,7 +21,7 @@ create table if not exists public.internships (
   student_whatsapp text,
   course text not null,
   company_name text not null,
-  status text not null default 'em_andamento' check (status in ('em_andamento', 'concluido')),
+  status text not null default 'em_andamento' check (status in ('em_andamento', 'suspenso', 'concluido')),
   expected_end_date date,
   partial_report_date date,
   final_report_date date,
@@ -30,6 +30,9 @@ create table if not exists public.internships (
   insurance_provider text check (insurance_provider in ('IFMS', 'Empresa concedente')),
   notes text,
   completed_at timestamptz,
+  suspended_at timestamptz,
+  suspended_by_email text,
+  suspension_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

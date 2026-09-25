@@ -2,6 +2,7 @@ const $ = selector => document.querySelector(selector);
 const config = window.SUPABASE_CONFIG || {};
 let supabase;
 let internships = [];
+let suspendedInternships = [];
 let recentSubmissions = [];
 
 function localDate(value) {
@@ -178,10 +179,53 @@ function renderList() {
     const advisor = document.createElement('span'); advisor.textContent = `Orientador: ${record.advisor_name || 'não informado'}`;
     const end = document.createElement('span'); end.textContent = `Previsão de término: ${formatDate(record.expected_end_date)}`;
     meta.append(advisor, end);
+    const actions = document.createElement('div'); actions.className = 'student-card-actions';
     const status = document.createElement('span'); status.className = 'student-card-status';
     status.textContent = state === 'academic' ? 'Finalizado no acadêmico' : state === 'overdue' ? `Finalização: falta ${finalization.missing.join(' e ')}` : state === 'partial' ? 'Relatório parcial a acompanhar' : state === 'soon' ? 'Término próximo' : 'Sem alerta prioritário';
-    card.append(identity, meta, status); container.append(card);
+    const suspend = document.createElement('button'); suspend.type = 'button'; suspend.className = 'coordination-action-button'; suspend.dataset.id = record.internship_id; suspend.textContent = 'Suspender acompanhamento';
+    actions.append(status, suspend);
+    card.append(identity, meta, actions); container.append(card);
   });
+  renderSuspendedList();
+}
+
+function renderSuspendedList() {
+  const section = $('#coordination-suspended-section');
+  const container = $('#coordination-suspended-list');
+  container.replaceChildren();
+  section.hidden = suspendedInternships.length === 0;
+  $('#coordination-suspended-count').textContent = suspendedInternships.length;
+  suspendedInternships.sort((a, b) => a.student_name.localeCompare(b.student_name, 'pt-BR')).forEach(record => {
+    const card = document.createElement('article'); card.className = 'student-card suspended';
+    const identity = document.createElement('div');
+    const name = document.createElement('h3'); name.textContent = record.student_name;
+    const summary = document.createElement('p'); summary.textContent = `${compactCourse(record.course)} · ${record.company_name || 'Concedente não informada'}`;
+    identity.append(name, summary);
+    const meta = document.createElement('div'); meta.className = 'student-card-meta';
+    const date = record.suspended_at ? new Date(record.suspended_at).toLocaleString('pt-BR') : 'data não registrada';
+    const suspendedAt = document.createElement('span'); suspendedAt.textContent = `Suspenso em: ${date}`;
+    const reason = document.createElement('span'); reason.textContent = `Motivo: ${record.suspension_reason || 'não informado'}`;
+    meta.append(suspendedAt, reason);
+    const actions = document.createElement('div'); actions.className = 'student-card-actions';
+    const status = document.createElement('span'); status.className = 'student-card-status'; status.textContent = 'Acompanhamento suspenso';
+    const reactivate = document.createElement('button'); reactivate.type = 'button'; reactivate.className = 'coordination-action-button reactivate'; reactivate.dataset.id = record.internship_id; reactivate.textContent = 'Reativar acompanhamento';
+    actions.append(status, reactivate); card.append(identity, meta, actions); container.append(card);
+  });
+}
+
+async function changeSuspension(id, suspend) {
+  const record = [...internships, ...suspendedInternships].find(item => item.internship_id === id);
+  if (!record) return;
+  let reason = null;
+  if (suspend) {
+    reason = prompt(`Informe o motivo da suspensão de ${record.student_name} (opcional):`, '');
+    if (reason === null) return;
+    if (!confirm(`Suspender o acompanhamento de ${record.student_name}? Os avisos automáticos serão interrompidos, sem concluir o estágio.`)) return;
+  } else if (!confirm(`Reativar o acompanhamento de ${record.student_name}? Os prazos e avisos voltarão a ser considerados.`)) return;
+  const { error } = await supabase.rpc('set_internship_suspension', { p_internship_id: id, p_suspend: suspend, p_reason: reason || null });
+  if (error) { alert(`Não foi possível ${suspend ? 'suspender' : 'reativar'} o acompanhamento. ${error.message || ''}`); return; }
+  const { data } = await supabase.auth.getSession();
+  if (data.session) await loadDashboard(data.session);
 }
 
 async function loadDashboard(session) {
@@ -206,7 +250,8 @@ async function loadDashboard(session) {
     message.hidden = false;
     return;
   }
-  internships = dashboardResult.data || [];
+  internships = (dashboardResult.data || []).filter(item => item.status === 'em_andamento');
+  suspendedInternships = (dashboardResult.data || []).filter(item => item.status === 'suspenso');
   recentSubmissions = submissionsResult.error ? [] : (submissionsResult.data || []);
   renderDashboard();
   renderSubmissionHistory();
@@ -236,6 +281,8 @@ $('#coordination-login-form').addEventListener('submit', async event => {
 $('#coordination-logout').addEventListener('click', () => supabase.auth.signOut());
 $('#coordination-refresh').addEventListener('click', async () => { const { data } = await supabase.auth.getSession(); if (data.session) await loadDashboard(data.session); });
 $('#coordination-filter').addEventListener('change', renderList);
+$('#coordination-list').addEventListener('click', event => { const button = event.target.closest('.coordination-action-button'); if (button) changeSuspension(button.dataset.id, true); });
+$('#coordination-suspended-list').addEventListener('click', event => { const button = event.target.closest('.coordination-action-button'); if (button) changeSuspension(button.dataset.id, false); });
 $('#coordination-password-form').addEventListener('submit', async event => {
   event.preventDefault();
   const password = $('#coordination-new-password').value;

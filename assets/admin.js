@@ -7,6 +7,7 @@ const dashboardMessage = $('#dashboard-message');
 const setupNotice = $('#setup-notice');
 const list = $('#internship-list');
 const sentList = $('#sent-internship-list');
+const suspendedList = $('#suspended-internship-list');
 const emptyState = $('#empty-state');
 const internshipDialog = $('#internship-dialog');
 const internshipForm = $('#internship-form');
@@ -733,8 +734,9 @@ function renderCard(record, target) {
   const state = recordState(record);
   card.dataset.id = record.id;
   const academicFinalized = record.status === 'em_andamento' && record.academic_status === 'Finalizado';
-  card.classList.add(academicFinalized ? 'status-academic-finalized' : `status-${state}`);
-  $('.status-pill', card).textContent = record.status === 'concluido' ? 'Concluído' : academicFinalized ? 'Finalizado no Sistema Acadêmico — revisar encerramento' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+  const suspended = record.status === 'suspenso';
+  card.classList.add(suspended ? 'status-suspended' : academicFinalized ? 'status-academic-finalized' : `status-${state}`);
+  $('.status-pill', card).textContent = suspended ? 'Acompanhamento suspenso' : record.status === 'concluido' ? 'Concluído' : academicFinalized ? 'Finalizado no Sistema Acadêmico — revisar encerramento' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
   const incompleteBadge = $('.incomplete-badge', card);
   if (record.status === 'em_andamento' && hasIncompleteContact(record)) {
     const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail', !record.student_sex && 'sexo'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' e $1');
@@ -766,6 +768,18 @@ function renderCard(record, target) {
   const finalCheck = $('[data-reminder-type="final"]', card);
   finalCheck.checked = Boolean(record.final_reminder_sent_at);
   finalCheck.disabled = !record.final_report_date;
+  if (suspended) {
+    partialCheck.disabled = true;
+    finalCheck.disabled = true;
+    const note = $('.suspension-note', card);
+    note.hidden = false;
+    const date = record.suspended_at ? new Date(record.suspended_at).toLocaleString('pt-BR') : 'data não registrada';
+    note.textContent = `Suspenso em ${date}${record.suspension_reason ? ` · Motivo: ${record.suspension_reason}` : ''}`;
+    $('.partial-reminder', card).hidden = true;
+    $('.final-reminder', card).hidden = true;
+    $('.complete-button', card).hidden = true;
+    $('.suspend-button', card).textContent = 'Reativar acompanhamento';
+  }
   if (record.academic_system_id) {
     const details = document.createElement('details');
     details.className = 'academic-wrap';
@@ -789,25 +803,32 @@ function renderCard(record, target) {
 function render() {
   const query = $('#search-input').value.trim().toLocaleLowerCase('pt-BR');
   const deadline = $('#deadline-filter').value;
-  const filtered = records.filter(record => {
+  const activeRecords = records.filter(record => record.status === 'em_andamento');
+  const filtered = activeRecords.filter(record => {
     const haystack = `${record.internship_number} ${record.student_name} ${record.course} ${record.company_name}`.toLocaleLowerCase('pt-BR');
     const state = recordState(record);
     return (!query || haystack.includes(query)) && (deadline === 'all' || (deadline === 'due' && state === 'due') || (deadline === 'soon' && state === 'soon') || (deadline === 'ok' && state === 'active') || (deadline === 'incomplete' && hasIncompleteContact(record)));
   });
 
   $('#stat-active').textContent = records.filter(record => record.status === 'em_andamento').length;
-  $('#stat-due').textContent = records.filter(record => recordState(record) === 'due').length;
-  $('#stat-soon').textContent = records.filter(record => recordState(record) === 'soon').length;
+  $('#stat-due').textContent = activeRecords.filter(record => recordState(record) === 'due').length;
+  $('#stat-soon').textContent = activeRecords.filter(record => recordState(record) === 'soon').length;
+  const suspended = records.filter(record => record.status === 'suspenso' && (!query || `${record.internship_number} ${record.student_name} ${record.course} ${record.company_name}`.toLocaleLowerCase('pt-BR').includes(query)));
+  $('#stat-suspended').textContent = records.filter(record => record.status === 'suspenso').length;
   const pending = filtered.filter(record => !belongsToSentList(record)).sort((a, b) => Number(b.academic_status === 'Finalizado') - Number(a.academic_status === 'Finalizado'));
   const sent = filtered.filter(belongsToSentList);
   list.replaceChildren();
   sentList.replaceChildren();
-  emptyState.hidden = filtered.length > 0;
+  suspendedList.replaceChildren();
+  emptyState.hidden = filtered.length > 0 || suspended.length > 0;
   $('#pending-list-count').textContent = pending.length;
   $('#sent-list-count').textContent = sent.length;
   $('#sent-group').hidden = sent.length === 0;
+  $('#suspended-list-count').textContent = suspended.length;
+  $('#suspended-group').hidden = suspended.length === 0;
   pending.forEach(record => renderCard(record, list));
   sent.forEach(record => renderCard(record, sentList));
+  suspended.forEach(record => renderCard(record, suspendedList));
 }
 
 
@@ -992,6 +1013,19 @@ async function handleCardAction(event) {
   if (event.target.closest('.menu-action')) openInternshipDialog(record);
   if (event.target.closest('.partial-reminder')) openMessage(record, 'partial');
   if (event.target.closest('.final-reminder')) openMessage(record, 'final');
+  if (event.target.closest('.suspend-button')) {
+    const suspending = record.status !== 'suspenso';
+    let reason = null;
+    if (suspending) {
+      reason = prompt(`Informe o motivo da suspensão de ${record.student_name} (opcional):`, '');
+      if (reason === null) return;
+      if (!confirm(`Suspender o acompanhamento de ${record.student_name}? Os avisos automáticos serão interrompidos, mas o estágio não será concluído.`)) return;
+    } else if (!confirm(`Reativar o acompanhamento de ${record.student_name}? Os prazos e avisos automáticos voltarão a ser considerados.`)) return;
+    const { error } = await supabase.rpc('set_internship_suspension', { p_internship_id: record.id, p_suspend: suspending, p_reason: reason || null });
+    if (error) { alert(`Não foi possível ${suspending ? 'suspender' : 'reativar'} o acompanhamento. ${error.message || ''}`); return; }
+    await loadRecords();
+    return;
+  }
   if (event.target.closest('.complete-button')) {
     if (!confirm(`Concluir e excluir permanentemente o cadastro de ${record.student_name}? Esta ação não poderá ser desfeita.`)) return;
     const { data: result, error } = await supabase.functions.invoke('manage-email-notification', {
@@ -1011,6 +1045,7 @@ async function handleCardAction(event) {
 
 list.addEventListener('click', handleCardAction);
 sentList.addEventListener('click', handleCardAction);
+suspendedList.addEventListener('click', handleCardAction);
 
 tceList.addEventListener('click', event => {
   const card = event.target.closest('.tce-request-card');
