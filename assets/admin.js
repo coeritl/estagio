@@ -937,6 +937,7 @@ function openCoordinationUserDialog(user = null) {
   $('#coordination-user-dialog-title').textContent = user ? 'Editar usuário' : 'Novo usuário';
   $('#coordination-user-name').value = user?.coordination_name || '';
   $('#coordination-user-email').value = user?.email || '';
+  $('#coordination-user-password').value = '';
   $('#coordination-user-email').readOnly = Boolean(user);
   $('#coordination-user-active').checked = user?.is_active ?? true;
   $('#coordination-user-form-message').textContent = '';
@@ -1791,7 +1792,7 @@ coordinationUserForm.addEventListener('submit', async event => {
   button.disabled = true; message.textContent = 'Salvando…';
   const email = $('#coordination-user-email').value.trim().toLowerCase();
   let data;
-  try { data = await callCoordinationUsers({ action: 'save', email, coordination_name: $('#coordination-user-name').value.trim(), courses, is_active: $('#coordination-user-active').checked }); }
+  try { data = await callCoordinationUsers({ action: 'save', email, temporary_password: $('#coordination-user-password').value, coordination_name: $('#coordination-user-name').value.trim(), courses, is_active: $('#coordination-user-active').checked }); }
   catch (error) { button.disabled = false; message.textContent = error.message || 'Não foi possível salvar o usuário.'; return; }
   button.disabled = false;
   coordinationUserDialog.close();

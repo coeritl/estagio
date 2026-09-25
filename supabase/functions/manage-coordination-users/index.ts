@@ -47,6 +47,8 @@ Deno.serve(async request => {
     if (!/^[^\s@]+@ifms\.edu\.br$/i.test(email)) return json(400, { error: "Informe um e-mail institucional @ifms.edu.br." });
     if (action === "save") {
       const name = String(input.coordination_name || "").trim().slice(0, 180);
+      const requestedPassword = String(input.temporary_password || "");
+      if (requestedPassword && requestedPassword.length < 6) return json(400, { error: "A senha temporária precisa ter pelo menos 6 caracteres." });
       const courses = [...new Set((Array.isArray(input.courses) ? input.courses : []).filter(course => allowedCourses.has(course)))];
       if (!name || !courses.length) return json(400, { error: "Informe o nome da coordenação e ao menos um curso." });
       const { data: listed, error: listError } = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -54,10 +56,14 @@ Deno.serve(async request => {
       let authUser = listed.users.find(user => emailValue(user.email) === email);
       let password: string | null = null;
       if (!authUser) {
-        password = temporaryPassword();
+        password = requestedPassword || temporaryPassword();
         const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
         if (created.error) throw created.error;
         authUser = created.data.user;
+      } else if (requestedPassword) {
+        password = requestedPassword;
+        const changed = await service.auth.admin.updateUserById(authUser.id, { password });
+        if (changed.error) throw changed.error;
       }
       const existing = await service.from("course_coordination_access").select("course_key").eq("email", email);
       if (existing.error) throw existing.error;
