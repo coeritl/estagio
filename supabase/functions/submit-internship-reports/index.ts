@@ -43,6 +43,8 @@ type UploadSession = StudentData & {
   submissionCode: string;
   expiresAt: number;
   documents: UploadDocument[];
+  submissionOrigin: "estudante" | "coordenacao";
+  submittedByEmail: string | null;
 };
 
 function headers(origin: string) {
@@ -94,6 +96,31 @@ async function validateCaptcha(token: string, request: Request) {
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: captchaForm });
   const result = await response.json();
   return Boolean(result.success);
+}
+
+function courseKey(value: unknown) {
+  const normalized = String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (normalized.includes("analise e desenvolvimento de sistemas")) return "ads";
+  if (normalized.includes("engenharia de computacao")) return "engenharia_computacao";
+  if (normalized.includes("engenharia de controle e automacao")) return "engenharia_controle_automacao";
+  if (normalized.includes("eletrotecnica")) return "tecnico_eletrotecnica";
+  if (normalized.includes("informatica")) return "tecnico_informatica";
+  if (normalized.includes("automacao industrial")) return "tecnologia_automacao_industrial";
+  if (normalized.includes("docencia") && normalized.includes("epct")) return "especializacao_docencia_epct";
+  if (normalized.includes("administracao")) return "tecnico_administracao";
+  return "outro";
+}
+
+async function coordinatorContext(request: Request, service: any) {
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+  const { data: userResult, error: userError } = await service.auth.getUser(token);
+  const email = userResult?.user?.email?.trim().toLowerCase();
+  if (userError || !email) return null;
+  const { data: access, error } = await service.from("course_coordination_access")
+    .select("course_key").eq("is_active", true).ilike("email", email);
+  if (error || !access?.length) return null;
+  return { email, courses: access.map((item: any) => item.course_key) };
 }
 
 function toBase64Url(bytes: Uint8Array) {
@@ -179,7 +206,7 @@ async function dispatchEmail(service: any, notification: any) {
 async function findInternship(service: any, cpf: string, email: string) {
   const { data: matches, error } = await service
     .from("internships")
-    .select("id,student_cpf,student_name,student_email")
+    .select("id,student_cpf,student_name,student_email,course")
     .eq("status", "em_andamento")
     .limit(2000);
   if (error) throw new Error(`internship-query:${error.message}`);
@@ -239,7 +266,9 @@ async function registerSubmission(service: any, session: UploadSession) {
     internship_period: session.internshipPeriod,
     total_workload: session.totalWorkload,
     contact_email: session.email,
-    contact_whatsapp: session.whatsapp
+    contact_whatsapp: session.whatsapp,
+    submission_origin: session.submissionOrigin,
+    submitted_by_email: session.submittedByEmail
   }));
   const { error: insertError } = await service.from("internship_report_submissions").insert(rows);
   if (insertError) throw insertError;
@@ -276,7 +305,12 @@ async function handleDirectUpload(request: Request, origin: string, body: Record
     { auth: { persistSession: false } }
   );
   if (body.action === "init") {
-    if (!await validateCaptcha(String(body.token || ""), request)) {
+    const coordinationSubmission = body.submission_origin === "coordenacao";
+    const coordinator = coordinationSubmission ? await coordinatorContext(request, service) : null;
+    if (coordinationSubmission && !coordinator) {
+      return failure(origin, 401, "Sua sessão de coordenação expirou. Entre novamente no painel.");
+    }
+    if (!coordinator && !await validateCaptcha(String(body.token || ""), request)) {
       console.warn("report-upload: captcha-rejected");
       return failure(origin, 403, `Não foi possível validar o CAPTCHA. Recarregue a página e tente novamente. Se o problema persistir, escreva para ${coeriEmail}.`);
     }
@@ -307,6 +341,9 @@ async function handleDirectUpload(request: Request, origin: string, body: Record
     const matches = lookup.matches;
     if (!matches.length) return failure(origin, 404, `Não encontramos um estágio em andamento com este CPF e este e-mail institucional. Confira os dados informados ou escreva para ${coeriEmail} para conferir ou complementar seu cadastro.`);
     if (matches.length > 1) return failure(origin, 409, `Há mais de um estágio em andamento vinculado a este CPF. Entre em contato com a COERI pelo e-mail ${coeriEmail} para identificar o cadastro correto.`);
+    if (coordinator && !coordinator.courses.includes(courseKey(matches[0].course))) {
+      return failure(origin, 403, "Este estágio não pertence a um curso vinculado à sua coordenação.");
+    }
     if (!lookup.verified) {
       const { error: backfillError } = await service.from("internships")
         .update({ student_email: student.email })
@@ -331,7 +368,9 @@ async function handleDirectUpload(request: Request, origin: string, body: Record
       studentName: matches[0].student_name,
       submissionCode,
       expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-      documents: sessionDocuments
+      documents: sessionDocuments,
+      submissionOrigin: coordinator ? "coordenacao" : "estudante",
+      submittedByEmail: coordinator?.email || null
     };
     return answer(origin, 200, { success: true, session: await signSession(session), uploads });
   }

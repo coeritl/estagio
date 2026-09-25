@@ -2,6 +2,7 @@ const $ = selector => document.querySelector(selector);
 const config = window.SUPABASE_CONFIG || {};
 let supabase;
 let internships = [];
+let recentSubmissions = [];
 
 function localDate(value) {
   if (!value) return null;
@@ -72,6 +73,25 @@ function appendRanking(container, position, title, detail, value) {
 
 function emptyRanking(container) {
   const message = document.createElement('p'); message.className = 'ranking-empty'; message.textContent = 'Nenhum atraso identificado.'; container.append(message);
+}
+
+function renderSubmissionHistory() {
+  const container = $('#coordination-history');
+  const empty = $('#coordination-history-empty');
+  container.replaceChildren();
+  empty.hidden = recentSubmissions.length > 0;
+  recentSubmissions.forEach(item => {
+    const row = document.createElement('article'); row.className = 'coordination-history-item';
+    const type = document.createElement('span'); type.textContent = item.item_type === 'tce' ? 'TCE' : 'Documento';
+    const copy = document.createElement('div');
+    const name = document.createElement('strong'); name.textContent = item.student_name;
+    const detail = document.createElement('small'); detail.textContent = item.detail;
+    copy.append(name, detail);
+    const date = document.createElement('time');
+    date.dateTime = item.submitted_at;
+    date.textContent = new Date(item.submitted_at).toLocaleString('pt-BR');
+    row.append(type, copy, date); container.append(row);
+  });
 }
 
 function renderDashboard() {
@@ -152,9 +172,10 @@ function renderList() {
 async function loadDashboard(session) {
   const message = $('#coordination-panel-message');
   message.hidden = true;
-  const [profileResult, dashboardResult] = await Promise.all([
+  const [profileResult, dashboardResult, submissionsResult] = await Promise.all([
     supabase.rpc('get_coordination_profile'),
-    supabase.rpc('get_coordination_dashboard')
+    supabase.rpc('get_coordination_dashboard'),
+    supabase.rpc('get_coordination_recent_submissions')
   ]);
   if (profileResult.error || !profileResult.data?.length) {
     showAuthenticated(false);
@@ -171,7 +192,9 @@ async function loadDashboard(session) {
     return;
   }
   internships = dashboardResult.data || [];
+  recentSubmissions = submissionsResult.error ? [] : (submissionsResult.data || []);
   renderDashboard();
+  renderSubmissionHistory();
 }
 
 $('#coordination-login-form').addEventListener('submit', async event => {

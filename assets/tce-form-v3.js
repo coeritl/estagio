@@ -1,7 +1,9 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const form = $('#tce-form');
 const config = window.SUPABASE_CONFIG || {};
-const previewMode = new URLSearchParams(location.search).get('preview') === '1';
+const query = new URLSearchParams(location.search);
+const previewMode = query.get('preview') === '1';
+const coordinationMode = query.get('origem') === 'coordenacao';
 let captchaToken = '';
 let widgetId;
 let captchaAvailable = false;
@@ -17,7 +19,7 @@ let selectedAgreement = null;
 function getSupabase() {
   if (!supabasePromise) {
     supabasePromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
-      .then(({ createClient }) => createClient(config.url, config.anonKey, { auth: { persistSession: false } }));
+      .then(({ createClient }) => createClient(config.url, config.anonKey, { auth: { persistSession: coordinationMode, autoRefreshToken: coordinationMode } }));
   }
   return supabasePromise;
 }
@@ -251,10 +253,29 @@ function validateDocuments() {
   return true;
 }
 
-function initializeForm() {
-  if ((!config.turnstileSiteKey && !previewMode) || !config.url || !config.anonKey) return;
+async function initializeForm() {
+  if ((!config.turnstileSiteKey && !previewMode && !coordinationMode) || !config.url || !config.anonKey) return;
   $('#legacy-forms').hidden = true;
   form.hidden = false;
+  if (coordinationMode) {
+    const supabase = await getSupabase();
+    const { data } = await supabase.auth.getSession();
+    const notice = document.createElement('div');
+    notice.className = 'callout green coordination-mode-notice';
+    const title = document.createElement('strong');
+    const copy = document.createElement('p');
+    if (!data.session) {
+      title.textContent = 'Sessão da coordenação não encontrada';
+      copy.textContent = 'Volte ao painel, entre novamente e use o atalho “Solicitar TCE para estudante”.';
+      form.querySelector('[type="submit"]').disabled = true;
+    } else {
+      title.textContent = 'Solicitação realizada pela coordenação';
+      copy.textContent = `Conta responsável: ${data.session.user.email}. O envio será registrado sem CAPTCHA e seguirá para a caixa da COERI.`;
+    }
+    notice.append(title, copy);
+    form.prepend(notice);
+    $('#turnstile-widget').hidden = true;
+  }
   if (previewMode) {
     const notice = document.createElement('div');
     notice.className = 'callout orange preview-notice';
@@ -318,6 +339,7 @@ function initializeForm() {
     $('#schedule-message').textContent = '';
   }));
 
+  if (coordinationMode) return;
   let captchaAttempts = 0;
   const waitForTurnstile = setInterval(() => {
     captchaAttempts++;
@@ -382,7 +404,7 @@ form.addEventListener('submit', async event => {
     return;
   }
   form.elements.weekly_schedule.value = weeklySchedule;
-  if (!captchaToken || !captchaAvailable) { message.textContent = 'A verificação de segurança ainda não foi concluída. Aguarde o CAPTCHA aparecer e confirme-o antes de enviar.'; return; }
+  if (!coordinationMode && (!captchaToken || !captchaAvailable)) { message.textContent = 'A verificação de segurança ainda não foi concluída. Aguarde o CAPTCHA aparecer e confirme-o antes de enviar.'; return; }
 
   const submit = form.querySelector('[type="submit"]');
   submit.disabled = true;
@@ -402,7 +424,8 @@ form.addEventListener('submit', async event => {
     privacy_consent: Boolean(values.privacy_consent),
     acknowledgment_start: Boolean(values.acknowledgment_start),
     acknowledgment_reports: Boolean(values.acknowledgment_reports),
-    acknowledgment_changes: Boolean(values.acknowledgment_changes)
+    acknowledgment_changes: Boolean(values.acknowledgment_changes),
+    submission_origin: coordinationMode ? 'coordenacao' : 'estudante'
   };
 
   try {
@@ -457,13 +480,13 @@ form.addEventListener('submit', async event => {
     consultationLink.href = 'consultar-protocolo';
     consultationLink.textContent = 'Consultar protocolo';
     message.replaceChildren(confirmationTitle, protocolLine, saveInstruction, consultationInstruction, consultationLink);
-    window.turnstile.reset(widgetId);
+    if (!coordinationMode) window.turnstile?.reset(widgetId);
     captchaToken = '';
     captchaAvailable = false;
     message.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
     message.textContent = error.message || 'Não foi possível enviar. Tente novamente.';
-    window.turnstile?.reset(widgetId);
+    if (!coordinationMode) window.turnstile?.reset(widgetId);
     captchaToken = '';
     captchaAvailable = false;
   } finally {

@@ -52,6 +52,32 @@ function cleanCompanyName(value: unknown) {
     .trim();
 }
 
+function courseKey(value: unknown) {
+  const normalized = text(value, 180).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (normalized.includes("analise e desenvolvimento de sistemas")) return "ads";
+  if (normalized.includes("engenharia de computacao")) return "engenharia_computacao";
+  if (normalized.includes("engenharia de controle e automacao")) return "engenharia_controle_automacao";
+  if (normalized.includes("eletrotecnica")) return "tecnico_eletrotecnica";
+  if (normalized.includes("informatica")) return "tecnico_informatica";
+  if (normalized.includes("automacao industrial")) return "tecnologia_automacao_industrial";
+  if (normalized.includes("docencia") && normalized.includes("epct")) return "especializacao_docencia_epct";
+  if (normalized.includes("administracao")) return "tecnico_administracao";
+  return "outro";
+}
+
+async function coordinatorContext(request: Request, service: any) {
+  const authorization = request.headers.get("authorization") || "";
+  const token = authorization.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+  const { data: userResult, error: userError } = await service.auth.getUser(token);
+  const email = userResult?.user?.email?.trim().toLowerCase();
+  if (userError || !email) return null;
+  const { data: access, error } = await service.from("course_coordination_access")
+    .select("course_key").eq("is_active", true).ilike("email", email);
+  if (error || !access?.length) return null;
+  return { email, courses: access.map((item: any) => item.course_key) };
+}
+
 async function notifyTceReceived(supabase: any, payload: any, protocol: string) {
   const { data: notification, error } = await supabase.from("email_notifications").upsert({
     event_type: "tce_recebido",
@@ -94,21 +120,35 @@ export default { async fetch(request: Request) {
 
   try {
     const { token, protocol: requestedProtocol, payload: input } = await request.json();
-    if (!token || !input || typeof input !== "object") {
+    if (!input || typeof input !== "object") {
       return response(origin, 400, { error: "Preencha o formulário e confirme o CAPTCHA." });
     }
 
-    const captchaForm = new FormData();
-    captchaForm.append("secret", Deno.env.get("TURNSTILE_SECRET_KEY") ?? "");
-    captchaForm.append("response", text(token, 2048));
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    if (forwarded) captchaForm.append("remoteip", forwarded);
-    const captchaResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      body: captchaForm,
-    });
-    const captcha = await captchaResponse.json();
-    if (!captcha.success) return response(origin, 403, { error: "Não foi possível validar o CAPTCHA. Tente novamente." });
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+    const coordinationSubmission = input.submission_origin === "coordenacao";
+    const coordinator = coordinationSubmission ? await coordinatorContext(request, supabase) : null;
+    if (coordinationSubmission && !coordinator) {
+      return response(origin, 401, { error: "Sua sessão de coordenação expirou. Entre novamente no painel." });
+    }
+
+    if (!coordinator) {
+      if (!token) return response(origin, 400, { error: "Preencha o formulário e confirme o CAPTCHA." });
+      const captchaForm = new FormData();
+      captchaForm.append("secret", Deno.env.get("TURNSTILE_SECRET_KEY") ?? "");
+      captchaForm.append("response", text(token, 2048));
+      const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      if (forwarded) captchaForm.append("remoteip", forwarded);
+      const captchaResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        body: captchaForm,
+      });
+      const captcha = await captchaResponse.json();
+      if (!captcha.success) return response(origin, 403, { error: "Não foi possível validar o CAPTCHA. Tente novamente." });
+    }
 
     const studentEmail = text(input.student_email, 254).toLowerCase();
     if (!/^[^@\s]+@(?:estudante\.)?ifms\.edu\.br$/.test(studentEmail)) {
@@ -122,11 +162,9 @@ export default { async fetch(request: Request) {
     const insuranceProvider = text(input.insurance_provider, 30);
     if (!["externo", "interno"].includes(requestType)) return response(origin, 400, { error: "Selecione o tipo de estágio." });
     const isInternal = requestType === "interno";
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
+    if (coordinator && !coordinator.courses.includes(courseKey(input.student_course))) {
+      return response(origin, 403, { error: "Este curso não está vinculado à sua coordenação." });
+    }
     let companyName = "IFMS Campus Três Lagoas";
     let companyCnpj = "";
     if (!isInternal) {
@@ -194,6 +232,8 @@ export default { async fetch(request: Request) {
       acknowledgment_start: bool(input.acknowledgment_start),
       acknowledgment_reports: bool(input.acknowledgment_reports),
       acknowledgment_changes: bool(input.acknowledgment_changes),
+      submission_origin: coordinator ? "coordenacao" : "estudante",
+      submitted_by_email: coordinator?.email || null,
     };
 
     const required = [

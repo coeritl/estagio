@@ -3,6 +3,7 @@ const message = document.querySelector('#report-upload-message');
 const cpfInput = document.querySelector('#report-cpf');
 const whatsappInput = document.querySelector('#report-whatsapp');
 const config = window.SUPABASE_CONFIG || {};
+const coordinationMode = new URLSearchParams(location.search).get('origem') === 'coordenacao';
 const maxFileSize = 10 * 1024 * 1024;
 const maxRequestSize = 15 * 1024 * 1024;
 let captchaToken = '';
@@ -12,16 +13,24 @@ let storageClient;
 async function getStorageClient() {
   if (storageClient) return storageClient;
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-  storageClient = createClient(config.url, config.anonKey, { auth: { persistSession: false } });
+  storageClient = createClient(config.url, config.anonKey, { auth: { persistSession: coordinationMode, autoRefreshToken: coordinationMode } });
   return storageClient;
 }
 
+async function authorizationToken() {
+  if (!coordinationMode) return config.anonKey;
+  const client = await getStorageClient();
+  const { data } = await client.auth.getSession();
+  return data.session?.access_token || '';
+}
+
 async function callUploadFunction(payload) {
+  const bearer = await authorizationToken();
   const response = await fetch(`${config.url}/functions/v1/submit-internship-reports`, {
     method: 'POST',
     headers: {
       apikey: config.anonKey,
-      Authorization: `Bearer ${config.anonKey}`,
+      Authorization: `Bearer ${bearer || config.anonKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(payload)
@@ -78,7 +87,7 @@ function maskWhatsapp(value) {
 whatsappInput.addEventListener('input', () => { whatsappInput.value = maskWhatsapp(whatsappInput.value); });
 
 function renderCaptcha() {
-  if (!window.turnstile || !config.turnstileSiteKey) return;
+  if (coordinationMode || !window.turnstile || !config.turnstileSiteKey) return;
   widgetId = window.turnstile.render('#report-turnstile', {
     sitekey: config.turnstileSiteKey,
     size: 'flexible',
@@ -88,7 +97,7 @@ function renderCaptcha() {
   });
 }
 let captchaWaited = 0;
-const captchaTimer = setInterval(() => {
+const captchaTimer = coordinationMode ? null : setInterval(() => {
   if (window.turnstile) {
     clearInterval(captchaTimer);
     renderCaptcha();
@@ -103,6 +112,27 @@ const captchaTimer = setInterval(() => {
     message.textContent = 'Não foi possível carregar a verificação de segurança (CAPTCHA). Tente em outra rede, desative bloqueadores de anúncio/rastreamento ou escreva para coeri.tl@ifms.edu.br.';
   }
 }, 150);
+
+async function initializeCoordinationMode() {
+  if (!coordinationMode) return;
+  document.querySelector('#report-turnstile').hidden = true;
+  const client = await getStorageClient();
+  const { data } = await client.auth.getSession();
+  const notice = document.createElement('div');
+  notice.className = 'callout green coordination-mode-notice';
+  const title = document.createElement('strong');
+  const copy = document.createElement('p');
+  if (!data.session) {
+    title.textContent = 'Sessão da coordenação não encontrada';
+    copy.textContent = 'Volte ao painel, entre novamente e use o atalho “Entregar relatórios do estudante”.';
+    form.querySelector('[type=submit]').disabled = true;
+  } else {
+    title.textContent = 'Entrega realizada pela coordenação';
+    copy.textContent = `Conta responsável: ${data.session.user.email}. O envio será registrado sem CAPTCHA e seguirá para conferência da COERI.`;
+  }
+  notice.append(title, copy);
+  form.prepend(notice);
+}
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
@@ -130,7 +160,7 @@ form.addEventListener('submit', async event => {
     message.textContent = 'Os arquivos somam mais de 15 MB. Envie os documentos em etapas separadas, preenchendo novamente o formulário para cada envio.';
     return;
   }
-  if (!captchaToken) {
+  if (!coordinationMode && !captchaToken) {
     message.textContent = 'Confirme o CAPTCHA antes de enviar. Se não conseguir, escreva para coeri.tl@ifms.edu.br.';
     return;
   }
@@ -154,6 +184,7 @@ form.addEventListener('submit', async event => {
       student_class: values.get('student_class'),
       internship_period: values.get('internship_period'),
       total_workload: values.get('total_workload'),
+      submission_origin: coordinationMode ? 'coordenacao' : 'estudante',
       documents: selected.map(({ input, file }) => ({ field: input.name, name: file.name, size: file.size }))
     });
     uploadSession = authorization.session;
@@ -185,7 +216,9 @@ form.addEventListener('submit', async event => {
   } finally {
     button.disabled = false;
     button.textContent = 'Enviar documentos';
-    window.turnstile?.reset(widgetId);
+    if (!coordinationMode) window.turnstile?.reset(widgetId);
     captchaToken = '';
   }
 });
+
+initializeCoordinationMode();

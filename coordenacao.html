@@ -31,7 +31,14 @@
       <header class="coordination-topbar"><div class="coordination-topbar-inner"><a href="./"><img src="assets/logo-ifms-tres-lagoas.png" alt="IFMS Campus Três Lagoas"></a><div><span>COERI</span><strong>Panorama das coordenações</strong></div><div class="coordination-account"><span id="coordination-account-email"></span><button id="coordination-logout" type="button">Sair</button></div></div></header>
       <div class="coordination-container">
         <header class="coordination-heading"><div><span class="coordination-kicker">Acompanhamento acadêmico</span><h1 id="coordination-name">Coordenação de curso</h1><p id="coordination-date"></p></div><button class="coordination-button secondary" id="coordination-refresh" type="button">Atualizar dados</button></header>
-        <div class="coordination-notice"><strong>Visão somente para acompanhamento</strong><span>Os registros são administrados pela COERI. Para solicitar correções, escreva para <a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a>.</span></div>
+      <div class="coordination-notice"><strong>Visão somente para acompanhamento</strong><span>Os registros são administrados pela COERI. Para solicitar correções, escreva para <a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a>.</span></div>
+      <section class="coordination-service-section" aria-labelledby="coordination-services-title">
+        <div class="section-heading"><div><span class="coordination-kicker">Atendimento ao estudante</span><h2 id="coordination-services-title">Solicitar e entregar pela coordenação</h2><p>Use os mesmos fluxos públicos com sua identificação institucional registrada.</p></div></div>
+        <div class="coordination-service-grid">
+          <a class="coordination-service-card" href="formulario-tce?origem=coordenacao"><span>TCE</span><strong>Solicitar TCE para estudante</strong><small>Preencha os dados, gere o protocolo e encaminhe para análise da COERI.</small></a>
+          <a class="coordination-service-card" href="enviar-relatorios?origem=coordenacao"><span>Documentos</span><strong>Entregar relatórios do estudante</strong><small>Envie relatório parcial, final ou avaliação do supervisor.</small></a>
+        </div>
+      </section>
         <p class="coordination-message panel-message" id="coordination-panel-message" role="alert" hidden></p>
 
         <section class="coordination-metrics" aria-label="Indicadores principais">
@@ -54,11 +61,16 @@
           </div>
         </section>
 
-        <section class="coordination-list-section">
+      <section class="coordination-list-section">
           <div class="section-heading"><div><span class="coordination-kicker">Estágios vinculados</span><h2>Estudantes em acompanhamento</h2></div><label>Filtrar situação<select id="coordination-filter"><option value="all">Todos</option><option value="overdue">Com entrega atrasada</option><option value="soon">Término nos próximos 30 dias</option><option value="regular">Sem atraso identificado</option></select></label></div>
           <div class="coordination-list" id="coordination-list"></div>
           <div class="coordination-empty" id="coordination-empty" hidden>Nenhum estágio encontrado neste filtro.</div>
-        </section>
+      </section>
+      <section class="coordination-list-section">
+        <div class="section-heading"><div><span class="coordination-kicker">Rastreabilidade</span><h2>Envios realizados pela coordenação</h2><p>Últimas solicitações de TCE e entregas feitas nesta conta.</p></div></div>
+        <div class="coordination-history" id="coordination-history"></div>
+        <p class="coordination-empty" id="coordination-history-empty" hidden>Nenhum envio realizado por esta coordenação.</p>
+      </section>
       </div>
     </section>
   </main>
@@ -74,6 +86,6 @@
     </form>
   </dialog>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/coordination.js?v=20260925-4"></script>
+  <script type="module" src="assets/coordination.js?v=20260925-5"></script>
 </body>
 </html>
