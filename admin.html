@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260925-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260925-2">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -66,6 +66,15 @@
             <section class="dashboard-chart course-chart-card"><div class="chart-heading"><div><span class="admin-kicker">Distribuição</span><h3>Estágios ativos por curso</h3></div></div><div class="horizontal-chart" id="overview-course-chart" aria-label="Quantidade de estágios ativos por curso"></div></section>
             <section class="dashboard-chart month-chart-card"><div class="chart-heading"><div><span class="admin-kicker">Planejamento</span><h3>Previsões de término</h3><p>Próximos seis meses</p></div></div><div class="month-chart" id="overview-month-chart" aria-label="Previsões de término por mês"></div></section>
           </div>
+
+          <section class="overdue-insights">
+            <div class="insights-heading"><div><span class="admin-kicker">Pendências documentais</span><h2>Onde estão os maiores atrasos</h2><p>Ranking calculado pelos prazos vencidos sem relatório entregue no portal.</p></div><span class="insights-total"><strong id="overview-overdue-total">0</strong> estudantes</span></div>
+            <div class="insight-grid">
+              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">⌛</span><div><h3>Maiores atrasos</h3><p>Estudantes há mais dias sem entrega</p></div></div><div class="ranking-list" id="overview-student-ranking"></div></article>
+              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">▤</span><div><h3>Cursos com mais pendências</h3><p>Quantidade de estudantes em atraso</p></div></div><div class="ranking-list" id="overview-course-ranking"></div></article>
+              <article class="insight-card"><div class="insight-card-title"><span aria-hidden="true">♙</span><div><h3>Orientadores com mais pendências</h3><p>Conforme o vínculo de cada estágio</p></div></div><div class="ranking-list" id="overview-advisor-ranking"></div></article>
+            </div>
+          </section>
 
           <section class="overview-automation"><div class="automation-symbol" aria-hidden="true">↗</div><div><span class="admin-kicker">Rotinas automáticas</span><h2>Comunicação integrada, acompanhamento centralizado</h2><p>Solicitações de TCE, documentos, relatório parcial, previsão de término e conclusão ficam reunidos no mesmo fluxo.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Acompanhar envios</button></section>
         </section>
@@ -295,6 +304,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260925-1"></script>
+  <script type="module" src="assets/admin.js?v=20260925-2"></script>
 </body>
 </html>

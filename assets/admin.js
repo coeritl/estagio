@@ -348,6 +348,75 @@ function renderOverviewCharts(activeRecords) {
     const label = document.createElement('span'); label.textContent = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
     item.append(countLabel, track, label); monthChart.append(item);
   });
+  renderOverdueInsights(activeRecords);
+}
+
+function reportWasDelivered(record, type) {
+  if (type === 'parcial' && record.partial_report_received_at) return true;
+  return reportSubmissions.some(report => report.internship_id === record.id && report.document_type === type);
+}
+
+function overdueReportData(record) {
+  const pending = [];
+  const partialDays = daysFromToday(record.partial_report_date);
+  const finalDays = daysFromToday(record.final_report_date);
+  if (partialDays !== null && partialDays < 0 && !reportWasDelivered(record, 'parcial')) pending.push({ label: 'Parcial', days: Math.abs(partialDays) });
+  if (finalDays !== null && finalDays < 0 && !reportWasDelivered(record, 'final')) pending.push({ label: 'Final', days: Math.abs(finalDays) });
+  if (!pending.length) return null;
+  return { record, pending, maxDays: Math.max(...pending.map(item => item.days)) };
+}
+
+function appendRankingRow(container, position, label, detail, value) {
+  const row = document.createElement('div'); row.className = 'ranking-row';
+  const order = document.createElement('span'); order.className = 'ranking-position'; order.textContent = position;
+  const copy = document.createElement('div');
+  const name = document.createElement('strong'); name.textContent = label;
+  const note = document.createElement('small'); note.textContent = detail;
+  copy.append(name, note);
+  const metric = document.createElement('b'); metric.textContent = value;
+  row.append(order, copy, metric); container.append(row);
+}
+
+function renderEmptyRanking(container) {
+  const empty = document.createElement('p');
+  empty.className = 'ranking-empty';
+  empty.textContent = 'Nenhuma pendência identificada.';
+  container.append(empty);
+}
+
+function renderOverdueInsights(activeRecords) {
+  const overdue = activeRecords.map(overdueReportData).filter(Boolean).sort((a, b) => b.maxDays - a.maxDays);
+  $('#overview-overdue-total').textContent = overdue.length;
+
+  const studentRanking = $('#overview-student-ranking');
+  studentRanking.replaceChildren();
+  overdue.slice(0, 5).forEach((item, index) => {
+    const reports = item.pending.map(report => report.label).join(' e ');
+    appendRankingRow(studentRanking, index + 1, item.record.student_name || 'Estudante sem nome', `${reports} · ${compactCourseName(item.record.course)}`, `${item.maxDays} dias`);
+  });
+  if (!overdue.length) renderEmptyRanking(studentRanking);
+
+  const aggregate = field => {
+    const groups = new Map();
+    overdue.forEach(item => {
+      const key = String(item.record[field] || 'Não informado').trim() || 'Não informado';
+      const current = groups.get(key) || { count: 0, maxDays: 0 };
+      current.count += 1;
+      current.maxDays = Math.max(current.maxDays, item.maxDays);
+      groups.set(key, current);
+    });
+    return [...groups.entries()].sort((a, b) => b[1].count - a[1].count || b[1].maxDays - a[1].maxDays).slice(0, 5);
+  };
+
+  const courseRanking = $('#overview-course-ranking');
+  courseRanking.replaceChildren();
+  aggregate('course').forEach(([name, data], index) => appendRankingRow(courseRanking, index + 1, compactCourseName(name), `Maior atraso: ${data.maxDays} dias`, `${data.count}`));
+  if (!overdue.length) renderEmptyRanking(courseRanking);
+
+  const advisorRanking = $('#overview-advisor-ranking');
+  advisorRanking.replaceChildren();
+  aggregate('advisor_name').forEach(([name, data], index) => appendRankingRow(advisorRanking, index + 1, name, `Maior atraso: ${data.maxDays} dias`, `${data.count}`));
+  if (!overdue.length) renderEmptyRanking(advisorRanking);
 }
 
 function renderEmailNotifications() {
