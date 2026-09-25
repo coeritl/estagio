@@ -69,13 +69,17 @@ function appendLegend(container, label, value, colorClass = '') {
   row.append(marker, text, count); container.append(row);
 }
 
-function appendRanking(container, position, title, detail, value) {
+function appendRanking(container, position, title, detail, value, secondary = '') {
   const row = document.createElement('div'); row.className = 'ranking-item';
   const order = document.createElement('span'); order.textContent = position;
   const copy = document.createElement('div');
   const name = document.createElement('strong'); name.textContent = title;
   const note = document.createElement('small'); note.textContent = detail;
-  copy.append(name, note);
+  if (secondary) {
+    note.className = 'ranking-action';
+    const context = document.createElement('small'); context.className = 'ranking-context'; context.textContent = secondary;
+    copy.append(name, note, context);
+  } else copy.append(name, note);
   const metric = document.createElement('b'); metric.textContent = value;
   row.append(order, copy, metric); container.append(row);
 }
@@ -145,7 +149,7 @@ function renderDashboard() {
   });
 
   const studentRanking = $('#student-ranking'); studentRanking.replaceChildren();
-  overdue.slice(0, 6).forEach((item, index) => appendRanking(studentRanking, index + 1, item.record.student_name, `Falta ${item.issue.missing.join(' e ')} · ${compactCourse(item.record.course)}`, `${item.issue.days} dias`));
+  overdue.slice(0, 6).forEach((item, index) => appendRanking(studentRanking, index + 1, item.record.student_name, `Falta entregar: ${item.issue.missing.join(' e ')}`, `${item.issue.days} dias`, compactCourse(item.record.course)));
   if (!overdue.length) emptyRanking(studentRanking);
 
   const advisors = new Map();

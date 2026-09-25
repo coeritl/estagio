@@ -374,13 +374,17 @@ function overdueReportData(record) {
   return { record, pending, maxDays: Math.max(...pending.map(item => item.days)) };
 }
 
-function appendRankingRow(container, position, label, detail, value) {
+function appendRankingRow(container, position, label, detail, value, secondary = '') {
   const row = document.createElement('div'); row.className = 'ranking-row';
   const order = document.createElement('span'); order.className = 'ranking-position'; order.textContent = position;
   const copy = document.createElement('div');
   const name = document.createElement('strong'); name.textContent = label;
   const note = document.createElement('small'); note.textContent = detail;
-  copy.append(name, note);
+  if (secondary) {
+    note.className = 'ranking-action';
+    const context = document.createElement('small'); context.className = 'ranking-context'; context.textContent = secondary;
+    copy.append(name, note, context);
+  } else copy.append(name, note);
   const metric = document.createElement('b'); metric.textContent = value;
   row.append(order, copy, metric); container.append(row);
 }
@@ -400,7 +404,7 @@ function renderOverdueInsights(activeRecords) {
   studentRanking.replaceChildren();
   overdue.slice(0, 5).forEach((item, index) => {
     const reports = item.pending.map(report => report.label).join(' e ');
-    appendRankingRow(studentRanking, index + 1, item.record.student_name || 'Estudante sem nome', `${reports} · ${compactCourseName(item.record.course)}`, `${item.maxDays} dias`);
+    appendRankingRow(studentRanking, index + 1, item.record.student_name || 'Estudante sem nome', `Falta entregar: ${reports.toLocaleLowerCase('pt-BR')}`, `${item.maxDays} dias`, compactCourseName(item.record.course));
   });
   if (!overdue.length) renderEmptyRanking(studentRanking);
 
