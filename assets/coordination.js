@@ -170,6 +170,7 @@ async function loadDashboard(session) {
   $('#coordination-name').textContent = profileResult.data[0].coordination_name;
   internships = dashboardResult.data || [];
   showAuthenticated(true, session.user.email);
+  if (profileResult.data[0].must_change_password) $('#coordination-password-dialog').showModal();
   renderDashboard();
 }
 
@@ -185,6 +186,19 @@ $('#coordination-login-form').addEventListener('submit', async event => {
 $('#coordination-logout').addEventListener('click', () => supabase.auth.signOut());
 $('#coordination-refresh').addEventListener('click', async () => { const { data } = await supabase.auth.getSession(); if (data.session) await loadDashboard(data.session); });
 $('#coordination-filter').addEventListener('change', renderList);
+$('#coordination-password-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const password = $('#coordination-new-password').value;
+  const message = $('#coordination-password-message');
+  if (password !== $('#coordination-confirm-password').value) { message.textContent = 'As senhas não coincidem.'; return; }
+  message.textContent = 'Salvando…';
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) { message.textContent = 'Não foi possível alterar a senha. Use pelo menos 8 caracteres.'; return; }
+  const { error: confirmationError } = await supabase.rpc('confirm_coordination_password_change');
+  if (confirmationError) { message.textContent = 'A senha foi alterada, mas não foi possível concluir o primeiro acesso. Entre novamente.'; return; }
+  $('#coordination-password-dialog').close();
+  message.textContent = '';
+});
 
 async function initialize() {
   $('#coordination-date').textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
