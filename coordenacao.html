@@ -9,7 +9,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Panorama de Estágios | Coordenações</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/coordination.css?v=20260925-6">
+  <link rel="stylesheet" href="assets/coordination.css?v=20260925-7">
 </head>
 <body class="coordination-body">
   <main>
@@ -32,13 +32,16 @@
       <div class="coordination-container">
         <header class="coordination-heading"><div><span class="coordination-kicker">Acompanhamento acadêmico</span><h1 id="coordination-name">Coordenação de curso</h1><p id="coordination-date"></p></div><button class="coordination-button secondary" id="coordination-refresh" type="button">Atualizar dados</button></header>
       <div class="coordination-notice"><strong>Visão somente para acompanhamento</strong><span>Os registros são administrados pela COERI. Para solicitar correções, escreva para <a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a>.</span></div>
-      <section class="coordination-service-section" aria-labelledby="coordination-services-title">
-        <div class="section-heading"><div><span class="coordination-kicker">Atendimento ao estudante</span><h2 id="coordination-services-title">Solicitar e entregar pela coordenação</h2><p>Use os mesmos fluxos públicos com sua identificação institucional registrada.</p></div></div>
-        <div class="coordination-service-grid">
-          <a class="coordination-service-card" href="formulario-tce?origem=coordenacao"><span>TCE</span><strong>Solicitar TCE para estudante</strong><small>Preencha os dados, gere o protocolo e encaminhe para análise da COERI.</small></a>
-          <a class="coordination-service-card" href="enviar-relatorios?origem=coordenacao"><span>Documentos</span><strong>Entregar relatórios do estudante</strong><small>Envie relatório parcial, final ou avaliação do supervisor.</small></a>
+      <details class="coordination-service-section">
+        <summary><span>Atendimento ao estudante</span><strong>Solicitar TCE ou entregar relatórios</strong><i aria-hidden="true"></i></summary>
+        <div class="coordination-service-content">
+          <p>Use os mesmos fluxos públicos com sua identificação institucional registrada.</p>
+          <div class="coordination-service-grid">
+            <a class="coordination-service-card" href="formulario-tce?origem=coordenacao"><span>TCE</span><strong>Solicitar TCE para estudante</strong><small>Preencha os dados, gere o protocolo e encaminhe para análise da COERI.</small></a>
+            <a class="coordination-service-card" href="enviar-relatorios?origem=coordenacao"><span>Documentos</span><strong>Entregar relatórios do estudante</strong><small>Envie relatório parcial, final ou avaliação do supervisor.</small></a>
+          </div>
         </div>
-      </section>
+      </details>
         <p class="coordination-message panel-message" id="coordination-panel-message" role="alert" hidden></p>
 
         <section class="coordination-metrics" aria-label="Indicadores principais">
