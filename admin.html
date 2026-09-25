@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260925-3">
+  <link rel="stylesheet" href="assets/admin.css?v=20260925-4">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -133,6 +133,12 @@
           <div class="requests-intro"><div><span class="admin-kicker">Dados administrativos</span><h2>Importar, exportar e atualizar</h2><p>Ferramentas usadas periodicamente para manter o painel e as listas públicas atualizados.</p></div></div>
           <div class="records-tools"><button class="admin-button ghost" id="import-academic-button" type="button">Importar estágios</button><button class="admin-button ghost" id="import-students-button" type="button">Complementar estudantes</button><button class="admin-button ghost" id="import-agreements-button" type="button">Importar convênios</button><button class="admin-button ghost" id="export-ifms-button" type="button">Exportar seguro IFMS</button></div>
         </section>
+        <section id="coordination-users-view" class="coordination-users-admin" hidden>
+          <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Acesso institucional</span><h2>Usuários das coordenações</h2><p>Crie contas com senha temporária e defina quais cursos cada coordenação poderá acompanhar.</p></div><button class="admin-button primary" id="new-coordination-user" type="button">+ Novo usuário</button></div>
+          <p class="form-message coordination-users-message" id="coordination-users-message" role="status"></p>
+          <section class="coordination-user-list" id="coordination-user-list" aria-live="polite"></section>
+          <div class="empty-state" id="coordination-users-empty" hidden><div>🔐</div><h2>Nenhum acesso cadastrado</h2><p>Use “Novo usuário” para criar o primeiro acesso.</p></div>
+        </section>
         <section id="advisors-view" hidden>
           <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
           <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
@@ -182,7 +188,23 @@
       <p class="form-message" id="advisor-message" role="alert"></p>
       <div class="dialog-actions"><button class="admin-button danger-outline" id="delete-advisor-button" type="button" hidden>Excluir</button><span class="dialog-spacer"></span><button class="admin-button ghost" type="button" data-close-advisor>Cancelar</button><button class="admin-button primary" type="submit">Salvar orientador</button></div>
     </form>
-  </dialog>  <dialog id="internship-dialog" class="admin-dialog">
+  </dialog>
+  <dialog id="coordination-user-dialog" class="admin-dialog small">
+    <form id="coordination-user-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Acesso das coordenações</span><h2 id="coordination-user-dialog-title">Novo usuário</h2></div><button class="icon-button" type="button" data-close-coordination-user aria-label="Fechar">×</button></div>
+      <div class="admin-form-grid">
+        <label class="full">Nome da coordenação<input id="coordination-user-name" required maxlength="180" placeholder="Ex.: Coordenação de Análise e Desenvolvimento de Sistemas"></label>
+        <label class="full">E-mail institucional<input id="coordination-user-email" required type="email" maxlength="254" placeholder="coordenacao.tl@ifms.edu.br"></label>
+        <fieldset class="full coordination-course-options"><legend>Cursos autorizados</legend>
+          <label><input type="checkbox" value="ads"> Análise e Desenvolvimento de Sistemas</label><label><input type="checkbox" value="engenharia_computacao"> Engenharia de Computação</label><label><input type="checkbox" value="engenharia_controle_automacao"> Engenharia de Controle e Automação</label><label><input type="checkbox" value="tecnico_eletrotecnica"> Técnico em Eletrotécnica</label><label><input type="checkbox" value="tecnico_informatica"> Técnico em Informática</label><label><input type="checkbox" value="tecnologia_automacao_industrial"> Tecnologia em Automação Industrial</label><label><input type="checkbox" value="especializacao_docencia_epct"> Especialização em Docência para EPCT</label><label><input type="checkbox" value="tecnico_administracao"> Técnico em Administração</label>
+        </fieldset>
+        <label class="full advisor-active-field"><input id="coordination-user-active" type="checkbox" checked> <span><strong>Acesso ativo</strong><small>Desative para bloquear o painel sem apagar o cadastro.</small></span></label>
+      </div>
+      <p class="form-message" id="coordination-user-form-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-coordination-user>Cancelar</button><button class="admin-button primary" type="submit">Salvar usuário</button></div>
+    </form>
+  </dialog>
+  <dialog id="internship-dialog" class="admin-dialog">
     <form id="internship-form" class="dialog-content">
       <div class="dialog-header"><div><span class="admin-kicker">Cadastro</span><h2 id="internship-dialog-title">Novo estágio</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fechar">×</button></div>
       <input type="hidden" id="internship-id">
@@ -310,6 +332,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><div class="suspension-note" hidden></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button suspend-button" type="button">Suspender acompanhamento</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260925-6"></script>
+  <script type="module" src="assets/admin.js?v=20260925-7"></script>
 </body>
 </html>

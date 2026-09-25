@@ -19,6 +19,8 @@ const studentImportDialog = $('#student-import-dialog');
 const agreementImportDialog = $('#agreement-import-dialog');
 const advisorDialog = $('#advisor-dialog');
 const advisorForm = $('#advisor-form');
+const coordinationUserDialog = $('#coordination-user-dialog');
+const coordinationUserForm = $('#coordination-user-form');
 const passwordForm = $('#password-form');
 const tceList = $('#tce-request-list');
 const reportList = $('#report-admin-list');
@@ -43,6 +45,7 @@ let pendingStudentRows = [];
 let agreements = [];
 let pendingAgreementImport = [];
 let advisors = [];
+let coordinationUsers = [];
 let advisorAvailability = [];
 let signatureSettings = { director_name: '', director_email: '' };
 
@@ -888,6 +891,64 @@ function renderAdvisors() {
   });
 }
 
+const coordinationCourseLabels = {
+  ads: 'Análise e Desenvolvimento de Sistemas', engenharia_computacao: 'Engenharia de Computação',
+  engenharia_controle_automacao: 'Engenharia de Controle e Automação', tecnico_eletrotecnica: 'Técnico em Eletrotécnica',
+  tecnico_informatica: 'Técnico em Informática', tecnologia_automacao_industrial: 'Tecnologia em Automação Industrial',
+  especializacao_docencia_epct: 'Especialização em Docência para EPCT', tecnico_administracao: 'Técnico em Administração'
+};
+
+function renderCoordinationUsers() {
+  const container = $('#coordination-user-list');
+  container.replaceChildren();
+  $('#coordination-users-empty').hidden = coordinationUsers.length > 0;
+  coordinationUsers.forEach(user => {
+    const card = document.createElement('article'); card.className = `coordination-user-card${user.is_active ? '' : ' inactive'}`; card.dataset.email = user.email;
+    const copy = document.createElement('div');
+    const heading = document.createElement('div'); heading.className = 'coordination-user-heading';
+    const name = document.createElement('h3'); name.textContent = user.coordination_name;
+    const status = document.createElement('span'); status.textContent = user.is_active ? 'Ativo' : 'Bloqueado';
+    heading.append(name, status);
+    const email = document.createElement('p'); email.textContent = user.email;
+    const courses = document.createElement('small'); courses.textContent = user.courses.map(course => coordinationCourseLabels[course] || course).join(' · ');
+    const auth = document.createElement('small'); auth.className = user.auth_exists ? 'auth-ok' : 'auth-missing'; auth.textContent = user.auth_exists ? `Conta criada${user.last_sign_in_at ? ` · Último acesso: ${new Date(user.last_sign_in_at).toLocaleString('pt-BR')}` : ' · Ainda não acessou'}` : 'Conta ainda não criada no Authentication';
+    copy.append(heading, email, courses, auth);
+    const actions = document.createElement('div'); actions.className = 'coordination-user-actions';
+    const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'admin-button ghost coordination-user-edit'; edit.textContent = 'Editar';
+    const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'admin-button ghost coordination-user-reset'; reset.textContent = user.auth_exists ? 'Nova senha temporária' : 'Criar conta';
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'admin-button ghost coordination-user-toggle'; toggle.textContent = user.is_active ? 'Bloquear acesso' : 'Reativar acesso';
+    actions.append(edit, reset, toggle); card.append(copy, actions); container.append(card);
+  });
+}
+
+async function loadCoordinationUsers() {
+  const message = $('#coordination-users-message');
+  message.textContent = 'Carregando usuários…';
+  const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'list' } });
+  if (error || data?.error) { message.textContent = data?.error || 'Não foi possível carregar os usuários.'; return; }
+  coordinationUsers = data.users || [];
+  message.textContent = '';
+  renderCoordinationUsers();
+}
+
+function openCoordinationUserDialog(user = null) {
+  coordinationUserForm.reset();
+  $('#coordination-user-dialog-title').textContent = user ? 'Editar usuário' : 'Novo usuário';
+  $('#coordination-user-name').value = user?.coordination_name || '';
+  $('#coordination-user-email').value = user?.email || '';
+  $('#coordination-user-email').readOnly = Boolean(user);
+  $('#coordination-user-active').checked = user?.is_active ?? true;
+  $('#coordination-user-form-message').textContent = '';
+  document.querySelectorAll('.coordination-course-options input').forEach(input => { input.checked = Boolean(user?.courses?.includes(input.value)); });
+  coordinationUserDialog.showModal();
+}
+
+function showTemporaryPassword(email, password) {
+  if (!password) return;
+  navigator.clipboard?.writeText(password).catch(() => {});
+  prompt(`Senha temporária de ${email}. Ela também foi copiada para a área de transferência. Envie-a por um canal seguro:`, password);
+}
+
 function openAdvisorDialog(advisor = null) {
   advisorForm.reset();
   $('#advisor-message').textContent = '';
@@ -1208,8 +1269,10 @@ function activateAdminView(view) {
   $('#notifications-view').hidden = view !== 'automation';
   $('#records-tools-view').hidden = view !== 'records';
   $('#advisors-view').hidden = view !== 'records';
+  $('#coordination-users-view').hidden = view !== 'records';
   $('#maintenance-view').hidden = view !== 'maintenance';
   if (view === 'maintenance') loadMaintenanceMetrics();
+  if (view === 'records') loadCoordinationUsers();
   document.querySelector('.admin-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -1680,6 +1743,7 @@ $('#delete-advisor-button').addEventListener('click', async () => {
 });
 $('#refresh-maintenance').addEventListener('click', loadMaintenanceMetrics);
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
+$('#new-coordination-user').addEventListener('click', () => openCoordinationUserDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
 $('#copy-final-emails').addEventListener('click', () => copyPendingEmails('final'));
@@ -1694,8 +1758,48 @@ document.querySelectorAll('[data-close-import]').forEach(button => button.addEve
 document.querySelectorAll('[data-close-student-import]').forEach(button => button.addEventListener('click', () => studentImportDialog.close()));
 document.querySelectorAll('[data-close-agreement-import]').forEach(button=>button.addEventListener('click',()=>agreementImportDialog.close()));
 document.querySelectorAll('[data-close-advisor]').forEach(button=>button.addEventListener('click',()=>advisorDialog.close()));
+document.querySelectorAll('[data-close-coordination-user]').forEach(button=>button.addEventListener('click',()=>coordinationUserDialog.close()));
 document.querySelectorAll('[data-close-report-correction]').forEach(button=>button.addEventListener('click',()=>reportCorrectionDialog.close()));
 $('#copy-message').addEventListener('click', async () => { await navigator.clipboard.writeText($('#message-text').value); $('#copy-message').textContent = 'Copiado!'; setTimeout(() => $('#copy-message').textContent = 'Copiar texto', 1500); });
+
+coordinationUserForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector('[type="submit"]');
+  const message = $('#coordination-user-form-message');
+  const courses = [...document.querySelectorAll('.coordination-course-options input:checked')].map(input => input.value);
+  if (!courses.length) { message.textContent = 'Selecione ao menos um curso.'; return; }
+  button.disabled = true; message.textContent = 'Salvando…';
+  const email = $('#coordination-user-email').value.trim().toLowerCase();
+  const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'save', email, coordination_name: $('#coordination-user-name').value.trim(), courses, is_active: $('#coordination-user-active').checked } });
+  button.disabled = false;
+  if (error || data?.error) { message.textContent = data?.error || 'Não foi possível salvar o usuário.'; return; }
+  coordinationUserDialog.close();
+  await loadCoordinationUsers();
+  showTemporaryPassword(email, data.temporary_password);
+});
+
+$('#coordination-user-list').addEventListener('click', async event => {
+  const card = event.target.closest('.coordination-user-card');
+  const button = event.target.closest('button');
+  if (!card || !button) return;
+  const user = coordinationUsers.find(item => item.email === card.dataset.email);
+  if (!user) return;
+  if (button.classList.contains('coordination-user-edit')) { openCoordinationUserDialog(user); return; }
+  button.disabled = true;
+  if (button.classList.contains('coordination-user-toggle')) {
+    const active = !user.is_active;
+    if (!confirm(`${active ? 'Reativar' : 'Bloquear'} o acesso de ${user.email}?`)) { button.disabled = false; return; }
+    const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'toggle', email: user.email, is_active: active } });
+    if (error || data?.error) alert(data?.error || 'Não foi possível alterar o acesso.');
+  }
+  if (button.classList.contains('coordination-user-reset')) {
+    if (!user.auth_exists) { openCoordinationUserDialog(user); button.disabled = false; return; }
+    if (!confirm(`Gerar uma nova senha temporária para ${user.email}? A senha atual deixará de funcionar.`)) { button.disabled = false; return; }
+    const { data, error } = await supabase.functions.invoke('manage-coordination-users', { body: { action: 'reset_password', email: user.email } });
+    if (error || data?.error) alert(data?.error || 'Não foi possível redefinir a senha.'); else showTemporaryPassword(user.email, data.temporary_password);
+  }
+  await loadCoordinationUsers();
+});
 
 
 document.querySelectorAll('.action-menu').forEach(menu => {
