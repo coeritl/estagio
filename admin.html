@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
-  <link rel="stylesheet" href="assets/admin.css?v=20260921-2">
+  <link rel="stylesheet" href="assets/admin.css?v=20260925-1">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -40,25 +40,34 @@
         <div class="dashboard-heading"><div><span class="admin-kicker">Central de trabalho</span><h1>Painel da COERI</h1><p id="today-label"></p></div><div class="heading-actions"><button class="admin-button primary new-internship-action" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
 
         <nav class="admin-tabs" aria-label="Áreas do painel">
-          <button class="admin-tab active" type="button" data-admin-view="overview">Visão geral</button>
-          <button class="admin-tab" type="button" data-admin-view="inbox">Caixa de entrada <span id="inbox-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="tracking">Estágios ativos</button>
-          <button class="admin-tab" type="button" data-admin-view="automation">Automações <span id="notification-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="records">Cadastros <span id="advisor-count">0</span></button>
-          <button class="admin-tab" type="button" data-admin-view="maintenance">Manutenção</button>
+          <button class="admin-tab active" type="button" data-admin-view="overview"><span class="admin-tab-icon" aria-hidden="true">⌂</span><span class="admin-tab-copy"><strong>Visão geral</strong><small>Indicadores e prioridades</small></span></button>
+          <button class="admin-tab" type="button" data-admin-view="inbox"><span class="admin-tab-icon" aria-hidden="true">↓</span><span class="admin-tab-copy"><strong>Caixa de entrada</strong><small>TCEs e documentos</small></span><span class="admin-tab-count" id="inbox-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="tracking"><span class="admin-tab-icon" aria-hidden="true">◎</span><span class="admin-tab-copy"><strong>Estágios ativos</strong><small>Prazos e acompanhamento</small></span></button>
+          <button class="admin-tab" type="button" data-admin-view="automation"><span class="admin-tab-icon" aria-hidden="true">↗</span><span class="admin-tab-copy"><strong>Automações</strong><small>E-mails e ocorrências</small></span><span class="admin-tab-count" id="notification-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="records"><span class="admin-tab-icon" aria-hidden="true">＋</span><span class="admin-tab-copy"><strong>Cadastros</strong><small>Dados e orientadores</small></span><span class="admin-tab-count" id="advisor-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="maintenance"><span class="admin-tab-icon" aria-hidden="true">⚙</span><span class="admin-tab-copy"><strong>Manutenção</strong><small>Saúde e consumo</small></span></button>
         </nav>
 
         <div class="dashboard-message" id="dashboard-message" role="alert" hidden></div>
 
-        <section id="overview-view">
-          <div class="overview-grid" aria-label="Tarefas que exigem atenção">
-            <button class="overview-card attention" type="button" data-open-view="inbox"><span>Caixa de entrada</span><strong id="overview-inbox">0</strong><small>TCEs e documentos aguardando análise</small></button>
-            <button class="overview-card danger" type="button" data-open-view="tracking"><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Estágios que exigem providência</small></button>
-            <button class="overview-card warning" type="button" data-open-view="automation"><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small></button>
-            <button class="overview-card" type="button" data-open-view="tracking"><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small></button>
-            <button class="overview-card warning" type="button" data-open-view="tracking"><span>Cadastros incompletos</span><strong id="overview-incomplete">0</strong><small>Sem CPF, e-mail ou sexo — revise para garantir a identificação e os documentos corretos</small></button>
+        <section id="overview-view" class="executive-dashboard">
+          <header class="overview-intro"><div><span class="admin-kicker">Painel executivo</span><h2>O que precisa da sua atenção</h2><p>Uma leitura rápida dos acompanhamentos, prazos e dados administrativos.</p></div><span class="overview-updated" id="overview-updated">Atualizado agora</span></header>
+          <div class="overview-grid" aria-label="Indicadores principais">
+            <button class="overview-card attention" type="button" data-open-view="inbox"><span class="metric-icon" aria-hidden="true">↓</span><span>Caixa de entrada</span><strong id="overview-inbox">0</strong><small>TCEs e documentos para analisar</small><em>Ver solicitações →</em></button>
+            <button class="overview-card danger" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">!</span><span>Prazos atingidos</span><strong id="overview-due">0</strong><small>Acompanhamentos que exigem providência</small><em>Revisar prazos →</em></button>
+            <button class="overview-card academic" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">✓</span><span>Finalizados no acadêmico</span><strong id="overview-finalized">0</strong><small>Aguardando conferência ou encerramento</small><em>Conferir registros →</em></button>
+            <button class="overview-card" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">◎</span><span>Estágios ativos</span><strong id="overview-active">0</strong><small>Acompanhamentos em curso</small><em>Abrir acompanhamento →</em></button>
+            <button class="overview-card warning" type="button" data-open-view="tracking"><span class="metric-icon" aria-hidden="true">◇</span><span>Cadastros incompletos</span><strong id="overview-incomplete">0</strong><small>Sem CPF, e-mail ou sexo</small><em>Completar cadastros →</em></button>
+            <button class="overview-card warning" type="button" data-open-view="automation"><span class="metric-icon" aria-hidden="true">↗</span><span>Falhas de comunicação</span><strong id="overview-notification-failures">0</strong><small>Mensagens para verificar ou reenviar</small><em>Ver automações →</em></button>
           </div>
-          <section class="overview-automation"><div><span class="admin-kicker">Rotinas automáticas</span><h2>O sistema cuida dos avisos previsíveis</h2><p>Solicitações de TCE, TCEs gerados, relatório parcial, previsão de término e conclusão do estágio possuem comunicação integrada.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Ver automações</button></section>
+
+          <div class="overview-charts">
+            <section class="dashboard-chart status-chart-card"><div class="chart-heading"><div><span class="admin-kicker">Panorama</span><h3>Situação dos acompanhamentos</h3></div><button type="button" data-open-view="tracking">Ver todos</button></div><div class="status-chart-content"><div class="donut-chart" id="overview-status-chart" role="img" aria-label="Distribuição da situação dos estágios"><div><strong id="overview-chart-total">0</strong><span>ativos</span></div></div><div class="chart-legend" id="overview-status-legend"></div></div></section>
+            <section class="dashboard-chart course-chart-card"><div class="chart-heading"><div><span class="admin-kicker">Distribuição</span><h3>Estágios ativos por curso</h3></div></div><div class="horizontal-chart" id="overview-course-chart" aria-label="Quantidade de estágios ativos por curso"></div></section>
+            <section class="dashboard-chart month-chart-card"><div class="chart-heading"><div><span class="admin-kicker">Planejamento</span><h3>Previsões de término</h3><p>Próximos seis meses</p></div></div><div class="month-chart" id="overview-month-chart" aria-label="Previsões de término por mês"></div></section>
+          </div>
+
+          <section class="overview-automation"><div class="automation-symbol" aria-hidden="true">↗</div><div><span class="admin-kicker">Rotinas automáticas</span><h2>Comunicação integrada, acompanhamento centralizado</h2><p>Solicitações de TCE, documentos, relatório parcial, previsão de término e conclusão ficam reunidos no mesmo fluxo.</p></div><button class="admin-button ghost" type="button" data-open-view="automation">Acompanhar envios</button></section>
         </section>
 
         <div id="tracking-view" hidden>
@@ -286,6 +295,6 @@
   <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><span class="incomplete-badge" hidden></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
 
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20260921-4"></script>
+  <script type="module" src="assets/admin.js?v=20260925-1"></script>
 </body>
 </html>

@@ -246,14 +246,108 @@ function hasIncompleteContact(record) {
 }
 
 function renderOverview() {
+  const activeRecords = records.filter(record => record.status === 'em_andamento');
   const inbox = tceRequests.length + reportSubmissions.filter(report => report.status !== 'aceito').length;
   const failures = emailNotifications.filter(item => item.status !== 'enviado').length;
   $('#inbox-count').textContent = inbox;
   $('#overview-inbox').textContent = inbox;
-  $('#overview-due').textContent = records.filter(record => recordState(record) === 'due').length;
+  $('#overview-due').textContent = activeRecords.filter(record => recordState(record) === 'due').length;
   $('#overview-notification-failures').textContent = failures;
-  $('#overview-active').textContent = records.filter(record => record.status === 'em_andamento').length;
-  $('#overview-incomplete').textContent = records.filter(record => record.status === 'em_andamento' && hasIncompleteContact(record)).length;
+  $('#overview-active').textContent = activeRecords.length;
+  $('#overview-incomplete').textContent = activeRecords.filter(hasIncompleteContact).length;
+  $('#overview-finalized').textContent = activeRecords.filter(record => record.academic_status === 'Finalizado').length;
+  $('#overview-updated').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  renderOverviewCharts(activeRecords);
+}
+
+function appendLegendItem(container, label, value, className) {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const marker = document.createElement('span');
+  marker.className = `legend-marker ${className}`;
+  const text = document.createElement('span');
+  text.textContent = label;
+  const count = document.createElement('strong');
+  count.textContent = value;
+  item.append(marker, text, count);
+  container.append(item);
+}
+
+function compactCourseName(value) {
+  return String(value || 'Curso não informado')
+    .replace(/^\s*\d+\s*-\s*/, '')
+    .replace(/^Tecnologia em\s+/i, '')
+    .replace(/^Técnico(?: Integrado)? em\s+/i, '')
+    .replace(/^Bacharelado em\s+/i, '')
+    .trim();
+}
+
+function renderOverviewCharts(activeRecords) {
+  const finalized = activeRecords.filter(record => record.academic_status === 'Finalizado').length;
+  const due = activeRecords.filter(record => record.academic_status !== 'Finalizado' && recordState(record) === 'due').length;
+  const soon = activeRecords.filter(record => record.academic_status !== 'Finalizado' && recordState(record) === 'soon').length;
+  const regular = Math.max(0, activeRecords.length - finalized - due - soon);
+  const total = Math.max(activeRecords.length, 1);
+  const dueEnd = due / total * 100;
+  const soonEnd = dueEnd + soon / total * 100;
+  const regularEnd = soonEnd + regular / total * 100;
+  const chart = $('#overview-status-chart');
+  chart.style.background = activeRecords.length
+    ? `conic-gradient(#d82935 0 ${dueEnd}%, #f2ae2e ${dueEnd}% ${soonEnd}%, #13864b ${soonEnd}% ${regularEnd}%, #7357b7 ${regularEnd}% 100%)`
+    : 'conic-gradient(#dfe8e2 0 100%)';
+  chart.setAttribute('aria-label', `${due} com prazo atingido, ${soon} próximos do prazo, ${regular} no prazo e ${finalized} finalizados no sistema acadêmico`);
+  $('#overview-chart-total').textContent = activeRecords.length;
+  const legend = $('#overview-status-legend');
+  legend.replaceChildren();
+  appendLegendItem(legend, 'Prazo atingido', due, 'danger');
+  appendLegendItem(legend, 'Próximos 7 dias', soon, 'warning');
+  appendLegendItem(legend, 'No prazo', regular, 'success');
+  appendLegendItem(legend, 'Finalizado no acadêmico', finalized, 'academic');
+
+  const courseCounts = new Map();
+  activeRecords.forEach(record => {
+    const name = compactCourseName(record.course);
+    courseCounts.set(name, (courseCounts.get(name) || 0) + 1);
+  });
+  const courses = [...courseCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const visibleCourses = courses.slice(0, 6);
+  if (courses.length > 6) visibleCourses.push(['Outros cursos', courses.slice(6).reduce((sum, item) => sum + item[1], 0)]);
+  const maxCourse = Math.max(...visibleCourses.map(item => item[1]), 1);
+  const courseChart = $('#overview-course-chart');
+  courseChart.replaceChildren();
+  if (!visibleCourses.length) {
+    const empty = document.createElement('p'); empty.className = 'chart-empty'; empty.textContent = 'Nenhum estágio ativo para exibir.'; courseChart.append(empty);
+  }
+  visibleCourses.forEach(([name, value]) => {
+    const row = document.createElement('div'); row.className = 'horizontal-bar-row';
+    const label = document.createElement('span'); label.textContent = name; label.title = name;
+    const track = document.createElement('div'); track.className = 'horizontal-bar-track';
+    const bar = document.createElement('i'); bar.style.width = `${Math.max(5, value / maxCourse * 100)}%`; track.append(bar);
+    const count = document.createElement('strong'); count.textContent = value;
+    row.append(label, track, count); courseChart.append(row);
+  });
+
+  const monthChart = $('#overview-month-chart');
+  monthChart.replaceChildren();
+  const base = today();
+  base.setDate(1);
+  const months = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(base.getFullYear(), base.getMonth() + index, 1);
+    const count = activeRecords.filter(record => {
+      const end = localDate(record.expected_end_date);
+      return end && end.getFullYear() === date.getFullYear() && end.getMonth() === date.getMonth();
+    }).length;
+    return { date, count };
+  });
+  const maxMonth = Math.max(...months.map(item => item.count), 1);
+  months.forEach(({ date, count }) => {
+    const item = document.createElement('div'); item.className = 'month-bar-item';
+    const countLabel = document.createElement('strong'); countLabel.textContent = count;
+    const track = document.createElement('div'); track.className = 'month-bar-track';
+    const bar = document.createElement('i'); bar.style.height = `${count ? Math.max(12, count / maxMonth * 100) : 3}%`; track.append(bar);
+    const label = document.createElement('span'); label.textContent = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    item.append(countLabel, track, label); monthChart.append(item);
+  });
 }
 
 function renderEmailNotifications() {
