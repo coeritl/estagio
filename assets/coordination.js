@@ -190,13 +190,19 @@ $('#coordination-password-form').addEventListener('submit', async event => {
   event.preventDefault();
   const password = $('#coordination-new-password').value;
   const message = $('#coordination-password-message');
+  const button = event.currentTarget.querySelector('[type="submit"]');
   if (password !== $('#coordination-confirm-password').value) { message.textContent = 'As senhas não coincidem.'; return; }
+  if (password.length < 8) { message.textContent = 'A nova senha precisa ter pelo menos 8 caracteres.'; return; }
   message.textContent = 'Salvando…';
+  button.disabled = true;
+  button.textContent = 'Salvando e abrindo…';
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) { message.textContent = 'Não foi possível alterar a senha. Use pelo menos 8 caracteres.'; return; }
+  if (error) { button.disabled = false; button.textContent = 'Definir senha e abrir dashboard'; message.textContent = 'Não foi possível alterar a senha. Use pelo menos 8 caracteres.'; return; }
   const { error: confirmationError } = await supabase.rpc('confirm_coordination_password_change');
-  if (confirmationError) { message.textContent = 'A senha foi alterada, mas não foi possível concluir o primeiro acesso. Entre novamente.'; return; }
+  if (confirmationError) { button.disabled = false; button.textContent = 'Definir senha e abrir dashboard'; message.textContent = 'A senha foi alterada, mas não foi possível concluir o primeiro acesso. Entre novamente.'; return; }
   $('#coordination-password-dialog').close();
+  button.disabled = false;
+  button.textContent = 'Definir senha e abrir dashboard';
   message.textContent = '';
 });
 
