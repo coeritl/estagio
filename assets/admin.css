@@ -58,9 +58,9 @@
 .overview-intro p{margin:0;color:var(--admin-muted)}
 .overview-updated{flex:none;padding:.42rem .65rem;border-radius:99px;background:#e6f1ea;color:#456052;font-size:.72rem;font-weight:800}
 .overview-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:.75rem}
-.overview-card{position:relative;display:flex;min-height:202px;flex-direction:column;padding:1rem;border-radius:17px;box-shadow:0 10px 26px rgba(21,55,36,.045);transition:transform .18s,box-shadow .18s,border-color .18s}
+.overview-card{position:relative;display:flex;min-height:202px;flex-direction:column;padding:1rem;border-top:5px solid var(--admin-green);border-radius:17px;box-shadow:0 10px 26px rgba(21,55,36,.045);transition:transform .18s,box-shadow .18s,border-color .18s}
 .overview-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(21,55,36,.09)}
-.overview-card.attention,.overview-card.warning,.overview-card.danger,.overview-card.academic{border-top-width:1px}
+.overview-card.attention,.overview-card.warning,.overview-card.danger,.overview-card.academic{border-top-width:5px}.overview-card.academic{border-top-color:#7357b7}
 .overview-card .metric-icon{display:grid;width:34px;height:34px;margin-bottom:.85rem;place-items:center;border-radius:10px;background:#e6f4eb;color:var(--admin-green-dark);font-size:1rem}
 .overview-card.danger .metric-icon{background:#fee9eb;color:#b31d28}.overview-card.warning .metric-icon{background:#fff2d5;color:#8a5b00}.overview-card.academic .metric-icon{background:#eee9fb;color:#6446a6}
 .overview-card>span:not(.metric-icon){font-size:.69rem;letter-spacing:.055em}
