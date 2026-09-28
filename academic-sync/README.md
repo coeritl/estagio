@@ -13,15 +13,17 @@ Quando um acompanhamento existente aparece como **Finalizado** no Sistema Acadê
 
 1. Execute `npm install` nesta pasta.
 2. Copie `.env.example` para `.env` e preencha o segredo entregue pela COERI.
-3. Execute `npm run login`.
-4. Faça o login manual no navegador aberto e aguarde a coleta de teste terminar.
+3. Execute `powershell -ExecutionPolicy Bypass -File .\setup-credentials.ps1` e informe o login e a senha do Sistema Acadêmico.
+4. Execute `npm run login` para criar o primeiro perfil do navegador e aguarde a coleta de teste terminar.
 5. Confira os arquivos de `preview/`. Nenhum dado é enviado no modo de teste.
 6. Execute `npm run sync` para sincronizar.
 
+As credenciais são protegidas pelo DPAPI do Windows no arquivo `credentials.dpapi.json`. A senha não fica em texto aberto, não é incluída no Git e somente o mesmo usuário do Windows, neste computador, consegue descriptografá-la.
+
 ## Execuções seguintes
 
-O perfil autenticado fica em `browser-profile/`, fora do Git. Quando a sessão expirar, `npm run sync` terminará sem transmitir dados. Execute novamente `npm run login` para renovar a sessão.
+O perfil autenticado fica em `browser-profile/`, fora do Git. Quando a sessão expirar, `run-sync.ps1` detecta a tela de login, recupera as credenciais protegidas pelo Windows, renova a sessão e continua a sincronização. Se a senha institucional for alterada, execute `setup-credentials.ps1` novamente.
 
 ## Agendamento no Windows
 
-Neste computador, a tarefa `COERI - Sincronizar Sistema Academico` executa `run-sync.ps1` semanalmente. O arquivo `logs/latest.json` registra o resultado mais recente. Quando a sessão expirar, execute novamente `npm run login` para renová-la.
+Neste computador, a tarefa `COERI - Sincronizar Sistema Academico` executa `run-sync.ps1`. A tarefa deve usar a mesma conta do Windows que cadastrou as credenciais. O arquivo `logs/latest.json` registra o resultado mais recente e informa se a autenticação foi renovada automaticamente.

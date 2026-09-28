@@ -55,7 +55,7 @@ Deno.serve(async request => {
     const agreements = Array.isArray(input.agreements) ? input.agreements.slice(0, 1000) : [];
     const internships = Array.isArray(input.internships) ? input.internships.slice(0, 500) : [];
     const finalizedAcademicIds = Array.isArray(input.finalized_academic_ids)
-      ? [...new Set(input.finalized_academic_ids.map((value: unknown) => text(value, 80)).filter(Boolean))].slice(0, 1000)
+      ? [...new Set(input.finalized_academic_ids.map((value: unknown) => text(value, 80)).filter(Boolean))].slice(0, 5000)
       : [];
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
     let removed = 0;

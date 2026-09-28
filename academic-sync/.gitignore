@@ -3,4 +3,4 @@ node_modules/
 browser-profile/
 logs/
 preview/
-
+credentials.dpapi.json

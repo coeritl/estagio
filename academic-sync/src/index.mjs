@@ -96,10 +96,41 @@ async function gotoWithRetry(page, url) {
 
 async function ensureAuthenticated(page) {
   await gotoWithRetry(page, `${BASE_URL}/`);
-  if (!/\/usuarios\/login/.test(page.url())) return;
-  if (!assistedLogin) throw new Error('Sessão do Sistema Acadêmico expirada. Execute npm run login.');
-  console.log('Faça o login manual no navegador. O sincronizador continuará automaticamente.');
-  await page.waitForURL(url => !url.pathname.includes('/usuarios/login'), { timeout: 5 * 60 * 1000 });
+  if (!/\/usuarios\/login/.test(page.url())) return { renewed: false };
+  if (assistedLogin) {
+    console.log('Faça o login manual no navegador. O sincronizador continuará automaticamente.');
+    await page.waitForURL(url => !url.pathname.includes('/usuarios/login'), { timeout: 5 * 60 * 1000 });
+    return { renewed: true, method: 'manual' };
+  }
+
+  const username = process.env.ACADEMIC_SYNC_USERNAME || '';
+  const password = process.env.ACADEMIC_SYNC_PASSWORD || '';
+  if (!username || !password) {
+    throw new Error('Sessão expirada e credenciais automáticas não configuradas. Execute setup-credentials.ps1.');
+  }
+
+  console.log('Sessão expirada. Renovando a autenticação automaticamente…');
+  const loginInput = page.locator('#UsuarioLogin, input[name="data[Usuario][login]"], input[type="text"]').first();
+  const passwordInput = page.locator('input[type="password"]').first();
+  const submitButton = page.locator('button[type="submit"], input[type="submit"]').first();
+  if (!await loginInput.isVisible() || !await passwordInput.isVisible() || !await submitButton.isVisible()) {
+    throw new Error('A tela de login do Sistema Acadêmico mudou. A renovação automática precisa ser revisada.');
+  }
+  await loginInput.fill(username);
+  await passwordInput.fill(password);
+  try {
+    await Promise.all([
+      page.waitForURL(url => !url.pathname.includes('/usuarios/login'), { timeout: 30000 }),
+      submitButton.click(),
+    ]);
+  } catch {
+    throw new Error('Não foi possível renovar a sessão. Confira o login e a senha executando setup-credentials.ps1 novamente.');
+  }
+  if (/\/usuarios\/login/.test(page.url())) {
+    throw new Error('O Sistema Acadêmico recusou as credenciais armazenadas. Execute setup-credentials.ps1 novamente.');
+  }
+  console.log('Sessão renovada automaticamente com sucesso.');
+  return { renewed: true, method: 'automatic' };
 }
 
 async function collectAgreements(page) {
@@ -239,7 +270,12 @@ if (cleanupNonEnrolled) {
 if (fromPreview) {
   const preview = JSON.parse(await fs.readFile(path.join(ROOT, 'preview', 'latest.json'), 'utf8'));
   const agreements = [...new Map(preview.agreements.map(item => [String(item.academic_agreement_id), item])).values()];
-  const payload = { collected_at: preview.collected_at, agreements, internships: preview.internships };
+  const payload = {
+    collected_at: preview.collected_at,
+    agreements,
+    internships: preview.internships,
+    finalized_academic_ids: Array.isArray(preview.finalized_academic_ids) ? preview.finalized_academic_ids : [],
+  };
   const result = await sendToSupabase(payload);
   const log = {
     started_at: new Date().toISOString(), finished_at: new Date().toISOString(), source: 'preview',
@@ -255,8 +291,9 @@ const context = await chromium.launchPersistentContext(path.join(ROOT, 'browser-
 });
 const page = context.pages()[0] || await context.newPage();
 const startedAt = new Date().toISOString();
+let authentication = { renewed: false };
 try {
-  await ensureAuthenticated(page);
+  authentication = await ensureAuthenticated(page);
   if (statusesOnly) {
     console.log('Consultando estágios finalizados para revisão…');
     const finalizedAcademicIds = await collectFinalizedInternshipIds(page);
@@ -269,7 +306,7 @@ try {
   if (agreementsOnly) {
     const payload = { collected_at: new Date().toISOString(), agreements, internships: [] };
     const result = dryRun ? { dry_run: true } : await sendToSupabase(payload);
-    const log = { started_at: startedAt, finished_at: new Date().toISOString(), dry_run: dryRun, agreements: agreements.length, internships: 0, student_errors: [], result };
+    const log = { started_at: startedAt, finished_at: new Date().toISOString(), authentication, dry_run: dryRun, agreements: agreements.length, internships: 0, student_errors: [], result };
     await fs.writeFile(path.join(ROOT, 'preview', 'agreements-latest.json'), JSON.stringify(payload, null, 2), 'utf8');
     await fs.writeFile(path.join(ROOT, 'logs', 'latest.json'), JSON.stringify(log, null, 2), 'utf8');
     console.log(dryRun ? 'Prévia de convênios concluída.' : 'Convênios sincronizados.', result);
@@ -297,11 +334,11 @@ try {
   const previewPath = path.join(ROOT, 'preview', 'latest.json');
   await fs.writeFile(previewPath, JSON.stringify({ ...payload, student_errors: studentErrors }, null, 2), 'utf8');
   const result = dryRun ? { dry_run: true } : await sendToSupabase(payload);
-  const log = { started_at: startedAt, finished_at: new Date().toISOString(), dry_run: dryRun, agreements: agreements.length, internships: internships.length, student_errors: studentErrors, result };
+  const log = { started_at: startedAt, finished_at: new Date().toISOString(), authentication, dry_run: dryRun, agreements: agreements.length, internships: internships.length, student_errors: studentErrors, result };
   await fs.writeFile(path.join(ROOT, 'logs', 'latest.json'), JSON.stringify(log, null, 2), 'utf8');
   console.log(dryRun ? `Prévia concluída em ${previewPath}` : 'Sincronização concluída.', log);
 } catch (error) {
-  const log = { started_at: startedAt, finished_at: new Date().toISOString(), error: error.message || String(error) };
+  const log = { started_at: startedAt, finished_at: new Date().toISOString(), authentication, error: error.message || String(error) };
   await fs.writeFile(path.join(ROOT, 'logs', 'latest.json'), JSON.stringify(log, null, 2), 'utf8');
   console.error(log.error);
   process.exitCode = 1;
