@@ -66,7 +66,7 @@ Deno.serve(async request => {
         .eq("status", "em_andamento")
         .not("academic_system_id", "is", null)
         .not("course_status", "is", null)
-        .neq("course_status", "Em curso")
+        .not("course_status", "in", '("Em curso","Integralizado em fase escolar")')
         .in("academic_status", ["Iniciado", "Suspenso", "Em edição"])
         .select("id");
       if (removeError) throw removeError;

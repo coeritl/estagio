@@ -14,6 +14,7 @@ const agreementsOnly = args.has('--agreements-only');
 const cleanupNonEnrolled = args.has('--cleanup-non-enrolled');
 const statusesOnly = args.has('--statuses-only');
 const allowedStatuses = new Set(['iniciado', 'suspenso', 'em edicao']);
+const allowedCourseStatuses = new Set(['em curso', 'integralizado em fase escolar']);
 const cnpjPattern = /\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/;
 
 async function loadEnv() {
@@ -169,7 +170,7 @@ async function collectInternships(page) {
       if (row.length < 14
         || normalize(row[1]) !== 'tl'
         || !allowedStatuses.has(normalize(row[12]))
-        || normalize(row[13]) !== 'em curso') continue;
+        || !allowedCourseStatuses.has(normalize(row[13]))) continue;
       byId.set(row[0], {
         academic_system_id: row[0], campus: row[1], course: canonicalCourse(row[2]), student_name: row[3].toLocaleUpperCase('pt-BR'),
         advisor_name: row[4], company_name: row[5] || 'NÃO INFORMADA NO SISTEMA ACADÊMICO', internship_type: row[6],
