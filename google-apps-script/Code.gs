@@ -73,6 +73,8 @@ function emailModel_(type, studentName, data) {
 
   if (type === 'orientador_pendencias') {
     return renderAdvisorPendenciesEmail_(studentName, data);
+  } else if (type === 'atraso_longo') {
+    return renderLongOverdueEmail_(studentName, data);
   } else if (type === 'tce_recebido') {
     content = {
       subject: 'Solicitação de TCE recebida pela COERI',
@@ -201,6 +203,21 @@ function emailModel_(type, studentName, data) {
   } else throw new Error('Tipo de mensagem inválido.');
 
   return { subject: content.subject, plainText: stripHtml_(content.introduction + ' ' + content.closing), html: renderEmail_(content) };
+}
+
+function renderLongOverdueEmail_(studentName, data) {
+  var firstName = escapeHtml_(String(studentName || 'estudante').trim().split(/\s+/)[0]);
+  var overdueDays = Number(data.overdueDays || 0);
+  var endDate = escapeHtml_(data.expectedEndDate || '');
+  var course = escapeHtml_(data.course || '');
+  var documents = Array.isArray(data.pendingDocuments) ? data.pendingDocuments.map(escapeHtml_) : [];
+  var documentRows = documents.map(function(documentName) {
+    return '<tr><td style="padding:11px 14px;border-bottom:1px solid #f1d1d3;font-size:15px;color:#762027"><strong>' + documentName + '</strong></td></tr>';
+  }).join('');
+  var subject = 'URGENTE: estágio em atraso há ' + overdueDays + ' dias — regularização necessária';
+  var plainText = 'Seu estágio está com a previsão de término vencida há ' + overdueDays + ' dias. Envie a documentação final pelo Portal da COERI: https://coeri.tl.ifms.edu.br/relatorios. A coordenação do curso recebeu cópia desta cobrança.';
+  var html = '<!doctype html><html lang="pt-BR"><body style="margin:0;padding:0;background:#f4eeee;font-family:Arial,Helvetica,sans-serif;color:#2f2526"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 10px 32px rgba(114,20,28,.16)"><tr><td style="height:9px;background:#b5121b">&nbsp;</td></tr><tr><td style="background:#86131b;padding:34px 38px 30px"><div style="font-size:13px;color:#ffd9dc;font-weight:bold;letter-spacing:.7px">REGULARIZAÇÃO URGENTE · COERI</div><h1 style="margin:9px 0 10px;font-size:30px;line-height:38px;color:#fff">Atraso superior a um ano</h1><p style="margin:0;font-size:17px;line-height:26px;color:#fff1f2">A documentação final do seu estágio ainda não foi localizada.</p></td></tr><tr><td style="padding:30px 38px 18px"><p style="margin:0;font-size:16px;line-height:26px">Olá, ' + firstName + '!</p><p style="margin:13px 0 0;font-size:16px;line-height:26px">A previsão de término do seu estágio foi atingida há <strong style="color:#a41922">' + overdueDays + ' dias</strong>. É necessária a regularização imediata da documentação junto à COERI.</p></td></tr><tr><td style="padding:0 38px 22px"><table role="presentation" width="100%" style="background:#fff0f1;border:2px solid #d9464f;border-radius:12px"><tr><td style="padding:18px;text-align:center"><div style="font-size:13px;color:#86131b;font-weight:bold;text-transform:uppercase">Tempo de atraso</div><div style="margin-top:5px;font-size:34px;font-weight:bold;color:#a41922">' + overdueDays + ' dias</div>' + (endDate ? '<div style="margin-top:5px;color:#685154">Previsão de término: <strong>' + endDate + '</strong></div>' : '') + (course ? '<div style="margin-top:4px;color:#685154">Curso: ' + course + '</div>' : '') + '</td></tr></table></td></tr><tr><td style="padding:0 38px 10px;font-size:13px;color:#86131b;font-weight:bold;text-transform:uppercase">Documentos ainda não localizados</td></tr><tr><td style="padding:0 38px 24px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e3b7ba;border-radius:10px;overflow:hidden">' + documentRows + '</table></td></tr><tr><td style="padding:0 38px 24px"><div style="background:#fff7e8;border-left:5px solid #e5a11a;padding:17px 18px;border-radius:8px;font-size:15px;line-height:23px"><strong>O que fazer:</strong> acesse a página de relatórios da COERI, baixe os modelos oficiais, preencha todos os campos, providencie as assinaturas e envie os documentos em PDF pelo portal. Depois do envio, monitore seu e-mail institucional.</div></td></tr><tr><td align="center" style="padding:0 38px 31px"><a href="https://coeri.tl.ifms.edu.br/relatorios" style="display:inline-block;background:#a41922;color:#fff;text-decoration:none;font-size:16px;font-weight:bold;padding:15px 27px;border-radius:9px">Regularizar documentação agora</a></td></tr><tr><td style="border-top:1px solid #eadfe0;padding:25px 38px;font-size:14px;line-height:22px"><strong>A coordenação do seu curso recebeu cópia desta mensagem</strong> para apoiar o acompanhamento da regularização.<br><br>Se o estágio teve prorrogação ou se a documentação já foi enviada, responda a este e-mail para que a COERI confira a situação.<br><br>Atenciosamente,<br><strong>Coordenação de Extensão e Relações Institucionais — COERI</strong><br>IFMS Campus Três Lagoas</td></tr><tr><td style="background:#541015;padding:22px 38px;text-align:center;font-size:13px"><a href="mailto:coeri.tl@ifms.edu.br" style="color:#fff;font-weight:bold">coeri.tl@ifms.edu.br</a></td></tr></table></td></tr></table></body></html>';
+  return { subject: subject, plainText: plainText, html: html };
 }
 
 function renderAdvisorPendenciesEmail_(advisorName, data) {

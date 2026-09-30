@@ -14,6 +14,36 @@ const reportTypeLabels: Record<string, string> = {
   avaliacao_supervisor: "Avaliação do estagiário pelo supervisor"
 };
 
+function normalized(value: unknown) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function courseCoordinator(course: unknown) {
+  const value = normalized(course);
+  if (value.includes("tecnico") && value.includes("informatica")) return "coinf.tl@ifms.edu.br";
+  if (value.includes("eletrotecnica")) return "cocip.tl@ifms.edu.br";
+  if (value.includes("engenharia") && value.includes("controle") && value.includes("automacao")) return "cobau.tl@ifms.edu.br";
+  if (value.includes("engenharia") && value.includes("computacao")) return "coenc.tl@ifms.edu.br";
+  if (value.includes("analise") && value.includes("desenvolvimento") && value.includes("sistemas")) return "cotad.tl@ifms.edu.br";
+  if (value.includes("automacao industrial")) return "cotai.tl@ifms.edu.br";
+  if (value.includes("administracao")) return "cogen.tl@ifms.edu.br";
+  return "";
+}
+
+function formatDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function daysOverdue(value: string) {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Cuiaba", year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date());
+  const [dueYear, dueMonth, dueDay] = value.split("-").map(Number);
+  const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
+  return Math.max(0, Math.floor((Date.UTC(todayYear, todayMonth - 1, todayDay) - Date.UTC(dueYear, dueMonth - 1, dueDay)) / 86400000));
+}
+
 async function dispatch(service: any, notification: any) {
   const url = Deno.env.get("GOOGLE_APPS_SCRIPT_URL") || "";
   const secret = Deno.env.get("GOOGLE_APPS_SCRIPT_SECRET") || "";
@@ -85,6 +115,51 @@ Deno.serve(async request => {
       const { data: notification, error } = await service.from("email_notifications").select("*").eq("id", input.notification_id).single();
       if (error) return json(404, { error: "Notificação não encontrada." });
       return json(200, await dispatch(service, notification));
+    }
+
+    if (input.action === "send_long_overdue_reminder") {
+      const internshipId = String(input.internship_id || "");
+      const { data: internship, error } = await service.from("internships")
+        .select("id,student_name,student_email,internship_number,course,expected_end_date,status")
+        .eq("id", internshipId).single();
+      if (error) return json(404, { error: "Estágio não encontrado." });
+      if (internship.status !== "em_andamento") return json(409, { error: "O estágio não está em acompanhamento ativo." });
+      if (!internship.expected_end_date) return json(422, { error: "O estágio não possui previsão de término cadastrada." });
+      const overdueDays = daysOverdue(internship.expected_end_date);
+      if (overdueDays < 365) return json(422, { error: "A cobrança especial só pode ser enviada após 365 dias de atraso." });
+      const recipientEmail = String(internship.student_email || "").trim().toLowerCase();
+      if (!recipientEmail.includes("@")) return json(422, { error: "O estudante não possui e-mail válido cadastrado." });
+      const coordinatorEmail = courseCoordinator(internship.course);
+      if (!coordinatorEmail) return json(422, { error: "Não há e-mail de coordenação configurado para este curso." });
+
+      const { data: reports, error: reportsError } = await service.from("internship_report_submissions")
+        .select("document_type").eq("internship_id", internshipId);
+      if (reportsError) return json(500, { error: "Não foi possível verificar os documentos entregues." });
+      const delivered = new Set((reports || []).map((item: any) => item.document_type));
+      const pendingDocuments = [];
+      if (!delivered.has("final")) pendingDocuments.push("Relatório Final de Estágio");
+      if (!delivered.has("avaliacao_supervisor")) pendingDocuments.push("Avaliação do Estagiário pelo Supervisor");
+      if (!pendingDocuments.length) return json(409, { error: "Os documentos finais já foram enviados e aguardam conferência da COERI." });
+
+      const { data: notification, error: notificationError } = await service.from("email_notifications").insert({
+        event_type: "atraso_longo",
+        reference_key: `${internshipId}:${crypto.randomUUID()}`,
+        recipient_email: recipientEmail,
+        student_name: internship.student_name || "Estudante",
+        subject: `URGENTE: estágio em atraso há ${overdueDays} dias — regularização necessária`,
+        template_data: {
+          internshipNumber: internship.internship_number || "",
+          course: internship.course || "",
+          expectedEndDate: formatDate(internship.expected_end_date),
+          overdueDays,
+          pendingDocuments,
+          ccEmails: [coordinatorEmail],
+          reportsUrl: "https://coeri.tl.ifms.edu.br/relatorios"
+        }
+      }).select("*").single();
+      if (notificationError) return json(500, { error: "Não foi possível registrar a cobrança." });
+      const result = await dispatch(service, notification);
+      return json(200, { ...result, coordinator_email: coordinatorEmail, overdue_days: overdueDays });
     }
 
     if (input.action === "tce_generated") {

@@ -27,6 +27,7 @@ function courseCoordinator(course: unknown) {
   if (value.includes("engenharia") && value.includes("controle") && value.includes("automacao")) return "cobau.tl@ifms.edu.br";
   if (value.includes("analise") && value.includes("desenvolvimento") && value.includes("sistemas")) return "cotad.tl@ifms.edu.br";
   if (value.includes("automacao industrial")) return "cotai.tl@ifms.edu.br";
+  if (value.includes("administracao")) return "cogen.tl@ifms.edu.br";
   return "";
 }
 

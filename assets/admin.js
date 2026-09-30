@@ -249,7 +249,8 @@ const notificationTypeLabels = {
   relatorio_parcial: 'Entrega do relatório parcial',
   orientador_pendencias: 'Aviso sobre orientandos com entregas em atraso',
   relatorios_recebidos: 'Documentação recebida',
-  relatorio_correcao: 'Correção de documento solicitada'
+  relatorio_correcao: 'Correção de documento solicitada',
+  atraso_longo: 'Cobrança individual por atraso superior a um ano'
 };
 
 function hasIncompleteContact(record) {
@@ -375,6 +376,17 @@ function overdueReportData(record) {
   if (finalDays !== null && finalDays < 0 && !reportWasDelivered(record, 'final')) pending.push({ label: 'Final', days: Math.abs(finalDays) });
   if (!pending.length) return null;
   return { record, pending, maxDays: Math.max(...pending.map(item => item.days)) };
+}
+
+function longOverdueData(record) {
+  if (record.status !== 'em_andamento' || !record.expected_end_date) return null;
+  const endDays = daysFromToday(record.expected_end_date);
+  if (endDays === null || endDays > -365) return null;
+  const pending = [];
+  if (!reportWasDelivered(record, 'final')) pending.push('relatório final');
+  if (!reportWasDelivered(record, 'avaliacao_supervisor')) pending.push('avaliação do estagiário pelo supervisor');
+  if (!pending.length) return null;
+  return { days: Math.abs(endDays), pending };
 }
 
 function appendRankingRow(container, position, label, detail, value, secondary = '') {
@@ -776,6 +788,13 @@ function renderCard(record, target) {
   renderDeadline($('.partial', card), record.partial_report_date);
   renderDeadline($('.final', card), record.final_report_date);
   renderDeadline($('.end', card), record.expected_end_date);
+  const longOverdue = longOverdueData(record);
+  const longOverdueButton = $('.long-overdue-reminder', card);
+  if (longOverdue) {
+    longOverdueButton.hidden = false;
+    longOverdueButton.textContent = `Cobrar atraso de ${longOverdue.days} dias`;
+    longOverdueButton.title = `Falta: ${longOverdue.pending.join(' e ')}`;
+  }
   const partialCheck = $('[data-reminder-type="partial"]', card);
   partialCheck.checked = Boolean(record.partial_reminder_sent_at);
   partialCheck.disabled = !record.partial_report_date;
@@ -791,6 +810,7 @@ function renderCard(record, target) {
     note.textContent = `Suspenso em ${date}${record.suspension_reason ? ` · Motivo: ${record.suspension_reason}` : ''}`;
     $('.partial-reminder', card).hidden = true;
     $('.final-reminder', card).hidden = true;
+    $('.long-overdue-reminder', card).hidden = true;
     $('.complete-button', card).hidden = true;
     $('.suspend-button', card).textContent = 'Reativar acompanhamento';
   }
@@ -1106,6 +1126,36 @@ async function handleCardAction(event) {
   if (event.target.closest('.menu-action')) openInternshipDialog(record);
   if (event.target.closest('.partial-reminder')) openMessage(record, 'partial');
   if (event.target.closest('.final-reminder')) openMessage(record, 'final');
+  if (event.target.closest('.long-overdue-reminder')) {
+    const overdue = longOverdueData(record);
+    if (!overdue) {
+      alert('Este estágio não atende mais aos critérios da cobrança por atraso longo. Atualize a página.');
+      return;
+    }
+    if (!record.student_email) {
+      alert('Cadastre o e-mail institucional do estudante antes de enviar a cobrança.');
+      return;
+    }
+    const button = event.target.closest('.long-overdue-reminder');
+    const description = overdue.pending.join(' e ');
+    if (!confirm(`Enviar uma cobrança destacada para ${record.student_email} e para a coordenação de ${record.course}?\n\nAtraso: ${overdue.days} dias.\nDocumentação: ${description}.`)) return;
+    button.disabled = true;
+    button.textContent = 'Enviando cobrança…';
+    const { data: result, error } = await supabase.functions.invoke('manage-email-notification', {
+      body: { action: 'send_long_overdue_reminder', internship_id: record.id }
+    });
+    button.disabled = false;
+    button.textContent = `Cobrar atraso de ${overdue.days} dias`;
+    if (error || !result?.sent) {
+      const detail = result?.error || error?.context?.error || error?.message || 'Consulte a Central de notificações.';
+      alert(`A cobrança não foi enviada. ${detail}`);
+      await loadRecords();
+      return;
+    }
+    alert(`Cobrança enviada ao estudante${result.coordinator_email ? `, com cópia para ${result.coordinator_email}` : ''}. O envio foi registrado na Central de notificações.`);
+    await loadRecords();
+    return;
+  }
   if (event.target.closest('.suspend-button')) {
     const suspending = record.status !== 'suspenso';
     let reason = null;
