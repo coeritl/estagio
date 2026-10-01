@@ -1527,6 +1527,60 @@ function exportIfmsInsuranceList() {
   URL.revokeObjectURL(url);
 }
 
+function normalizeInternshipRequirement(value) {
+  const normalized = String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+  if (/\bnao\s*[- ]?obrigatori[oa]\b/.test(normalized)) return 'nonMandatory';
+  if (/\bobrigatori[oa]\b/.test(normalized)) return 'mandatory';
+  return 'notInformed';
+}
+
+function exportInternshipTypeByStartYear() {
+  if (!records.length) {
+    alert('Não há cadastros de estágio disponíveis para gerar o relatório.');
+    return;
+  }
+
+  const summary = new Map();
+  records.forEach(record => {
+    const parsedDate = localDate(record.start_date);
+    const year = parsedDate && !Number.isNaN(parsedDate.getTime())
+      ? String(parsedDate.getFullYear())
+      : 'Não informado';
+    if (!summary.has(year)) {
+      summary.set(year, { mandatory: 0, nonMandatory: 0, notInformed: 0, total: 0 });
+    }
+    const group = summary.get(year);
+    group[normalizeInternshipRequirement(record.internship_type)] += 1;
+    group.total += 1;
+  });
+
+  const years = [...summary.keys()].sort((a, b) => {
+    if (a === 'Não informado') return 1;
+    if (b === 'Não informado') return -1;
+    return Number(b) - Number(a);
+  });
+  const rows = [
+    ['Ano de início', 'Estudantes - obrigatório', 'Estudantes - não obrigatório', 'Modalidade não informada', 'Total de cadastros'],
+    ...years.map(year => {
+      const group = summary.get(year);
+      return [year, group.mandatory, group.nonMandatory, group.notInformed, group.total];
+    })
+  ];
+  const csvCell = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
+  const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  const todayLabel = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `estagios-por-modalidade-e-ano-${todayLabel}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 async function copyPendingEmails(type) {
   const pending = records.filter(record => record.status === 'em_andamento' && reportDeadlineReached(record, type));
   const recordsWithEmail = pending.filter(record => record.student_email?.trim());
@@ -1816,6 +1870,7 @@ $('#refresh-maintenance').addEventListener('click', loadMaintenanceMetrics);
 $('#new-internship-button').addEventListener('click', () => openInternshipDialog());
 $('#new-coordination-user').addEventListener('click', () => openCoordinationUserDialog());
 $('#export-ifms-button').addEventListener('click', exportIfmsInsuranceList);
+$('#export-internship-type-year-button').addEventListener('click', exportInternshipTypeByStartYear);
 $('#copy-partial-emails').addEventListener('click', () => copyPendingEmails('partial'));
 $('#copy-final-emails').addEventListener('click', () => copyPendingEmails('final'));
 $('#mark-copied-emails-sent').addEventListener('click', markCopiedEmailsAsSent);
