@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 360" role="img" aria-labelledby="title desc">
+  <title id="title">Botão Adicionar Documento de Texto</title>
+  <desc id="desc">Representação vetorial do botão verde do SUAP usado para criar um documento de texto.</desc>
+  <rect width="840" height="360" rx="24" fill="#f7f9f8"/>
+  <rect x="75" y="112" width="690" height="136" rx="68" fill="#22b73d"/>
+  <rect x="75" y="112" width="690" height="136" rx="68" fill="none" stroke="#13922d" stroke-width="4"/>
+  <text x="420" y="193" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="42" font-weight="700" fill="#fff">Adicionar Documento de Texto</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" role="img" aria-labelledby="title desc">
+  <title id="title">Caminho para Documentos Eletrônicos no SUAP</title>
+  <desc id="desc">Representação vetorial do menu Documentos e Processos, Documentos Eletrônicos e Documentos.</desc>
+  <rect width="720" height="520" rx="24" fill="#242424"/>
+  <g font-family="Arial,Helvetica,sans-serif" fill="#fff">
+    <circle cx="55" cy="62" r="18" fill="#0aa37a"/><path d="M42 62 55 49l13 13v17H58V66h-7v13h-9z" fill="#242424"/>
+    <text x="93" y="72" font-size="32" font-weight="700">Início</text>
+    <rect x="36" y="116" width="38" height="38" rx="7" fill="#0aa37a"/><path d="m48 143 7-18 5 10 8-4-8 15z" fill="#242424"/>
+    <text x="93" y="146" font-size="31" font-weight="700">Documentos/Processos</text>
+    <text x="93" y="214" font-size="29" font-weight="700">Documentos Eletrônicos</text>
+    <path d="m645 211 13-13 13 13" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+    <line x1="94" y1="240" x2="675" y2="240" stroke="#414141" stroke-width="2"/>
+    <rect x="82" y="247" width="607" height="65" rx="9" fill="#333"/>
+    <text x="105" y="290" font-size="28" font-weight="700">Documentos</text>
+    <line x1="94" y1="326" x2="675" y2="326" stroke="#414141" stroke-width="2"/>
+    <text x="105" y="370" font-size="27" fill="#d6d6d6">Documentos Pessoais</text>
+    <line x1="94" y1="390" x2="675" y2="390" stroke="#414141" stroke-width="2"/>
+    <text x="105" y="435" font-size="27" fill="#d6d6d6">Documentos Pessoais Digitalizados</text>
+  </g>
+</svg>
