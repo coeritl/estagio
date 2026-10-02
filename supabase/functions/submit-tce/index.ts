@@ -157,6 +157,7 @@ export default { async fetch(request: Request) {
 
     const isMinor = bool(input.is_minor);
     const isPaid = bool(input.is_paid);
+    const scholarshipPaymentBasis = isPaid ? text(input.scholarship_payment_basis, 20) || "mensal" : null;
     const requiresEpi = bool(input.requires_epi);
     const requestType = text(input.request_type, 10);
     const insuranceProvider = text(input.insurance_provider, 30);
@@ -210,6 +211,7 @@ export default { async fetch(request: Request) {
       internship_modality: text(input.internship_modality, 30),
       advisor_name: text(input.advisor_name, 180),
       is_paid: isPaid,
+      scholarship_payment_basis: scholarshipPaymentBasis,
       scholarship_amount: isPaid ? Number(input.scholarship_amount) : null,
       other_benefits: isPaid ? text(input.other_benefits, 500) || null : null,
       insurance_provider: insuranceProvider,
@@ -247,8 +249,11 @@ export default { async fetch(request: Request) {
     if (!isInternal && (!payload.company_name || !payload.company_cnpj || !payload.company_email || !payload.company_phone)) {
       return response(origin, 400, { error: "Preencha os dados da unidade concedente." });
     }
-    if (isPaid && (!Number.isFinite(payload.scholarship_amount) || payload.scholarship_amount < 0)) {
+    if (isPaid && (!Number.isFinite(payload.scholarship_amount) || payload.scholarship_amount <= 0)) {
       return response(origin, 400, { error: "Informe um valor de bolsa válido." });
+    }
+    if (isPaid && !["mensal", "hora"].includes(payload.scholarship_payment_basis || "")) {
+      return response(origin, 400, { error: "Informe se a bolsa é mensal ou paga por hora trabalhada." });
     }
     if (!["IFMS", "Empresa concedente"].includes(payload.insurance_provider)) {
       return response(origin, 400, { error: "Informe quem oferece o seguro do estagiário." });

@@ -64,6 +64,7 @@ create table if not exists public.tce_requests (
   internship_modality text not null check (internship_modality in ('Obrigatório', 'Não obrigatório')),
   advisor_name text not null,
   is_paid boolean not null default false,
+  scholarship_payment_basis text check (scholarship_payment_basis in ('mensal', 'hora')),
   scholarship_amount numeric(10,2),
   insurance_provider text not null check (insurance_provider in ('IFMS', 'Empresa concedente')),
   insurance_company_name text,
@@ -125,6 +126,7 @@ alter table public.internships add column if not exists academic_student_importe
 alter table public.tce_requests add column if not exists supervisor_phone text;
 alter table public.tce_requests add column if not exists public_protocol text unique;
 alter table public.tce_requests add column if not exists other_benefits text;
+alter table public.tce_requests add column if not exists scholarship_payment_basis text;
 alter table public.tce_requests add column if not exists insurance_provider text;
 alter table public.tce_requests add column if not exists insurance_company_name text;
 alter table public.tce_requests add column if not exists insurance_policy_number text;

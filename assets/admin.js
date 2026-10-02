@@ -679,7 +679,7 @@ function openTceDialog(request) {
     ['Menor de idade', request.is_minor ? 'Sim' : 'Não'], ['Responsável legal', request.guardian_name], ['E-mail do responsável', request.guardian_email],
     ['CPF do responsável', request.guardian_cpf], ['Contato do responsável', request.guardian_phone], ['Unidade concedente', request.company_name],
     ['CNPJ', request.company_cnpj], ['E-mail da concedente', request.company_email], ['Contato da concedente', request.company_phone],
-    ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Não'],
+    ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${request.scholarship_payment_basis === 'hora' ? 'por hora trabalhada' : 'por mês'}` : 'Não'],
     ['Outros benefícios', request.other_benefits],
     ['Seguro', request.insurance_provider], ['Seguradora', request.insurance_company_name], ['Número da apólice', request.insurance_policy_number],
     ['Capital segurado', request.insurance_coverage_amount ? `R$ ${Number(request.insurance_coverage_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null],

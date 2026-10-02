@@ -313,8 +313,18 @@ async function initializeForm() {
   syncAgreementNotice();
   loadAgreements();
   syncGuardianFields = setConditional('is_minor', 'true', guardianFields, [...guardianFields.querySelectorAll('input')]);
-  syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-field'), [form.elements.scholarship_amount]);
+  syncScholarshipField = setConditional('is_paid', 'true', $('#scholarship-fields'), [form.elements.scholarship_payment_basis, form.elements.scholarship_amount]);
   syncOtherBenefitsField = setConditional('is_paid', 'true', $('#other-benefits-field'), [form.elements.other_benefits], false);
+  const syncScholarshipHelp = () => {
+    const basis = form.elements.scholarship_payment_basis.value;
+    $('#scholarship-amount-help').textContent = basis === 'hora'
+      ? 'Informe quanto a empresa paga por hora trabalhada.'
+      : basis === 'mensal'
+        ? 'Informe o valor mensal da bolsa.'
+        : 'Informe o valor conforme a forma de pagamento selecionada.';
+  };
+  form.elements.scholarship_payment_basis.addEventListener('change', syncScholarshipHelp);
+  syncScholarshipHelp();
   syncInsuranceCompanyFields = setConditional('insurance_provider', 'Empresa concedente', $('#insurance-company-fields'), [form.elements.insurance_company_name, form.elements.insurance_policy_number, form.elements.insurance_coverage_amount]);
   form.addEventListener('change', event => {
     if (event.target.name !== 'requires_epi') return;
@@ -419,6 +429,7 @@ form.addEventListener('submit', async event => {
     is_minor: values.is_minor === 'true',
     is_paid: values.is_paid === 'true',
     requires_epi: values.requires_epi === 'true',
+    scholarship_payment_basis: values.is_paid === 'true' ? values.scholarship_payment_basis : null,
     scholarship_amount: values.scholarship_amount || null,
     other_benefits: values.other_benefits?.trim() || null,
     privacy_consent: Boolean(values.privacy_consent),
