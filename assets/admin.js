@@ -762,7 +762,7 @@ function renderCard(record, target) {
   const academicFinalized = record.status === 'em_andamento' && record.academic_status === 'Finalizado';
   const suspended = record.status === 'suspenso';
   card.classList.add(suspended ? 'status-suspended' : academicFinalized ? 'status-academic-finalized' : `status-${state}`);
-  $('.status-pill', card).textContent = suspended ? 'Acompanhamento suspenso' : record.status === 'concluido' ? 'Concluído' : academicFinalized ? 'Finalizado no Sistema Acadêmico — revisar encerramento' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
+  $('.status-pill', card).textContent = suspended ? 'Retirado do acompanhamento' : record.status === 'concluido' ? 'Concluído' : academicFinalized ? 'Finalizado no Sistema Acadêmico — revisar encerramento' : state === 'due' ? 'Prazo atingido' : state === 'soon' ? 'Prazo próximo' : 'Em andamento';
   const incompleteBadge = $('.incomplete-badge', card);
   if (record.status === 'em_andamento' && hasIncompleteContact(record)) {
     const missing = [!record.student_cpf && 'CPF', !record.student_email && 'e-mail', !record.student_sex && 'sexo'].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' e $1');
@@ -807,7 +807,7 @@ function renderCard(record, target) {
     const note = $('.suspension-note', card);
     note.hidden = false;
     const date = record.suspended_at ? new Date(record.suspended_at).toLocaleString('pt-BR') : 'data não registrada';
-    note.textContent = `Suspenso em ${date}${record.suspension_reason ? ` · Motivo: ${record.suspension_reason}` : ''}`;
+    note.textContent = `Retirado em ${date}${record.suspension_reason ? ` · Motivo: ${record.suspension_reason}` : ''}`;
     $('.partial-reminder', card).hidden = true;
     $('.final-reminder', card).hidden = true;
     $('.long-overdue-reminder', card).hidden = true;
@@ -1160,12 +1160,12 @@ async function handleCardAction(event) {
     const suspending = record.status !== 'suspenso';
     let reason = null;
     if (suspending) {
-      reason = prompt(`Informe o motivo da suspensão de ${record.student_name} (opcional):`, '');
+      reason = prompt(`Informe por que ${record.student_name} será retirado do acompanhamento (opcional):`, '');
       if (reason === null) return;
-      if (!confirm(`Suspender o acompanhamento de ${record.student_name}? Os avisos automáticos serão interrompidos, mas o estágio não será concluído.`)) return;
+      if (!confirm(`Retirar ${record.student_name} do acompanhamento? O cadastro será preservado, mas os prazos e todos os e-mails automáticos serão interrompidos. O estágio não será marcado como concluído.`)) return;
     } else if (!confirm(`Reativar o acompanhamento de ${record.student_name}? Os prazos e avisos automáticos voltarão a ser considerados.`)) return;
     const { error } = await supabase.rpc('set_internship_suspension', { p_internship_id: record.id, p_suspend: suspending, p_reason: reason || null });
-    if (error) { alert(`Não foi possível ${suspending ? 'suspender' : 'reativar'} o acompanhamento. ${error.message || ''}`); return; }
+    if (error) { alert(`Não foi possível ${suspending ? 'retirar do' : 'reativar o'} acompanhamento. ${error.message || ''}`); return; }
     await loadRecords();
     return;
   }
