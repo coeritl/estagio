@@ -146,15 +146,23 @@ async function collectAgreements(page) {
   const missingCnpj = unique.filter(item => !cnpjPattern.test(`${item.description} ${item.external_institution}`)
     && !normalize(item.description).includes('estagio interno'));
   if (missingCnpj.length) console.log(`Complementando CNPJ de ${missingCnpj.length} convênio(s)…`);
-  for (const item of missingCnpj) {
+  console.log(`Consultando contatos de ${unique.length} convênio(s)…`);
+  for (const item of unique) {
     try {
       await gotoWithRetry(page, `${BASE_URL}/convenio_exts/visualizar/${encodeURIComponent(item.academic_agreement_id)}`);
       const body = await page.locator('body').innerText();
       const match = body.match(new RegExp(`CNPJ\\s*\\n?\\s*(${cnpjPattern.source})`, 'i'));
       const cnpj = formatCnpj(match?.[1]);
-      if (cnpj) item.description = `CNPJ ${cnpj} - ${item.description}`;
+      if (cnpj && !cnpjPattern.test(`${item.description} ${item.external_institution}`)) item.description = `CNPJ ${cnpj} - ${item.description}`;
+      const institution = body.split(/Dados da Institui[çc][ãa]o Externa Conveniada/i)[1]?.split(/Dados do Campus/i)[0];
+      if (!institution) throw new Error('Seção da instituição externa não encontrada');
+      item.contacts = {
+        company_email: institution.match(/E-mail\s*:?\s*([^\s]+@[^\s]+)/i)?.[1] || '',
+        representative_name: institution.match(/Representante\s*:?\s*Nome\s*:\s*([^\n]+)/i)?.[1]?.trim() || '',
+        representative_role: institution.match(/Cargo\s*:\s*([^\n]+)/i)?.[1]?.trim() || ''
+      };
     } catch (error) {
-      console.warn(`CNPJ do convênio ${item.academic_agreement_id} não pôde ser complementado: ${error.message || error}`);
+      console.warn(`Detalhes do convênio ${item.academic_agreement_id} não puderam ser complementados: ${error.message || error}`);
     }
   }
   return unique;
@@ -269,7 +277,7 @@ if (cleanupNonEnrolled) {
   process.exit(0);
 }
 if (fromPreview) {
-  const preview = JSON.parse(await fs.readFile(path.join(ROOT, 'preview', 'latest.json'), 'utf8'));
+  const preview = JSON.parse(await fs.readFile(path.join(ROOT, 'preview', agreementsOnly ? 'agreements-latest.json' : 'latest.json'), 'utf8'));
   const agreements = [...new Map(preview.agreements.map(item => [String(item.academic_agreement_id), item])).values()];
   const payload = {
     collected_at: preview.collected_at,

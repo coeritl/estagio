@@ -100,7 +100,18 @@ Deno.serve(async request => {
       Object.assign(existing, finalizedFields);
       finalized++;
     }
-    const summary = { agreements: agreementPayload.length, inserted: 0, updated: 0, unchanged: 0, removed, finalized, review: [] as any[] };
+    const contactPayload = agreements.filter((item: any) => item.contacts && agreementPayload.some((a: any) => a.academic_agreement_id === text(item.academic_agreement_id, 80))).map((item: any) => ({
+      academic_agreement_id: text(item.academic_agreement_id, 80),
+      company_email: nullable(item.contacts.company_email, 254)?.toLowerCase() || null,
+      representative_name: nullable(item.contacts.representative_name, 180),
+      representative_role: nullable(item.contacts.representative_role, 180),
+      synced_at: new Date().toISOString()
+    }));
+    if (contactPayload.length) {
+      const { error } = await service.from("internship_agreement_contacts").upsert([...new Map(contactPayload.map((item: any) => [item.academic_agreement_id, item])).values()]);
+      if (error) throw error;
+    }
+    const summary = { agreements: agreementPayload.length, contacts: contactPayload.length, inserted: 0, updated: 0, unchanged: 0, removed, finalized, review: [] as any[] };
     for (const item of internships) {
       const payload = { ...academicFields(item), ...studentFields(item.student) };
       if (!payload.academic_system_id || !payload.student_name || !payload.course) {

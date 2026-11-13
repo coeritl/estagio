@@ -42,7 +42,7 @@
 .signature-settings-box{margin-top:1.5rem;border-color:#b7d9c6;background:#f7fcf9}.signature-settings-box h2{margin:.25rem 0}.signature-settings-box>p{color:var(--admin-muted)}
 
 /* Dashboard executivo */
-.admin-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem;padding:.65rem;background:#e5eee8;border:1px solid #d5e2da;border-radius:18px;overflow:visible}
+.admin-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));width:100%;gap:.45rem;padding:.65rem;background:#e5eee8;border:1px solid #d5e2da;border-radius:18px;overflow:visible}
 .admin-tab{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:.65rem;min-width:0;padding:.75rem;border:1px solid transparent;border-radius:13px;background:transparent;text-align:left;white-space:normal}
 .admin-tab:hover{background:rgba(255,255,255,.7);border-color:#cfddd4}
 .admin-tab.active{background:#fff;border-color:#c8dacf;box-shadow:0 7px 20px rgba(17,63,39,.08)}

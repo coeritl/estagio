@@ -1,3 +1,4 @@
+param([switch]$AgreementsOnly, [switch]$DryRun)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Security
 
@@ -28,7 +29,10 @@ try {
     $env:ACADEMIC_SYNC_PASSWORD = [Text.Encoding]::UTF8.GetString($clearBytes)
   }
 
-  & $node (Join-Path $root 'src\index.mjs')
+  $syncArguments = @()
+  if ($AgreementsOnly) { $syncArguments += '--agreements-only' }
+  if ($DryRun) { $syncArguments += '--dry-run' }
+  & $node (Join-Path $root 'src\index.mjs') @syncArguments
   $exitCode = $LASTEXITCODE
 } finally {
   Remove-Item Env:ACADEMIC_SYNC_USERNAME -ErrorAction SilentlyContinue

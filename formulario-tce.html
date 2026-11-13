@@ -44,6 +44,8 @@
             <small id="agreement-help" aria-live="polite">Carregando a lista de convênios…</small>
           </label>
           <input name="agreement_id" type="hidden">
+          <label class="field">Nome do representante da concedente<input name="company_representative_name" maxlength="180"><small>Confira o representante que assinará o TCE.</small></label>
+          <label class="field">Cargo do representante<input name="company_representative_role" maxlength="180"></label>
           <label class="field">Nome da unidade concedente<input name="company_name" required maxlength="180" readonly aria-readonly="true"></label><label class="field">CNPJ<input name="company_cnpj" class="mask-cnpj" required inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" pattern="\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}" title="CNPJ preenchido pelo convênio selecionado" readonly aria-readonly="true"></label>
         <label class="field">E-mail da unidade concedente<input name="company_email" type="email" required maxlength="254"></label><label class="field">Telefone/WhatsApp da concedente<input name="company_phone" class="mask-phone" required type="tel" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" pattern="\(\d{2}\) \d{5}-\d{4}"></label></div>
         <div id="agreement-missing-notice" class="callout orange agreement-missing-notice" hidden><strong>Não encontrou a unidade concedente?</strong><p>A instituição precisa estar cadastrada na relação de convênios e possuir CNPJ identificado. Confira a lista em <a href="empresas" target="_blank" rel="noopener">Convênios</a> ou veja como <a href="para-empresas" target="_blank" rel="noopener">firmar parceria</a>.</p></div>
@@ -91,5 +93,5 @@
   </div></div></section>
 </main>
 <footer class="site-footer"><div class="container"><div class="footer-grid"><div><h3>COERI · Estágios</h3><p>IFMS Campus Três Lagoas</p></div><div><h3>Precisa de ajuda?</h3><a href="como-comecar">Veja como começar</a></div><div><h3>Contato</h3><a href="mailto:coeri.tl@ifms.edu.br">coeri.tl@ifms.edu.br</a><a href="tel:+556720200307">(67) 2020-0307</a></div></div><div class="footer-bottom">Página informativa desenvolvida pela COERI do IFMS Campus Três Lagoas.</div></div></footer>
-<script src="assets/icons.js?v=20260925-1"></script><script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-3"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/advisors.js?v=20260820-1"></script><script type="module" src="assets/tce-form-v3.js?v=20261113-1"></script>
+<script src="assets/icons.js?v=20260925-1"></script><script src="assets/main.js"></script><script src="assets/supabase-config.js?v=20260720-3"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script><script type="module" src="assets/advisors.js?v=20260820-1"></script><script type="module" src="assets/tce-form-v3.js?v=20261113-2"></script>
 </body></html>

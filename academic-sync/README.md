@@ -2,7 +2,7 @@
 
 Agente local, somente leitura no Sistema Acadêmico, para sincronizar com o painel da COERI:
 
-- convênios;
+- convênios, incluindo e-mail da instituição, nome e cargo do representante obtidos na página de detalhes;
 - estágios com situação **Iniciado**, **Suspenso** ou **Em edição**, de estudantes cuja situação no curso seja **Em curso** ou **Integralizado em fase escolar**;
 - dados pessoais somente dos estudantes vinculados a esses estágios.
 
@@ -21,6 +21,15 @@ Quando um acompanhamento existente aparece como **Finalizado** no Sistema Acadê
 As credenciais são protegidas pelo DPAPI do Windows no arquivo `credentials.dpapi.json`. A senha não fica em texto aberto, não é incluída no Git e somente o mesmo usuário do Windows, neste computador, consegue descriptografá-la.
 
 ## Execuções seguintes
+
+Para sincronizar somente os convênios, execute `./run-sync.ps1 -AgreementsOnly`.
+Acrescente `-DryRun` para coletar e salvar a prévia sem enviar ao Supabase.
+Falhas na leitura dos detalhes preservam os contatos anteriormente sincronizados.
+O robô consulta todos os detalhes em cada execução, inclusive convênios inativos.
+Os contatos ficam na tabela protegida `internship_agreement_contacts`; a lista pública
+não os carrega. O formulário consulta individualmente o convênio escolhido pela RPC
+`get_agreement_tce_contact`, disponível aos usuários do formulário, e permite revisão
+antes do envio. O telefone continua manual, pois não consta nessa página da origem.
 
 O perfil autenticado fica em `browser-profile/`, fora do Git. Quando a sessão expirar, `run-sync.ps1` detecta a tela de login, recupera as credenciais protegidas pelo Windows, renova a sessão e continua a sincronização. Se a senha institucional for alterada, execute `setup-credentials.ps1` novamente.
 

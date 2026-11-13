@@ -159,6 +159,9 @@ function clearAgreementSelection(clearSearch = false) {
   form.elements.agreement_id.value = '';
   form.elements.company_name.value = '';
   form.elements.company_cnpj.value = '';
+  form.elements.company_email.value = '';
+  form.elements.company_representative_name.value = '';
+  form.elements.company_representative_role.value = '';
   if (clearSearch) form.elements.agreement_search.value = '';
 }
 
@@ -177,6 +180,23 @@ function selectAgreementFromSearch() {
   search.setCustomValidity('');
   $('.agreement-picker').classList.remove('is-error');
   $('#agreement-help').textContent = 'Nome e CNPJ preenchidos automaticamente a partir do convênio selecionado.';
+  if (agreement.contactRequested) return;
+  agreement.contactRequested = true;
+  getSupabase().then(client => client.rpc('get_agreement_tce_contact', { p_agreement_id: agreement.academic_agreement_id })).then(({ data, error }) => {
+    if (selectedAgreement !== agreement) { agreement.contactRequested = false; return; }
+    agreement.contactRequested = false;
+    if (error) throw error;
+    const contact = data?.[0];
+    if (!contact) return;
+    for (const [field, value] of [['company_email', contact.company_email], ['company_representative_name', contact.representative_name], ['company_representative_role', contact.representative_role]]) {
+      if (!form.elements[field].value.trim()) form.elements[field].value = value || '';
+    }
+    validateUniqueContacts();
+    $('#agreement-help').textContent = 'Dados do convênio preenchidos. Confira o e-mail e o representante; atualize-os se necessário.';
+  }).catch(() => {
+    agreement.contactRequested = false;
+    if (selectedAgreement === agreement) $('#agreement-help').textContent = 'Contatos indisponíveis. Preencha o e-mail e o representante manualmente.';
+  });
 }
 
 async function loadAgreements() {
@@ -314,6 +334,12 @@ async function initializeForm() {
 
   const guardianFields = $('#guardian-fields');
   syncCompanyFields = setConditional('request_type', 'externo', $('#company-fields'), [...$('#company-fields').querySelectorAll('input')]);
+  const optionalRepresentative = () => {
+    form.elements.company_representative_name.required = false;
+    form.elements.company_representative_role.required = false;
+  };
+  optionalRepresentative();
+  form.elements.request_type.addEventListener('change', optionalRepresentative);
   const syncAgreementNotice = () => { $('#agreement-missing-notice').hidden = form.elements.request_type.value !== 'externo'; };
   form.elements.request_type.addEventListener('change', () => {
     clearAgreementSelection(true);
@@ -491,6 +517,8 @@ form.addEventListener('submit', async event => {
     }
     form.reset();
     syncCompanyFields();
+    form.elements.company_representative_name.required = false;
+    form.elements.company_representative_role.required = false;
     clearAgreementSelection(true);
     syncGuardianFields();
     syncScholarshipField();

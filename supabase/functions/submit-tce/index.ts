@@ -208,6 +208,8 @@ export default { async fetch(request: Request) {
       company_cnpj: companyCnpj,
       company_email: isInternal ? "" : text(input.company_email, 254),
       company_phone: isInternal ? "" : text(input.company_phone, 30),
+      company_representative_name: isInternal ? null : text(input.company_representative_name, 180) || null,
+      company_representative_role: isInternal ? null : text(input.company_representative_role, 180) || null,
       internship_modality: text(input.internship_modality, 30),
       advisor_name: text(input.advisor_name, 180),
       is_paid: isPaid,

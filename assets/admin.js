@@ -43,6 +43,7 @@ let pendingMissingAcademic = [];
 let pendingStudentImport = [];
 let pendingStudentRows = [];
 let agreements = [];
+let agreementContacts = new Map();
 let agreementView = 'active';
 let pendingAgreementImport = [];
 let advisors = [];
@@ -227,6 +228,8 @@ async function loadRecords() {
   reportSubmissions = reportsResult.error ? [] : (reportsResult.data || []);
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
+  const contactsResult = await supabase.from('internship_agreement_contacts').select('*');
+  agreementContacts = new Map((contactsResult.data || []).map(item => [item.academic_agreement_id, item]));
   renderAdminAgreements(agreementsResult.error);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
@@ -639,7 +642,7 @@ function openTceDialog(request) {
   $('#tce-pdf').value = '';
   const internal = request.request_type === 'interno';
   const selectedAdvisor = advisors.find(advisor => advisor.name.trim().toLocaleLowerCase('pt-BR') === String(request.advisor_name || '').trim().toLocaleLowerCase('pt-BR'));
-  $('#signer-company-name').value = internal ? (signatureSettings.director_name || '') : '';
+  $('#signer-company-name').value = internal ? (signatureSettings.director_name || '') : (request.company_representative_name || '');
   $('#signer-company-email').value = internal ? (signatureSettings.director_email || '') : (request.company_email || '');
   $('#signer-company-phone').value = formatPhone(request.company_phone || '');
   $('#signer-student-name').value = request.student_name || '';
@@ -681,6 +684,7 @@ function openTceDialog(request) {
     ['Menor de idade', request.is_minor ? 'Sim' : 'Não'], ['Responsável legal', request.guardian_name], ['E-mail do responsável', request.guardian_email],
     ['CPF do responsável', request.guardian_cpf], ['Contato do responsável', request.guardian_phone], ['Unidade concedente', request.company_name],
     ['CNPJ', request.company_cnpj], ['E-mail da concedente', request.company_email], ['Contato da concedente', request.company_phone],
+    ['Representante da concedente', request.company_representative_name], ['Cargo do representante', request.company_representative_role],
     ['Modalidade', request.internship_modality], ['Professor orientador', request.advisor_name], ['Remunerado', request.is_paid ? `Sim · R$ ${Number(request.scholarship_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ${request.scholarship_payment_basis === 'hora' ? 'por hora trabalhada' : 'por mês'}` : 'Não'],
     ['Outros benefícios', request.other_benefits],
     ['Seguro', request.insurance_provider], ['Seguradora', request.insurance_company_name], ['Número da apólice', request.insurance_policy_number],
@@ -1350,13 +1354,6 @@ function activateAdminView(view) {
   document.querySelector('.admin-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-const agreementsTab = document.createElement('button');
-agreementsTab.type = 'button';
-agreementsTab.className = 'admin-tab';
-agreementsTab.dataset.adminView = 'agreements';
-agreementsTab.innerHTML = '<span class="admin-tab-copy"><strong>Empresas conveniadas</strong><small>Convênios ativos e inativos</small></span>';
-document.querySelector('.admin-tabs').append(agreementsTab);
-
 function renderAdminAgreements(error = null) {
   const active = item => !item.end_date || localDate(item.end_date) >= today();
   $('#admin-active-agreement-count').textContent = agreements.filter(active).length;
@@ -1383,7 +1380,11 @@ function renderAdminAgreements(error = null) {
       cell.append(term, content);
       meta.append(cell);
     }
-    card.append(title, description, meta);
+    const contact = agreementContacts.get(item.academic_agreement_id);
+    const details = document.createElement('p');
+    details.className = 'agreement-description';
+    details.textContent = contact ? `E-mail: ${contact.company_email || 'Não informado'} · Representante: ${contact.representative_name || 'Não informado'} · Cargo: ${contact.representative_role || 'Não informado'}` : 'Contatos ainda não sincronizados.';
+    card.append(title, description, details, meta);
     return card;
   });
   $('#admin-agreement-list').replaceChildren(...cards);
