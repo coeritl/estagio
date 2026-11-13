@@ -108,6 +108,25 @@ function buildWeeklySchedule() {
 
 const digits = value => value.replace(/\D/g, '');
 
+function validateUniqueContacts() {
+  for (const suffix of ['email', 'phone']) {
+    const seen = new Map();
+    for (const role of ['student', 'guardian', 'company', 'supervisor']) {
+      const field = form.elements[`${role}_${suffix}`];
+      field.setCustomValidity('');
+      if (field.disabled) continue;
+      const value = suffix === 'email' ? field.value.trim().toLowerCase() : digits(field.value).replace(/^55(?=\d{11}$)/, '');
+      if (!value) continue;
+      const label = field.closest('label').firstChild.textContent.trim();
+      if (seen.has(value)) field.setCustomValidity(`${label}: este contato já foi informado em “${seen.get(value)}”. Informe um contato diferente.`);
+      else seen.set(value, label);
+    }
+  }
+}
+
+form.addEventListener('input', validateUniqueContacts);
+form.addEventListener('change', validateUniqueContacts);
+
 function formatCpf(value) {
   const number = digits(value).slice(0, 11);
   return number.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
@@ -386,6 +405,8 @@ async function initializeForm() {
 form.addEventListener('submit', async event => {
   event.preventDefault();
   const message = $('#tce-form-message');
+  validateUniqueContacts();
+  if (!form.reportValidity()) return;
   const email = form.elements.student_email.value.trim().toLowerCase();
   if (form.elements.request_type.value === 'externo') {
     selectAgreementFromSearch();

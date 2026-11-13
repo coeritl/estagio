@@ -269,6 +269,17 @@ export default { async fetch(request: Request) {
       return response(origin, 400, { error: "Confirme todas as declarações antes do envio." });
     }
 
+    for (const suffix of ["email", "phone"] as const) {
+      const seen = new Map<string, string>();
+      for (const [role, label] of [["student", "estudante"], ["guardian", "responsável legal"], ["company", "unidade concedente"], ["supervisor", "supervisor"]] as const) {
+        const raw = String(payload[`${role}_${suffix}`] || "").trim();
+        const value = suffix === "email" ? raw.toLowerCase() : raw.replace(/\D/g, "").replace(/^55(?=\d{11}$)/, "");
+        if (!value) continue;
+        if (seen.has(value)) return response(origin, 400, { error: `O ${suffix === "email" ? "e-mail" : "telefone/WhatsApp"} do ${label} já foi informado para ${seen.get(value)}. Informe contatos diferentes.` });
+        seen.set(value, label);
+      }
+    }
+
     const { data, error } = await supabase.from("tce_requests").insert(payload).select("id").single();
     if (error) throw error;
     const { error: reservationError } = await supabase.rpc("reserve_advisor_slot", {
