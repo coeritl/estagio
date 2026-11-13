@@ -1,0 +1,10 @@
+{
+  "name": "coeri-google-apps-script",
+  "private": true,
+  "scripts": {
+    "clasp": "clasp"
+  },
+  "devDependencies": {
+    "@google/clasp": "3.4.1"
+  }
+}

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { renewalMessage } from "./renewal.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "https://coeri.tl.ifms.edu.br",
@@ -53,6 +54,11 @@ async function dispatch(service: any, notification: any) {
     return { sent: false, error };
   }
   try {
+    if (notification.event_type === "convenio_renovacao") {
+      const probe = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ secret, action: "capabilities" }) });
+      const capabilities = await probe.json().catch(() => ({}));
+      if (!probe.ok || !capabilities.types?.includes("convenio_renovacao")) throw new Error("Atualize a implantação do Google Apps Script para habilitar propostas de renovação. Nenhum e-mail foi enviado.");
+    }
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -104,6 +110,27 @@ Deno.serve(async request => {
     if (!isAdmin) return json(403, { error: "Acesso não autorizado." });
 
     const input = await request.json();
+    if (["preview_agreement_renewal", "send_agreement_renewal"].includes(input.action)) {
+      const agreementId = String(input.agreement_id || "").trim();
+      const { data: agreement, error } = await service.from("internship_agreements").select("*").eq("academic_agreement_id", agreementId).single();
+      if (error) return json(404, { error: "Convênio não encontrado." });
+      const { data: contact, error: contactError } = await service.from("internship_agreement_contacts").select("*").eq("academic_agreement_id", agreementId).maybeSingle();
+      if (contactError) return json(500, { error: "Não foi possível consultar o contato da concedente." });
+      const date = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Cuiaba", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      let preview;
+      try { preview = renewalMessage(agreement, contact, date); }
+      catch (error) { return json(422, { error: error instanceof Error ? error.message : String(error) }); }
+      if (input.action === "preview_agreement_renewal") return json(200, { preview });
+      if (input.confirmed !== true || !/^[0-9a-f-]{36}$/i.test(String(input.request_id || ""))) return json(400, { error: "Revise e confirme o envio manual." });
+      if (JSON.stringify(input.preview) !== JSON.stringify(preview)) return json(409, { error: "Os dados do convênio mudaram. Feche e abra a revisão novamente antes de enviar." });
+      const notification = await createOrGet(service, {
+        event_type: "convenio_renovacao", reference_key: `${agreementId}:${input.request_id}`,
+        recipient_email: preview.recipient, student_name: agreement.external_institution,
+        subject: preview.subject, template_data: { ...preview, requestedBy: userData.user.id, requestedByEmail: userData.user.email, manual: true }
+      });
+      if (notification.status === "enviado") return json(200, { sent: true, duplicate: true });
+      return json(200, await dispatch(service, notification));
+    }
     if (input.action === "clear_sent") {
       const { error, count } = await service.from("email_notifications")
         .update({ archived_at: new Date().toISOString() }, { count: "exact" })

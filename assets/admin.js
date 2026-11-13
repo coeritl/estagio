@@ -230,10 +230,10 @@ async function loadRecords() {
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
   const contactsResult = await supabase.from('internship_agreement_contacts').select('*');
   agreementContacts = new Map((contactsResult.data || []).map(item => [item.academic_agreement_id, item]));
-  renderAdminAgreements(agreementsResult.error);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
   emailNotifications = notificationsResult.error ? [] : (notificationsResult.data || []);
+  renderAdminAgreements(agreementsResult.error);
   signatureSettings = signatureSettingsResult.error || !signatureSettingsResult.data ? { director_name: '', director_email: '' } : signatureSettingsResult.data;
   $('#director-name').value = signatureSettings.director_name || '';
   $('#director-email').value = signatureSettings.director_email || '';
@@ -255,7 +255,8 @@ const notificationTypeLabels = {
   orientador_pendencias: 'Aviso sobre orientandos com entregas em atraso',
   relatorios_recebidos: 'Documentação recebida',
   relatorio_correcao: 'Correção de documento solicitada',
-  atraso_longo: 'Cobrança individual por atraso superior a um ano'
+  atraso_longo: 'Cobrança individual por atraso superior a um ano',
+  convenio_renovacao: 'Proposta manual de renovação de convênio'
 };
 
 function hasIncompleteContact(record) {
@@ -1354,12 +1355,25 @@ function activateAdminView(view) {
   document.querySelector('.admin-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function agreementDaysRemaining(item) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.end_date || '')) return null;
+  const current = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Cuiaba', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return Math.round((Date.parse(item.end_date) - Date.parse(current)) / 86400000);
+}
+
 function renderAdminAgreements(error = null) {
   const active = item => !item.end_date || localDate(item.end_date) >= today();
   $('#admin-active-agreement-count').textContent = agreements.filter(active).length;
   $('#admin-inactive-agreement-count').textContent = agreements.filter(item => !active(item)).length;
+  $('#admin-expiring-agreement-count').textContent = agreements.filter(item => { const days = agreementDaysRemaining(item); return days !== null && days >= 0 && days <= 90; }).length;
+  $('#admin-expired-agreement-count').textContent = agreements.filter(item => { const days = agreementDaysRemaining(item); return days !== null && days < 0; }).length;
   const query = $('#admin-agreement-search').value.trim().toLocaleLowerCase('pt-BR');
-  const filtered = agreements.filter(item => active(item) === (agreementView === 'active'))
+  const filtered = agreements.filter(item => {
+    const days = agreementDaysRemaining(item);
+    if (agreementView === 'expiring') return days !== null && days >= 0 && days <= 90;
+    if (agreementView === 'expired') return days !== null && days < 0;
+    return active(item) === (agreementView === 'active');
+  })
     .filter(item => [item.external_institution, item.description, item.agreement_number].join(' ').toLocaleLowerCase('pt-BR').includes(query));
   const cards = filtered.map(item => {
     const card = document.createElement('article');
@@ -1385,12 +1399,69 @@ function renderAdminAgreements(error = null) {
     details.className = 'agreement-description';
     details.textContent = contact ? `E-mail: ${contact.company_email || 'Não informado'} · Representante: ${contact.representative_name || 'Não informado'} · Cargo: ${contact.representative_role || 'Não informado'}` : 'Contatos ainda não sincronizados.';
     card.append(title, description, details, meta);
+    const days = agreementDaysRemaining(item);
+    const expiry = document.createElement('p');
+    expiry.className = 'agreement-description';
+    expiry.textContent = days === null ? 'Data de término não informada.' : days < 0 ? `Vencido há ${-days} dia(s).` : days === 0 ? 'Vence hoje.' : `Vence em ${days} dia(s).`;
+    card.append(expiry);
+    const history = emailNotifications.filter(n => n.event_type === 'convenio_renovacao' && n.template_data?.agreementId === item.academic_agreement_id);
+    const last = history.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+    if (last) {
+      const notice = document.createElement('p');
+      notice.className = 'agreement-description';
+      notice.textContent = `Última proposta: ${new Date(last.created_at).toLocaleString('pt-BR')} · ${last.status} · ${last.recipient_email}`;
+      card.append(notice);
+    }
+    if (days !== null && days <= 90) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'admin-button ghost';
+      button.textContent = 'Revisar proposta de renovação';
+      button.disabled = !contact?.company_email;
+      button.title = button.disabled ? 'Sincronize um e-mail válido da concedente para enviar.' : 'Revise os dados antes de confirmar o envio.';
+      button.addEventListener('click', () => openAgreementRenewal(item, button));
+      card.append(button);
+    }
     return card;
   });
   $('#admin-agreement-list').replaceChildren(...cards);
   $('#admin-agreement-empty').hidden = Boolean(error) || filtered.length > 0;
-  $('#admin-agreement-status').textContent = error ? 'Não foi possível carregar os convênios. Atualize o painel para tentar novamente.' : `${filtered.length} convênio(s) ${agreementView === 'active' ? 'ativo(s)' : 'inativo(s)'} encontrado(s).`;
+  $('#admin-agreement-status').textContent = error ? 'Não foi possível carregar os convênios. Atualize o painel para tentar novamente.' : `${filtered.length} convênio(s) encontrado(s) no filtro selecionado.`;
 }
+let renewalPreview = null;
+let renewalRequestId = '';
+async function openAgreementRenewal(item, button) {
+  button.disabled = true;
+  try {
+    const { data, error } = await supabase.functions.invoke('manage-email-notification', { body: { action: 'preview_agreement_renewal', agreement_id: item.academic_agreement_id } });
+    if (error || !data?.preview) throw new Error(data?.error || 'Não foi possível preparar a proposta. Confira o contato e a data de término do convênio.');
+    renewalPreview = data.preview;
+    renewalRequestId = crypto.randomUUID();
+    $('#agreement-renewal-recipient').value = data.preview.recipient;
+    $('#agreement-renewal-subject').value = data.preview.subject;
+    $('#agreement-renewal-body').value = data.preview.body;
+    $('#agreement-renewal-message').textContent = '';
+    $('#send-agreement-renewal').disabled = false;
+    $('#agreement-renewal-dialog').showModal();
+  } catch (error) { $('#admin-agreement-status').textContent = error.message; }
+  finally { button.disabled = false; }
+}
+$('#close-agreement-renewal').addEventListener('click', () => $('#agreement-renewal-dialog').close());
+$('#agreement-renewal-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!renewalPreview) return;
+  const button = $('#send-agreement-renewal');
+  const message = $('#agreement-renewal-message');
+  button.disabled = true;
+  message.textContent = 'Enviando proposta…';
+  try {
+    const { data, error } = await supabase.functions.invoke('manage-email-notification', { body: { action: 'send_agreement_renewal', agreement_id: renewalPreview.agreementId, preview: renewalPreview, request_id: renewalRequestId, confirmed: true } });
+    if (error || !data?.sent) throw new Error(data?.error || 'Não foi possível confirmar o envio. Consulte a central de notificações antes de tentar novamente.');
+    message.textContent = 'Proposta enviada pelo Gmail. Acompanhe a resposta na caixa de entrada da COERI.';
+    renewalPreview = null;
+    await loadRecords();
+  } catch (error) { message.textContent = error.message; button.disabled = false; }
+});
 $('#admin-agreement-search').addEventListener('input', () => renderAdminAgreements());
 document.querySelectorAll('[data-admin-agreement-view]').forEach(button => button.addEventListener('click', () => {
   agreementView = button.dataset.adminAgreementView;

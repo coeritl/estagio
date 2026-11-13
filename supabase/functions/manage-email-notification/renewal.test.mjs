@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { renewalMessage } from './renewal.ts';
+const agreement = { academic_agreement_id: '23', external_institution: 'Empresa exemplo', agreement_number: '2/2020', description: 'CNPJ 00.000.000/0001-00', start_date: '2020-01-01', end_date: '2026-11-13' };
+const contact = { company_email: ' CONTATO@example.com ', representative_name: 'Maria', representative_role: 'Diretora' };
+const preview = renewalMessage(agreement, contact, '2026-11-13');
+assert.equal(preview.recipient, 'contato@example.com');
+assert.match(preview.body, /Maria/);
+assert.match(preview.body, /Diretora/);
+assert.match(preview.body, /responda a este e-mail/);
+assert.match(preview.body, /não renova o convênio/);
+assert.match(renewalMessage({ ...agreement, end_date: '2026-11-12' }, contact, '2026-11-13').body, /venceu em/);
+assert.doesNotThrow(() => renewalMessage({ ...agreement, end_date: '2027-02-11' }, contact, '2026-11-13'));
+assert.throws(() => renewalMessage({ ...agreement, end_date: '2027-02-12' }, contact, '2026-11-13'), /90 dias/);
+assert.throws(() => renewalMessage({ ...agreement, end_date: null }, contact, '2026-11-13'), /data de término/);
+assert.throws(() => renewalMessage(agreement, null, '2026-11-13'), /e-mail/);
+assert.throws(() => renewalMessage(agreement, { company_email: 'a@example.com,b@example.com' }, '2026-11-13'), /e-mail/);
+console.log('Validados: vencidos, hoje, limite de 90 dias, contato e conteúdo da proposta.');

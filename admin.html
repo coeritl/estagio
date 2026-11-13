@@ -134,6 +134,8 @@
         <section id="admin-agreements-view" hidden>
           <div class="requests-intro"><div><span class="admin-kicker">Parcerias de estágio</span><h2>Empresas conveniadas</h2><p>Consulte os convênios ativos e inativos. Convênios sem data de término informada aparecem como ativos, conforme a consulta pública.</p></div></div>
           <div class="agreement-toolbar"><label class="agreement-search">Pesquisar instituição, descrição ou número<input id="admin-agreement-search" type="search" placeholder="Digite para pesquisar"></label><div class="agreement-tabs" aria-label="Situação dos convênios"><button class="agreement-tab active" type="button" data-admin-agreement-view="active" aria-pressed="true">Ativos <span id="admin-active-agreement-count">0</span></button><button class="agreement-tab" type="button" data-admin-agreement-view="inactive" aria-pressed="false">Inativos <span id="admin-inactive-agreement-count">0</span></button></div></div>
+          <div class="agreement-tabs" aria-label="Acompanhamento de vencimentos"><button class="agreement-tab" type="button" data-admin-agreement-view="expiring" aria-pressed="false">Vencem em até 90 dias <span id="admin-expiring-agreement-count">0</span></button><button class="agreement-tab" type="button" data-admin-agreement-view="expired" aria-pressed="false">Vencidos <span id="admin-expired-agreement-count">0</span></button></div>
+          <p>Propostas de renovação são enviadas somente após revisão e confirmação da COERI. As respostas devem ser acompanhadas no e-mail da coordenação.</p>
           <p id="admin-agreement-status" class="agreement-status" role="status"></p>
           <section id="admin-agreement-list" class="agreement-list" aria-live="polite"></section>
           <p id="admin-agreement-empty" class="agreement-empty" hidden>Nenhum convênio encontrado. Altere a pesquisa ou importe os convênios em Cadastros.</p>
@@ -343,6 +345,17 @@
 
   <script src="assets/icons.js?v=20260925-1"></script>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20261113-2"></script>
+  <dialog id="agreement-renewal-dialog" class="admin-dialog">
+    <form id="agreement-renewal-form" class="dialog-content">
+      <div class="dialog-header"><h2>Revisar proposta de renovação</h2><button id="close-agreement-renewal" type="button" class="icon-button" aria-label="Fechar">×</button></div>
+      <p>O envio será feito pela conta da COERI. Confira o contato sincronizado; as respostas serão encaminhadas para coeri.tl@ifms.edu.br.</p>
+      <label class="field">Destinatário<input id="agreement-renewal-recipient" type="email" readonly></label>
+      <label class="field">Assunto<input id="agreement-renewal-subject" readonly></label>
+      <label class="field">Mensagem<textarea id="agreement-renewal-body" rows="18" readonly></textarea></label>
+      <p id="agreement-renewal-message" class="form-message" role="alert"></p>
+      <div class="dialog-actions"><button id="send-agreement-renewal" class="admin-button primary" type="submit">Confirmar e enviar e-mail</button></div>
+    </form>
+  </dialog>
+  <script type="module" src="assets/admin.js?v=20261113-3"></script>
 </body>
 </html>

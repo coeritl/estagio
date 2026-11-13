@@ -8,6 +8,7 @@ function doPost(e) {
     var input = JSON.parse(e.postData.contents || '{}');
     var expected = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
     if (!expected || input.secret !== expected) return output_({ success: false, error: 'Não autorizado.' });
+    if (input.action === 'capabilities') return output_({ success: true, types: ['convenio_renovacao'] });
     if (!input.notificationId || !input.to || !input.type) return output_({ success: false, error: 'Dados incompletos.' });
 
     var lock = LockService.getScriptLock();
@@ -65,6 +66,12 @@ function installDailyEndingTrigger() {
 }
 
 function emailModel_(type, studentName, data) {
+  if (type === 'convenio_renovacao') {
+    var renewalBody = String(data.body || '');
+    if (!renewalBody) throw new Error('Proposta de renovação sem conteúdo.');
+    return { subject: String(data.subject || 'Proposta de renovação de convênio'), plainText: renewalBody,
+      html: '<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#26332f;line-height:1.6;max-width:720px;margin:24px auto;padding:24px"><h1 style="color:#0d633c;font-size:24px">Renovação de parceria de estágio</h1><div style="white-space:pre-wrap">' + escapeHtml_(renewalBody) + '</div></body></html>' };
+  }
   var firstName = escapeHtml_(String(studentName).trim().split(/\s+/)[0] || 'estudante');
   var protocol = escapeHtml_(data.protocol || '');
   var documentUrl = safeUrl_(data.documentUrl || '');
