@@ -7,6 +7,7 @@
   <title>Painel de Estágios | COERI</title>
   <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
   <link rel="stylesheet" href="assets/admin.css?v=20260925-6">
+  <link rel="stylesheet" href="assets/agreements.css?v=20260723-2">
 </head>
 <body class="admin-body">
   <main id="admin-root">
@@ -129,6 +130,13 @@
           <div class="empty-state" id="notification-empty-state"><div data-icon="mail" aria-hidden="true"></div><h2>Nenhuma notificação registrada</h2><p>As mensagens automáticas aparecerão aqui.</p></div>
         </section>
 
+        <section id="admin-agreements-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Parcerias de estágio</span><h2>Empresas conveniadas</h2><p>Consulte os convênios ativos e inativos. Convênios sem data de término informada aparecem como ativos, conforme a consulta pública.</p></div></div>
+          <div class="agreement-toolbar"><label class="agreement-search">Pesquisar instituição, descrição ou número<input id="admin-agreement-search" type="search" placeholder="Digite para pesquisar"></label><div class="agreement-tabs" aria-label="Situação dos convênios"><button class="agreement-tab active" type="button" data-admin-agreement-view="active" aria-pressed="true">Ativos <span id="admin-active-agreement-count">0</span></button><button class="agreement-tab" type="button" data-admin-agreement-view="inactive" aria-pressed="false">Inativos <span id="admin-inactive-agreement-count">0</span></button></div></div>
+          <p id="admin-agreement-status" class="agreement-status" role="status"></p>
+          <section id="admin-agreement-list" class="agreement-list" aria-live="polite"></section>
+          <p id="admin-agreement-empty" class="agreement-empty" hidden>Nenhum convênio encontrado. Altere a pesquisa ou importe os convênios em Cadastros.</p>
+        </section>
         <section id="records-tools-view" hidden>
           <div class="requests-intro"><div><span class="admin-kicker">Dados administrativos</span><h2>Importar, exportar e atualizar</h2><p>Ferramentas usadas periodicamente para manter o painel e as listas públicas atualizados.</p></div></div>
           <div class="records-tools"><button class="admin-button ghost" id="import-academic-button" type="button">Importar estágios</button><button class="admin-button ghost" id="import-students-button" type="button">Complementar estudantes</button><button class="admin-button ghost" id="import-agreements-button" type="button">Importar convênios</button><button class="admin-button ghost" id="export-ifms-button" type="button">Exportar seguro IFMS</button><button class="admin-button ghost" id="export-internship-type-year-button" type="button">Relatório: modalidade por ano</button></div>
@@ -334,6 +342,6 @@
 
   <script src="assets/icons.js?v=20260925-1"></script>
   <script src="assets/supabase-config.js?v=20260720-1"></script>
-  <script type="module" src="assets/admin.js?v=20261006-1"></script>
+  <script type="module" src="assets/admin.js?v=20261113-1"></script>
 </body>
 </html>

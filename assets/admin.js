@@ -43,6 +43,7 @@ let pendingMissingAcademic = [];
 let pendingStudentImport = [];
 let pendingStudentRows = [];
 let agreements = [];
+let agreementView = 'active';
 let pendingAgreementImport = [];
 let advisors = [];
 let coordinationUsers = [];
@@ -226,6 +227,7 @@ async function loadRecords() {
   reportSubmissions = reportsResult.error ? [] : (reportsResult.data || []);
   protocolStatuses = statusesResult.error ? [] : (statusesResult.data || []);
   agreements = agreementsResult.error ? [] : (agreementsResult.data || []);
+  renderAdminAgreements(agreementsResult.error);
   advisors = advisorsResult.error ? [] : (advisorsResult.data || []);
   advisorAvailability = availabilityResult.error ? [] : (availabilityResult.data || []);
   emailNotifications = notificationsResult.error ? [] : (notificationsResult.data || []);
@@ -1332,6 +1334,7 @@ notificationList.addEventListener('click', async event => {
 });
 
 function activateAdminView(view) {
+  $('#admin-agreements-view').hidden = view !== 'agreements';
   document.querySelectorAll('[data-admin-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.adminView === view));
   $('#overview-view').hidden = view !== 'overview';
   $('#tracking-view').hidden = view !== 'tracking';
@@ -1347,6 +1350,55 @@ function activateAdminView(view) {
   document.querySelector('.admin-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+const agreementsTab = document.createElement('button');
+agreementsTab.type = 'button';
+agreementsTab.className = 'admin-tab';
+agreementsTab.dataset.adminView = 'agreements';
+agreementsTab.innerHTML = '<span class="admin-tab-copy"><strong>Empresas conveniadas</strong><small>Convênios ativos e inativos</small></span>';
+document.querySelector('.admin-tabs').append(agreementsTab);
+
+function renderAdminAgreements(error = null) {
+  const active = item => !item.end_date || localDate(item.end_date) >= today();
+  $('#admin-active-agreement-count').textContent = agreements.filter(active).length;
+  $('#admin-inactive-agreement-count').textContent = agreements.filter(item => !active(item)).length;
+  const query = $('#admin-agreement-search').value.trim().toLocaleLowerCase('pt-BR');
+  const filtered = agreements.filter(item => active(item) === (agreementView === 'active'))
+    .filter(item => [item.external_institution, item.description, item.agreement_number].join(' ').toLocaleLowerCase('pt-BR').includes(query));
+  const cards = filtered.map(item => {
+    const card = document.createElement('article');
+    card.className = `agreement-card${active(item) ? '' : ' inactive'}`;
+    const title = document.createElement('h2');
+    title.textContent = item.external_institution || 'Instituição não informada';
+    const description = document.createElement('p');
+    description.className = 'agreement-description';
+    description.textContent = item.description || 'Descrição não informada';
+    const meta = document.createElement('div');
+    meta.className = 'agreement-meta';
+    for (const [label, value] of [['Convênio', item.agreement_number || 'Não informado'], ['Início', formatDate(item.start_date)], ['Fim', formatDate(item.end_date)]]) {
+      const cell = document.createElement('div');
+      const term = document.createElement('span');
+      term.textContent = label;
+      const content = document.createElement('strong');
+      content.textContent = value;
+      cell.append(term, content);
+      meta.append(cell);
+    }
+    card.append(title, description, meta);
+    return card;
+  });
+  $('#admin-agreement-list').replaceChildren(...cards);
+  $('#admin-agreement-empty').hidden = Boolean(error) || filtered.length > 0;
+  $('#admin-agreement-status').textContent = error ? 'Não foi possível carregar os convênios. Atualize o painel para tentar novamente.' : `${filtered.length} convênio(s) ${agreementView === 'active' ? 'ativo(s)' : 'inativo(s)'} encontrado(s).`;
+}
+$('#admin-agreement-search').addEventListener('input', () => renderAdminAgreements());
+document.querySelectorAll('[data-admin-agreement-view]').forEach(button => button.addEventListener('click', () => {
+  agreementView = button.dataset.adminAgreementView;
+  document.querySelectorAll('[data-admin-agreement-view]').forEach(tab => {
+    tab.classList.toggle('active', tab === button);
+    tab.setAttribute('aria-pressed', String(tab === button));
+  });
+  renderAdminAgreements();
+}));
 document.querySelectorAll('[data-admin-view]').forEach(button => button.addEventListener('click', () => activateAdminView(button.dataset.adminView)));
 document.querySelectorAll('[data-open-view]').forEach(button => button.addEventListener('click', () => activateAdminView(button.dataset.openView)));
 
