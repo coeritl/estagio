@@ -1422,6 +1422,26 @@ function renderAdminAgreements(error = null) {
       button.addEventListener('click', () => openAgreementRenewal(item, button));
       card.append(button);
     }
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'admin-button danger-outline';
+    deleteButton.textContent = 'Excluir convênio';
+    deleteButton.addEventListener('click', async () => {
+      if (!confirm(`Excluir o convênio ${item.agreement_number || item.academic_agreement_id} de ${item.external_institution}?\n\nEle será removido do painel, da consulta pública e das opções para novos TCEs. O robô não voltará a exibi-lo. TCEs e estágios existentes serão preservados.`)) return;
+      deleteButton.disabled = true;
+      try {
+        const { error } = await supabase.rpc('delete_internship_agreement', { p_agreement_id: item.academic_agreement_id });
+        if (error) throw error;
+        agreements = agreements.filter(a => a.academic_agreement_id !== item.academic_agreement_id);
+        agreementContacts.delete(item.academic_agreement_id);
+        renderAdminAgreements();
+        $('#admin-agreement-status').textContent = 'Convênio excluído do painel e da consulta pública. TCEs e estágios existentes foram preservados.';
+      } catch (error) {
+        $('#admin-agreement-status').textContent = `Não foi possível excluir o convênio: ${error.message}`;
+        deleteButton.disabled = false;
+      }
+    });
+    card.append(deleteButton);
     return card;
   });
   $('#admin-agreement-list').replaceChildren(...cards);

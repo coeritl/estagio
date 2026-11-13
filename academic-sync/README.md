@@ -26,6 +26,10 @@ Para sincronizar somente os convênios, execute `./run-sync.ps1 -AgreementsOnly`
 Acrescente `-DryRun` para coletar e salvar a prévia sem enviar ao Supabase.
 Falhas na leitura dos detalhes preservam os contatos anteriormente sincronizados.
 O robô consulta todos os detalhes em cada execução, inclusive convênios inativos.
+Convênios excluídos no painel ficam arquivados (`deleted_at`), fora da consulta
+pública e das opções de novos TCEs. O upsert do robô não limpa esse campo;
+portanto, sincronizar novamente não restaura um convênio excluído. Os dados
+anteriores e os TCEs existentes são preservados para recuperação administrativa.
 Os contatos ficam na tabela protegida `internship_agreement_contacts`; a lista pública
 não os carrega. O formulário consulta individualmente o convênio escolhido pela RPC
 `get_agreement_tce_contact`, disponível aos usuários do formulário, e permite revisão

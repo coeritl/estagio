@@ -112,7 +112,7 @@ Deno.serve(async request => {
     const input = await request.json();
     if (["preview_agreement_renewal", "send_agreement_renewal"].includes(input.action)) {
       const agreementId = String(input.agreement_id || "").trim();
-      const { data: agreement, error } = await service.from("internship_agreements").select("*").eq("academic_agreement_id", agreementId).single();
+      const { data: agreement, error } = await service.from("internship_agreements").select("*").eq("academic_agreement_id", agreementId).is("deleted_at", null).single();
       if (error) return json(404, { error: "Convênio não encontrado." });
       const { data: contact, error: contactError } = await service.from("internship_agreement_contacts").select("*").eq("academic_agreement_id", agreementId).maybeSingle();
       if (contactError) return json(500, { error: "Não foi possível consultar o contato da concedente." });

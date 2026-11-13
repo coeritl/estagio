@@ -175,6 +175,7 @@ export default { async fetch(request: Request) {
         .from("internship_agreements")
         .select("academic_agreement_id,description,end_date,external_institution")
         .eq("academic_agreement_id", agreementId)
+        .is("deleted_at", null)
         .maybeSingle();
       if (agreementError || !agreement) return response(origin, 400, { error: "O convênio selecionado não foi localizado. Atualize a página e selecione novamente." });
       companyName = cleanCompanyName(agreement.external_institution) || cleanCompanyName(agreement.description);
