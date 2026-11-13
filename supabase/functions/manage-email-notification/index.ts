@@ -185,21 +185,37 @@ Deno.serve(async request => {
       const correctionNote = String(input.correction_note || "").trim().slice(0, 2000);
       if (!protocol || correctionNote.length < 5) return json(400, { error: "Descreva o que deve ser corrigido." });
       const { data: tceRequest, error } = await service.from("tce_requests")
-        .select("student_name,student_email,public_protocol")
+        .select("student_name,student_email,public_protocol,advisor_name")
         .eq("public_protocol", protocol).single();
       if (error) return json(404, { error: "Solicitação de TCE não encontrada." });
       const recipientEmail = String(tceRequest.student_email || "").trim().toLowerCase();
       if (!recipientEmail) return json(422, { error: "A solicitação não possui e-mail do estudante." });
+      const advisorName = String(tceRequest.advisor_name || "").trim();
+      let advisorEmail = "";
+      if (advisorName) {
+        const { data: advisor, error: advisorError } = await service.from("internship_advisors")
+          .select("email")
+          .ilike("name", advisorName)
+          .maybeSingle();
+        if (advisorError) console.error("tce-correction-advisor-lookup-failed", { protocol, advisorName, error: advisorError });
+        advisorEmail = String(advisor?.email || "").trim().toLowerCase();
+        if (advisorEmail === recipientEmail) advisorEmail = "";
+      }
       const { data: notification, error: notificationError } = await service.from("email_notifications").insert({
         event_type: "tce_correcao",
         reference_key: `${protocol}:${crypto.randomUUID()}`,
         recipient_email: recipientEmail,
         student_name: tceRequest.student_name || "Estudante",
         subject: "Correção necessária na solicitação do TCE",
-        template_data: { protocol, correctionNote }
+        template_data: {
+          protocol,
+          correctionNote,
+          advisorName,
+          ccEmails: advisorEmail ? [advisorEmail] : []
+        }
       }).select("*").single();
       if (notificationError) return json(500, { error: "Não foi possível preparar a notificação de correção do TCE." });
-      return json(200, await dispatch(service, notification));
+      return json(200, { ...await dispatch(service, notification), advisor_notified: Boolean(advisorEmail) });
     }
     if (input.action === "request_report_correction") {
       const reportId = String(input.report_id || "");
